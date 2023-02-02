@@ -44,6 +44,7 @@ build_r
 _build
 _build_d
 _build_r
+/test_assets/
 /Assets/Shader/
 .vscode
 .DS_Store
