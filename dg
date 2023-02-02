@@ -1,0 +1,28 @@
+#!/bin/sh
+
+set -e
+if [ -n "$1" ]; then
+    PARAL=$1
+else
+    PARAL=8
+fi
+
+if [ ! -d ./build/xel ]; then
+    echo "xel missing"
+    exit
+fi
+
+rm -rf ./build/engine
+mkdir -p ./build/engine
+
+if [ ! -d logs ];then
+mkdir logs
+fi
+
+cd build/engine
+rm -rf "./.local/"
+cmake -DCMAKE_BUILD_TYPE=Debug -Wno-dev ../../Engine
+make -j ${PARAL}
+make test
+make install
+cd ../..
