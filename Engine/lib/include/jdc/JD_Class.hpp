@@ -71,13 +71,15 @@ namespace jdc
     constexpr const xAccessFlag ACC_SYNCHRONIZED = 0x0020; // method
     constexpr const xAccessFlag ACC_SUPER        = 0x0020; // class | interface
     constexpr const xAccessFlag ACC_OPEN         = 0x0020; // module
-    constexpr const xAccessFlag ACC_VOLATILE     = 0x0040; // field | method
-    constexpr const xAccessFlag ACC_TRANSIENT    = 0x0080; // field | method
+    constexpr const xAccessFlag ACC_BRIDGE       = 0x0040; // method
+    constexpr const xAccessFlag ACC_VOLATILE     = 0x0040; // field
+    constexpr const xAccessFlag ACC_VARARGS      = 0x0080; // method
+    constexpr const xAccessFlag ACC_TRANSIENT    = 0x0080; // field
     constexpr const xAccessFlag ACC_NATIVE       = 0x0100; // method
     constexpr const xAccessFlag ACC_INTERFACE    = 0x0200; // class
     constexpr const xAccessFlag ACC_ABSTRACT     = 0x0400; // method
     constexpr const xAccessFlag ACC_STRICT       = 0x0800; // method
-    constexpr const xAccessFlag ACC_SYNTHETIC    = 0x1000; // class NOT_IN_SOURCE
+    constexpr const xAccessFlag ACC_SYNTHETIC    = 0x1000; // class
     constexpr const xAccessFlag ACC_ANNOTATION   = 0x2000; // class
     constexpr const xAccessFlag ACC_ENUM         = 0x4000; // class
     constexpr const xAccessFlag ACC_MODULE       = 0x8000; // class
@@ -206,22 +208,27 @@ namespace jdc
         X_GAME_API_MEMBER void Clear();
     };
 
-    struct xClassMethodInfo
+    struct xAttributeInfo
     {
-
+        uint16_t                      NameIndex;
+        std::vector<xel::ubyte>       Info;
     };
 
-    struct xClassAttributeInfo
-    {
 
+    struct xMethodInfo
+    {
+        uint16_t                      AccessFlags;
+        uint16_t                      NameIndex;
+        uint16_t                      DescriptorIndex;
+        std::vector<xAttributeInfo>   Attributes;
     };
 
-    struct xClassFieldInfo
+    struct xFieldInfo
     {
-        xAccessFlag                        AccessFlags;
-        uint16_t                           NameIndex;
-        uint16_t                           DescriptorIndex;
-        std::vector<xClassAttributeInfo>   Attributes;
+        xAccessFlag                   AccessFlags;
+        uint16_t                      NameIndex;
+        uint16_t                      DescriptorIndex;
+        std::vector<xAttributeInfo>   Attributes;
     };
 
     struct xClass
@@ -229,14 +236,14 @@ namespace jdc
         uint32_t                           Magic;
         uint16_t                           MinorVersion;
         uint16_t                           MajorVersion;
-        std::vector<xConstantItemInfo>     ConstantPoolInfo;
+        std::vector<xConstantItemInfo>     ConstantPool;
         uint16_t                           AccessFlags;
         uint16_t                           ThisClass;
         uint16_t                           SuperClass;
         std::vector<uint16_t>              InterfaceIndices;
-        std::vector<xClassFieldInfo>       Fields;
-        std::vector<xClassMethodInfo>      Methods;
-        std::vector<xClassAttributeInfo>   Attributes;
+        std::vector<xFieldInfo>            Fields;
+        std::vector<xMethodInfo>           Methods;
+        std::vector<xAttributeInfo>        Attributes;
     };
 
     X_GAME_API const char * ConstantTagString(const eConstantTag Tag);
@@ -254,7 +261,7 @@ namespace jdc
     X_INLINE bool HasClassAccessFlag_Public(xAccessFlag Flag) { return Flag & ACC_PUBLIC; }
     X_INLINE bool HasClassAccessFlag_Interface(xAccessFlag Flag) { return Flag & ACC_INTERFACE; }
     X_INLINE bool HasClassAccessFlag_Abstract(xAccessFlag Flag) { return Flag & ACC_ABSTRACT; }
-    X_INLINE bool HasClassAccessFlag_Synthetic(xAccessFlag Flag) { return Flag & ACC_SYNTHETIC; } // not in source code
+    X_INLINE bool HasClassAccessFlag_Synthetic(xAccessFlag Flag) { return Flag & ACC_SYNTHETIC; }
     X_INLINE bool HasClassAccessFlag_Annotation(xAccessFlag Flag) { return Flag & ACC_ANNOTATION; }
     X_INLINE bool HasClassAccessFlag_Enum(xAccessFlag Flag) { return Flag & ACC_ENUM; }
     X_INLINE bool HasClassAccessFlag_Module(xAccessFlag Flag) { return Flag & ACC_MODULE; }

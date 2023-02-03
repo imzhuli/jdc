@@ -353,6 +353,53 @@ namespace jdc
         Tag = eConstantTag::Unspecified;
     }
 
+    static bool LoadAttributeInfo(xStreamReader & Reader, ssize_t & RemainSize, xAttributeInfo & AttributeInfo)
+    {
+        if ((RemainSize -= 6) < 0) {
+            return false;
+        }
+        AttributeInfo.NameIndex = Reader.R2();
+        AttributeInfo.Info.resize(Reader.R4());
+        if ((RemainSize -= AttributeInfo.Info.size()) < 0) {
+            return false;
+        }
+        Reader.R(AttributeInfo.Info.data(), AttributeInfo.Info.size());
+        return true;
+    }
+
+    static bool LoadFieldInfo(xStreamReader & Reader, ssize_t & RemainSize, xFieldInfo & FieldInfo)
+    {
+        if ((RemainSize -= 8) < 0) {
+            return false;
+        }
+        FieldInfo.AccessFlags = Reader.R2();
+        FieldInfo.NameIndex = Reader.R2();
+        FieldInfo.DescriptorIndex = Reader.R2();
+        FieldInfo.Attributes.resize(Reader.R2());
+        for (auto & AttributeInfo : FieldInfo.Attributes) {
+            if (!LoadAttributeInfo(Reader, RemainSize, AttributeInfo)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    static bool LoadMethodInfo(xStreamReader & Reader, ssize_t & RemainSize, xMethodInfo & MethodInfo)
+    {
+        if ((RemainSize -= 8) < 0) {
+            return false;
+        }
+        MethodInfo.AccessFlags = Reader.R2();
+        MethodInfo.NameIndex = Reader.R2();
+        MethodInfo.DescriptorIndex = Reader.R2();
+        MethodInfo.Attributes.resize(Reader.R2());
+        for (auto & AttributeInfo : MethodInfo.Attributes) {
+            if (!LoadAttributeInfo(Reader, RemainSize, AttributeInfo)) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     xJDResult<xClass> LoadClassInfoFromFile(const std::string & Filename)
     {
@@ -378,9 +425,9 @@ namespace jdc
         if ((RemainSize -= 2) < 0) {
             return { JDR_DATA_SIZE_ERROR, "Read class info error @" X_STRINGIFY(__LINE__)};
         }
-        JavaClass.ConstantPoolInfo.resize(Reader.R2());
-        for (size_t Index = 1; Index < JavaClass.ConstantPoolInfo.size(); ++Index) { // !!! Note: Index starts from 1 to size - 1
-            auto & Item = JavaClass.ConstantPoolInfo[Index];
+        JavaClass.ConstantPool.resize(Reader.R2());
+        for (size_t Index = 1; Index < JavaClass.ConstantPool.size(); ++Index) { // !!! Note: Index starts from 1 to size - 1
+            auto & Item = JavaClass.ConstantPool[Index];
             if (!LoadConstantInfo(Reader, RemainSize, Item)) {
                 return { JDR_DATA_SIZE_ERROR, "Read class info error @" X_STRINGIFY(__LINE__)};
             }
@@ -407,16 +454,38 @@ namespace jdc
         }
         JavaClass.SuperClass = Reader.R2();
 
-        // implemented methods
+        // interfaces
         if ((RemainSize -= 2) < 0) {
-            return { JDR_DATA_SIZE_ERROR, "Read class info error @" X_STRINGIFY(__LINE__)};
+            return { JDR_DATA_SIZE_ERROR, "Read interface info error @" X_STRINGIFY(__LINE__)};
         }
         JavaClass.InterfaceIndices.resize(Reader.R2());
         for (auto & Item : JavaClass.InterfaceIndices) {
             if ((RemainSize -= 2) < 0) {
-                return { JDR_DATA_SIZE_ERROR, "Read class info error @" X_STRINGIFY(__LINE__)};
+                return { JDR_DATA_SIZE_ERROR, "Read interface info error @" X_STRINGIFY(__LINE__)};
             }
             Item = Reader.R2();
+        }
+
+        // fields:
+        if ((RemainSize -= 2) < 0) {
+            return { JDR_DATA_SIZE_ERROR, "Read field info error @" X_STRINGIFY(__LINE__)};
+        }
+        JavaClass.Fields.resize(Reader.R2());
+        for (auto & FieldInfo : JavaClass.Fields) {
+            if (!LoadFieldInfo(Reader, RemainSize, FieldInfo)) {
+                return { JDR_DATA_SIZE_ERROR, "Read field info error @" X_STRINGIFY(__LINE__)};
+            }
+        }
+
+        // methods:
+        if ((RemainSize -= 2) < 0) {
+            return { JDR_DATA_SIZE_ERROR, "Read method info error @" X_STRINGIFY(__LINE__)};
+        }
+        JavaClass.Methods.resize(Reader.R2());
+        for (auto & MethodInfo : JavaClass.Methods) {
+            if (!LoadMethodInfo(Reader, RemainSize, MethodInfo)) {
+                return { JDR_DATA_SIZE_ERROR, "Read method info error @" X_STRINGIFY(__LINE__)};
+            }
         }
 
         return { std::move(JavaClass) };

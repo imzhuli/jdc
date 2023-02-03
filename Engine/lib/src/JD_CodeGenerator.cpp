@@ -63,7 +63,7 @@ namespace jdc
         InterfaceNames.resize(JavaClass.InterfaceIndices.size());
         for (size_t Index = 0; Index < JavaClass.InterfaceIndices.size(); ++Index) {
             auto InterfaceIndex = JavaClass.InterfaceIndices[Index];
-            InterfaceNames[Index] = GetClassName(*GetConstantItemClassPathName(JavaClass.ConstantPoolInfo, InterfaceIndex));
+            InterfaceNames[Index] = GetClassName(*GetConstantItemClassPathName(JavaClass.ConstantPool, InterfaceIndex));
         }
         return InterfaceNames;
     }
@@ -99,8 +99,8 @@ namespace jdc
             TitleStrings.push_back("class");
         }
 
-        auto ThisClassName = *GetConstantItemClassPathName(JavaClass.ConstantPoolInfo, JavaClass.ThisClass);
-        auto SuperClassName = *GetConstantItemClassPathName(JavaClass.ConstantPoolInfo, JavaClass.SuperClass);
+        auto ThisClassName = *GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.ThisClass);
+        auto SuperClassName = *GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.SuperClass);
         TitleStrings.push_back(GetClassName(ThisClassName));
 
         if (SuperClassName != JavaDefaultRootClassPathName) {
@@ -120,15 +120,15 @@ namespace jdc
     std::vector<std::string> GetImportNames(const xClass & JavaClass)
     {
         std::vector<std::string> ImportNames;
-        for (size_t Index = 1 ; Index < JavaClass.ConstantPoolInfo.size(); ++Index) {
-            auto & Item = JavaClass.ConstantPoolInfo[Index];
+        for (size_t Index = 1 ; Index < JavaClass.ConstantPool.size(); ++Index) {
+            auto & Item = JavaClass.ConstantPool[Index];
             if (Item.Tag != eConstantTag::Class) {
                 continue;
             }
             if (Index == JavaClass.ThisClass) {
                 continue;
             }
-            auto ClassPathName = *GetConstantItemClassPathName(JavaClass.ConstantPoolInfo, Index);
+            auto ClassPathName = *GetConstantItemClassPathName(JavaClass.ConstantPool, Index);
             if (ClassPathName == JavaDefaultRootClassPathName) {
                 continue;
             }
@@ -140,7 +140,7 @@ namespace jdc
 
     std::string GenerateClassCode(const xClass & JavaClass)
     {
-        auto ClassPathName = *GetConstantItemClassPathName(JavaClass.ConstantPoolInfo, JavaClass.ThisClass);
+        auto ClassPathName = *GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.ThisClass);
         auto ImportNames = GetImportNames(JavaClass);
         auto [PackageName, ClassName] = GetPackageAndClassName(ClassPathName);
         auto ClassTitle = GenerateClassTitle(JavaClass);
