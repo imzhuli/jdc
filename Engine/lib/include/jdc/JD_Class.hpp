@@ -85,7 +85,7 @@ namespace jdc
 
     struct xConstantClassInfo
     {
-        uint16_t NameIndex;
+        uint16_t PathNameIndex;
     };
 
     struct xConstantFieldRefInfo
@@ -131,7 +131,7 @@ namespace jdc
         double Value;
     };
 
-    struct xConstnatNameAndTypeInfo
+    struct xConstantNameAndTypeInfo
     {
         uint16_t NameIndex;
         uint16_t DescriptorIndex;
@@ -142,35 +142,35 @@ namespace jdc
         std::string * DataPtr;
     };
 
-    struct xConstMethodHandleInfo
+    struct xConstantMethodHandleInfo
     {
         uint16_t ReferenceKind;
         uint16_t ReferenceIndex;
     };
 
-    struct xConstMethodTypeInfo
+    struct xConstantMethodTypeInfo
     {
         uint16_t DescriptorIndex;
     };
 
-    struct xDynamicInfo
+    struct xConstantDynamicInfo
     {
         uint16_t BootstrapMethodAttributeIndex;
         uint16_t NameAndTypeIndex;
     };
 
-    struct xInvokeDynamicInfo
+    struct xConstantInvokeDynamicInfo
     {
         uint16_t BootstrapMethodAttributeIndex;
         uint16_t NameAndTypeIndex;
     };
 
-    struct xModuleInfo
+    struct xConstantModuleInfo
     {
         uint16_t NameIndex;
     };
 
-    struct xPackageInfo
+    struct xConstantPackageInfo
     {
         uint16_t NameIndex;
     };
@@ -188,14 +188,14 @@ namespace jdc
             xConstantFloatInfo                Float;
             xConstantLongInfo                 Long;
             xConstantDoubleInfo               Double;
-            xConstnatNameAndTypeInfo          NameAndType;
+            xConstantNameAndTypeInfo          NameAndType;
             xConstantUtf8Info                 Utf8;
-            xConstMethodHandleInfo            MethodHandle;
-            xConstMethodTypeInfo              MethodType;
-            xDynamicInfo                      Dynamic;
-            xInvokeDynamicInfo                InvokeDynamic;
-            xModuleInfo                       Module;
-            xPackageInfo                      Package;
+            xConstantMethodHandleInfo         MethodHandle;
+            xConstantMethodTypeInfo           MethodType;
+            xConstantDynamicInfo              Dynamic;
+            xConstantInvokeDynamicInfo        InvokeDynamic;
+            xConstantModuleInfo               Module;
+            xConstantPackageInfo              Package;
         } Info;
 
         xConstantItemInfo() = default;
@@ -204,11 +204,6 @@ namespace jdc
         X_GAME_API_MEMBER ~xConstantItemInfo();
         X_GAME_API_MEMBER void SetUtf8(const char * DataPtr, size_t Length);
         X_GAME_API_MEMBER void Clear();
-    };
-
-    struct xClassInterface
-    {
-
     };
 
     struct xClassMethodInfo
@@ -238,7 +233,7 @@ namespace jdc
         uint16_t                           AccessFlags;
         uint16_t                           ThisClass;
         uint16_t                           SuperClass;
-        std::vector<xClassInterface>       Interfaces;
+        std::vector<uint16_t>              InterfaceIndices;
         std::vector<xClassFieldInfo>       Fields;
         std::vector<xClassMethodInfo>      Methods;
         std::vector<xClassAttributeInfo>   Attributes;
@@ -249,12 +244,10 @@ namespace jdc
     X_GAME_API const std::string * GetConstantItemUtf8(const xConstantItemInfo & Item);
     X_GAME_API const std::string * GetConstantItemUtf8(const std::vector<xConstantItemInfo> & Items, size_t Index);
     X_GAME_API const std::string * GetConstantItemString(const std::vector<xConstantItemInfo> & Items, size_t Index);
-    X_GAME_API const std::string * GetConstantItemClassName(const std::vector<xConstantItemInfo> & Items, size_t Index);
-    X_GAME_API std::string DumpConstantItemString(const std::vector<xConstantItemInfo> & Items, size_t Index);
+    X_GAME_API const std::string * GetConstantItemClassPathName(const std::vector<xConstantItemInfo> & Items, size_t Index);
 
     X_GAME_API const char * ClassVersionString(uint16_t MajorVersion);
     X_GAME_API xJDResult<xClass> LoadClassInfoFromFile(const std::string & Filename);
-    X_GAME_API std::string DumpStringFromClass(const xClass & JavaClass);
 
     X_INLINE bool HasClassAccessFlag_Super(xAccessFlag Flag) { return Flag & ACC_SUPER; }
     X_INLINE bool HasClassAccessFlag_Final(xAccessFlag Flag) { return Flag & ACC_FINAL; }

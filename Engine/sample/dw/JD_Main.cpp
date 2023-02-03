@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include <jdc/JD_Class.hpp>
+#include <jdc/JD_ClassDump.hpp>
 #include <jdc/JD_CodeGenerator.hpp>
 
 #ifdef X_SYSTEM_WINDOWS
@@ -35,7 +36,7 @@ int main(int argc, char *argv[])
             return -1;
         }
         cout << DumpStringFromClass(LoadResult.Data) << endl;
-        cout << GenerateClassTitle(LoadResult.Data) << endl;
+        cout << GenerateClassCode(LoadResult.Data) << endl;
         return 0;
     }
 
