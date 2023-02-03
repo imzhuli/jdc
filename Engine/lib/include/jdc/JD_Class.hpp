@@ -231,7 +231,6 @@ namespace jdc
 
     struct xClass
     {
-        std::string                        Name;
         uint32_t                           Magic;
         uint16_t                           MinorVersion;
         uint16_t                           MajorVersion;
@@ -250,6 +249,7 @@ namespace jdc
     X_GAME_API const std::string * GetConstantItemUtf8(const xConstantItemInfo & Item);
     X_GAME_API const std::string * GetConstantItemUtf8(const std::vector<xConstantItemInfo> & Items, size_t Index);
     X_GAME_API const std::string * GetConstantItemString(const std::vector<xConstantItemInfo> & Items, size_t Index);
+    X_GAME_API const std::string * GetConstantItemClassName(const std::vector<xConstantItemInfo> & Items, size_t Index);
     X_GAME_API std::string DumpConstantItemString(const std::vector<xConstantItemInfo> & Items, size_t Index);
 
     X_GAME_API const char * ClassVersionString(uint16_t MajorVersion);

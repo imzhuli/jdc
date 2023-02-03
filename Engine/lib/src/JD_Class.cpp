@@ -1,5 +1,6 @@
 #include <jdc/JD_Class.hpp>
 #include <jdc/JD_Util.hpp>
+#include <jdc/JD_CodeGenerator.hpp>
 #include <xel/String.hpp>
 #include <xel/Byte.hpp>
 #include <sstream>
@@ -116,7 +117,7 @@ namespace jdc
             case eConstantTag::Double:
                 return IndexString + "Double: " + std::to_string(Item.Info.Double.Value);
             case eConstantTag::Class:
-                return IndexString + "Class";
+                return IndexString + "Class: @" + std::to_string(Item.Info.Class.NameIndex);
             case eConstantTag::String:
                 return IndexString + "String: @" + std::to_string(Item.Info.String.StringIndex) + " ==> " + *GetConstantItemString(Items, Index);
             case eConstantTag::FieldRef:
@@ -164,6 +165,15 @@ namespace jdc
         auto & Item = Items[Index];
         if (Item.Tag == eConstantTag::String) {
             return GetConstantItemUtf8(Items, Item.Info.String.StringIndex);
+        }
+        return nullptr;
+    }
+
+    const std::string * GetConstantItemClassName(const std::vector<xConstantItemInfo> & Items, size_t Index)
+    {
+        auto & Item = Items[Index];
+        if (Item.Tag == eConstantTag::Class) {
+            return GetConstantItemUtf8(Items, Item.Info.Class.NameIndex);
         }
         return nullptr;
     }
@@ -395,7 +405,6 @@ namespace jdc
     xJDResult<xClass> LoadClassInfoFromFile(const std::string & Filename)
     {
         xClass JavaClass = {};
-        JavaClass.Name = std::filesystem::path(Filename).stem().string();
 
         auto FileDataOpt = FileToStr(Filename);
         if (!FileDataOpt()) {
@@ -413,6 +422,7 @@ namespace jdc
         JavaClass.MinorVersion = Reader.R2();
         JavaClass.MajorVersion = Reader.R2();
 
+        // constant pool
         if ((RemainSize -= 2) < 0) {
             return { JDR_DATA_SIZE_ERROR, "Read class info error @" X_STRINGIFY(__LINE__)};
         }
@@ -433,6 +443,17 @@ namespace jdc
         }
         JavaClass.AccessFlags = Reader.R2();
 
+        // this class
+        if ((RemainSize -= 2) < 0) {
+            return { JDR_DATA_SIZE_ERROR, "Read class info error @" X_STRINGIFY(__LINE__)};
+        }
+        JavaClass.ThisClass = Reader.R2();
+
+        // super class
+        if ((RemainSize -= 2) < 0) {
+            return { JDR_DATA_SIZE_ERROR, "Read class info error @" X_STRINGIFY(__LINE__)};
+        }
+        JavaClass.SuperClass = Reader.R2();
 
         return { std::move(JavaClass) };
     }
@@ -474,7 +495,8 @@ namespace jdc
     std::string DumpStringFromClass(const xClass & JavaClass)
     {
         std::stringstream ss;
-        ss << "ClassName " << JavaClass.Name << endl;
+        ss << "ClassName " << *GetConstantItemClassName(JavaClass.ConstantPoolInfo, JavaClass.ThisClass) << endl;
+        ss << "ClassName " << *GetConstantItemClassName(JavaClass.ConstantPoolInfo, JavaClass.SuperClass) << endl;
         ss << " - MagicCheck: " << YN(JavaClass.Magic == 0xCAFEBABE) << endl;
         ss << " - MajorVersion: " << JavaClass.MajorVersion << " ( " << ClassVersionString(JavaClass.MajorVersion) << " ) "<< endl;
         ss << " - MinorVersion: " << JavaClass.MinorVersion << endl;
