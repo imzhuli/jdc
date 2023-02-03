@@ -1,7 +1,7 @@
 #include <iostream>
 #include <jdc/JD.hpp>
 
-namespace xjd
+namespace jdc
 {
 
     void JDC_Version()

@@ -1,4 +1,5 @@
 #include <jdc/JD_Class.hpp>
+#include <jdc/JD_Util.hpp>
 #include <xel/String.hpp>
 #include <xel/Byte.hpp>
 #include <sstream>
@@ -8,7 +9,7 @@
 using namespace std;
 using namespace xel;
 
-namespace xjd
+namespace jdc
 {
     const char * ClassVersionString(uint16_t MajorVersion)
     {
@@ -51,9 +52,11 @@ namespace xjd
         return "UnknownVersion";
     }
 
-    const char * ConstantTypeString(const eConstantTag Tag)
+    const char * ConstantTagString(const eConstantTag Tag)
     {
         switch (Tag) {
+            case eConstantTag::Unspecified:
+                return "Unspecified";
             case eConstantTag::Utf8:
                 return "Utf8";
             case eConstantTag::Integer:
@@ -94,99 +97,169 @@ namespace xjd
         return "Unknown";
     }
 
+    std::string DumpConstantItemString(const std::vector<xConstantItemInfo> & Items, size_t Index)
+    {
+        auto & Item = Items[Index];
+        auto IndexString = "#" + std::to_string(Index) + " ";
+        switch(Item.Tag)
+        {
+            case eConstantTag::Unspecified:
+                return IndexString + "Unspecified";
+            case eConstantTag::Utf8:
+                return IndexString + "Utf8: " + *GetConstantItemUtf8(Item);
+            case eConstantTag::Integer:
+                return IndexString + "Integer: " + std::to_string(Item.Info.Integer.Value);
+            case eConstantTag::Float:
+                return IndexString + "Float: " + std::to_string(Item.Info.Float.Value);
+            case eConstantTag::Long:
+                return IndexString + "Long: " + std::to_string(Item.Info.Long.Value);
+            case eConstantTag::Double:
+                return IndexString + "Double: " + std::to_string(Item.Info.Double.Value);
+            case eConstantTag::Class:
+                return IndexString + "Class";
+            case eConstantTag::String:
+                return IndexString + "String: @" + std::to_string(Item.Info.String.StringIndex) + " ==> " + *GetConstantItemString(Items, Index);
+            case eConstantTag::FieldRef:
+                return IndexString + "FieldRef";
+            case eConstantTag::MethodRef:
+                return IndexString + "MethodRef";
+            case eConstantTag::InterfaceMethodRef:
+                return IndexString + "InterfaceMethodRef";
+            case eConstantTag::NameAndType:
+                return IndexString + "NameAndType";
+            case eConstantTag::MethodHandle:
+                return IndexString + "MethodHandle";
+            case eConstantTag::MethodType:
+                return IndexString + "MethodType";
+            case eConstantTag::Dynamic:
+                return IndexString + "Dynamic";
+            case eConstantTag::InvokeDynamic:
+                return IndexString + "InvokeDynamic";
+            case eConstantTag::Module:
+                return IndexString + "Module";
+            case eConstantTag::Package:
+                return IndexString + "Package";
+            default:
+                break;
+        }
+        return IndexString + "Unknown";
+    }
+
+    const std::string * GetConstantItemUtf8(const xConstantItemInfo & Item)
+    {
+        if (Item.Tag == eConstantTag::Utf8) {
+            return Item.Info.Utf8.DataPtr;
+        }
+        return nullptr;
+    }
+
+    const std::string * GetConstantItemUtf8(const std::vector<xConstantItemInfo> & Items, size_t Index)
+    {
+        auto & Item = Items[Index];
+        return GetConstantItemUtf8(Item);
+    }
+
+    const std::string * GetConstantItemString(const std::vector<xConstantItemInfo> & Items, size_t Index)
+    {
+        auto & Item = Items[Index];
+        if (Item.Tag == eConstantTag::String) {
+            return GetConstantItemUtf8(Items, Item.Info.String.StringIndex);
+        }
+        return nullptr;
+    }
+
     static bool LoadConstantInfo(xStreamReader & Reader, ssize_t & RemainSize, xConstantItemInfo & TagInfo)
     {
         if ((RemainSize -= 1) < 0) {
             return false;
         }
-        TagInfo.Tag = eConstantTag(Reader.R1());
-        switch(TagInfo.Tag) {
+        auto Tag = eConstantTag(Reader.R1());
+        switch(Tag) {
             case eConstantTag::Class: {
-                auto & Info = TagInfo.ClassInfo;
+                auto & Info = TagInfo.Info.Class;
                 if ((RemainSize -= 2) < 0) {
                     return false;
                 }
                 Info.NameIndex = Reader.R2();
-                return true;
+                break;
             }
             case eConstantTag::FieldRef: {
-                auto & Info = TagInfo.FieldRefInfo;
+                auto & Info = TagInfo.Info.FieldRef;
                 if ((RemainSize -= 4) < 0) {
                     return false;
                 }
                 Info.ClassIndex = Reader.R2();
                 Info.NameAndTypeIndex = Reader.R2();
-                return true;
+                break;
             }
             case eConstantTag::String: {
-                auto & Info = TagInfo.StringInfo;
+                auto & Info = TagInfo.Info.String;
                 if ((RemainSize -= 2) < 0) {
                     return false;
                 }
                 Info.StringIndex = Reader.R2();
-                return true;
+                break;
             }
             case eConstantTag::MethodRef: {
-                auto & Info = TagInfo.MethodRefInfo;
+                auto & Info = TagInfo.Info.MethodRef;
                 if ((RemainSize -= 4) < 0) {
                     return false;
                 }
                 Info.ClassIndex = Reader.R2();
                 Info.NameAndTypeIndex = Reader.R2();
-                return true;
+                break;
             }
             case eConstantTag::InterfaceMethodRef: {
-                auto & Info = TagInfo.InterfaceMethodRefInfo;
+                auto & Info = TagInfo.Info.InterfaceMethodRef;
                 if ((RemainSize -= 4) < 0) {
                     return false;
                 }
                 Info.ClassIndex = Reader.R2();
                 Info.NameAndTypeIndex = Reader.R2();
-                return true;
+                break;
             }
             case eConstantTag::Integer: {
-                auto & Info = TagInfo.IntegerInfo;
+                auto & Info = TagInfo.Info.Integer;
                 if ((RemainSize -= 4) < 0) {
                     return false;
                 }
                 Info.Value = Reader.R4();
-                return true;
+                break;
             }
             case eConstantTag::Float: {
-                auto & Info = TagInfo.FloatInfo;
+                auto & Info = TagInfo.Info.Float;
                 if ((RemainSize -= 4) < 0) {
                     return false;
                 }
                 Info.Value = Reader.RF();
-                return true;
+                break;
             }
             case eConstantTag::Long: {
-                auto & Info = TagInfo.LongInfo;
+                auto & Info = TagInfo.Info.Long;
                 if ((RemainSize -= 8) < 0) {
                     return false;
                 }
                 Info.Value = Reader.R8();
-                return true;
+                break;
             }
             case eConstantTag::Double: {
-                auto & Info = TagInfo.DoubleInfo;
+                auto & Info = TagInfo.Info.Double;
                 if ((RemainSize -= 8) < 0) {
                     return false;
                 }
                 Info.Value = Reader.RD();
-                return true;
+                break;
             }
             case eConstantTag::NameAndType: {
-                auto & Info = TagInfo.NameAndTypeInfo;
+                auto & Info = TagInfo.Info.NameAndType;
                 if ((RemainSize -= 4) < 0) {
                     return false;
                 }
                 Info.NameIndex = Reader.R2();
                 Info.DescriptorIndex = Reader.R2();
-                return true;
+                break;
             }
             case eConstantTag::Utf8: {
-                auto & Info = TagInfo.Utf8Info;
                 if ((RemainSize -= 2) < 0) {
                     return false;
                 }
@@ -195,38 +268,75 @@ namespace xjd
                     return false;
                 }
                 TagInfo.SetUtf8((const char *)Reader.Skip(Length), Length);
+                // no further operation is needed, just return
                 return true;
             }
             case eConstantTag::MethodHandle: {
-                auto & Info = TagInfo.MethodHandleInfo;
+                auto & Info = TagInfo.Info.MethodHandle;
                 if ((RemainSize -= 4) < 0) {
                     return false;
                 }
                 Info.ReferenceKind = Reader.R2();
                 Info.ReferenceIndex = Reader.R2();
-                return true;
+                break;
             }
             case eConstantTag::MethodType: {
-                auto & Info = TagInfo.MethodTypeInfo;
+                auto & Info = TagInfo.Info.MethodType;
                 if ((RemainSize -= 2) < 0) {
                     return false;
                 }
                 Info.DescriptorIndex = Reader.R2();
-                return true;
+                break;
+            }
+            case eConstantTag::Dynamic: {
+                auto & Info = TagInfo.Info.Dynamic;
+                if ((RemainSize -= 4) < 0) {
+                    return false;
+                }
+                Info.BootstrapMethodAttributeIndex = Reader.R2();
+                Info.NameAndTypeIndex = Reader.R2();
+                break;
+            }
+            case eConstantTag::InvokeDynamic: {
+                auto & Info = TagInfo.Info.InvokeDynamic;
+                if ((RemainSize -= 4) < 0) {
+                    return false;
+                }
+                Info.BootstrapMethodAttributeIndex = Reader.R2();
+                Info.NameAndTypeIndex = Reader.R2();
+                break;
+            }
+            case eConstantTag::Module: {
+                auto & Info = TagInfo.Info.Module;
+                if ((RemainSize -= 2) < 0) {
+                    return false;
+                }
+                Info.NameIndex = Reader.R2();
+                break;
+            }
+            case eConstantTag::Package: {
+                auto & Info = TagInfo.Info.Package;
+                if ((RemainSize -= 2) < 0) {
+                    return false;
+                }
+                Info.NameIndex = Reader.R2();
+                break;
             }
             default: {
                 cerr << "Unknown Tag: value=" << (unsigned int)TagInfo.Tag << endl;
-                break;
+                return false;
             }
         }
-        return false;
+
+        TagInfo.Tag = Tag;
+        return true;
     }
 
     xConstantItemInfo::xConstantItemInfo(const xConstantItemInfo &Other)
     {
         switch(Other.Tag) {
             case eConstantTag::Utf8: {
-                auto & Source = Other.Utf8Info;
+                auto & Source = Other.Info.Utf8;
                 SetUtf8(Source.DataPtr->data(), Source.DataPtr->size());
                 Tag = Other.Tag;
                 return;
@@ -235,7 +345,24 @@ namespace xjd
                 break;
             }
         }
-        memcpy(this, &Other, sizeof(xConstantItemInfo));
+        Tag = Other.Tag;
+        memcpy(&Info, &Other.Info, sizeof(Info));
+    }
+
+    xConstantItemInfo::xConstantItemInfo(xConstantItemInfo && Other)
+    {
+        Tag = Other.Tag;
+        memcpy(&Info, &Other.Info, sizeof(Info));
+        switch(Other.Tag) {
+            case eConstantTag::Utf8: {
+                Other.Tag = eConstantTag::Unspecified;
+                Other.Info.Utf8.DataPtr = nullptr;
+                return;
+            }
+            default: {
+                break;
+            }
+        }
     }
 
     xConstantItemInfo::~xConstantItemInfo()
@@ -247,14 +374,14 @@ namespace xjd
     {
         Clear();
         Tag = eConstantTag::Utf8;
-        Utf8Info.DataPtr = new std::string(DataPtr, Length);
+        Info.Utf8.DataPtr = new std::string(DataPtr, Length);
     }
 
     void xConstantItemInfo::Clear()
     {
         switch(Tag) {
             case eConstantTag::Utf8: {
-                delete Utf8Info.DataPtr;
+                delete Info.Utf8.DataPtr;
                 break;
             }
             default: {
@@ -290,13 +417,58 @@ namespace xjd
             return { JDR_DATA_SIZE_ERROR, "Read class info error @" X_STRINGIFY(__LINE__)};
         }
         JavaClass.ConstantPoolInfo.resize(Reader.R2());
-        for (auto & Item : JavaClass.ConstantPoolInfo) {
+        for (size_t Index = 1; Index < JavaClass.ConstantPoolInfo.size(); ++Index) { // !!! Note: Index starts from 1 to size - 1
+            auto & Item = JavaClass.ConstantPoolInfo[Index];
             if (!LoadConstantInfo(Reader, RemainSize, Item)) {
                 return { JDR_DATA_SIZE_ERROR, "Read class info error @" X_STRINGIFY(__LINE__)};
             }
+            if (Item.Tag == eConstantTag::Long || Item.Tag == eConstantTag::Double) { // long & double types take two entry, an extra index increment is required
+                ++Index;
+            }
         }
 
-        return { JavaClass };
+        // read access flags:
+        if ((RemainSize -= 2) < 0) {
+            return { JDR_DATA_SIZE_ERROR, "Read class info error @" X_STRINGIFY(__LINE__)};
+        }
+        JavaClass.AccessFlags = Reader.R2();
+
+
+        return { std::move(JavaClass) };
+    }
+
+    static std::string DumpClassAccessFlags(const xClass & JavaClass)
+    {
+        auto Flag = JavaClass.AccessFlags;
+        std::vector<std::string> FlagStrings;
+        if (HasClassAccessFlag_Super(Flag)) {
+            FlagStrings.push_back("ACC_SUPER");
+        }
+        if (HasClassAccessFlag_Final(Flag)) {
+            FlagStrings.push_back("ACC_FINAL");
+        }
+        if (HasClassAccessFlag_Public(Flag)) {
+            FlagStrings.push_back("ACC_PUBLIC");
+        }
+        if (HasClassAccessFlag_Interface(Flag)) {
+            FlagStrings.push_back("ACC_INTERFACE");
+        }
+        if (HasClassAccessFlag_Abstract(Flag)) {
+            FlagStrings.push_back("ACC_ABSTRACT");
+        }
+        if (HasClassAccessFlag_Synthetic(Flag)) {
+            FlagStrings.push_back("ACC_SYNTHETIC");
+        }
+        if (HasClassAccessFlag_Annotation(Flag)) {
+            FlagStrings.push_back("ACC_ANNOTATION");
+        }
+        if (HasClassAccessFlag_Enum(Flag)) {
+            FlagStrings.push_back("ACC_ENUM");
+        }
+        if (HasClassAccessFlag_Module(Flag)) {
+            FlagStrings.push_back("ACC_MODULE");
+        }
+        return Join(FlagStrings.begin(), FlagStrings.end(), ' ');
     }
 
     std::string DumpStringFromClass(const xClass & JavaClass)
@@ -308,6 +480,11 @@ namespace xjd
         ss << " - MinorVersion: " << JavaClass.MinorVersion << endl;
 
         ss << " -- ConstantPoolSize: " << JavaClass.ConstantPoolInfo.size() << endl;
+        for (size_t Index = 0; Index < JavaClass.ConstantPoolInfo.size(); ++Index) {
+            ss << " --- " << DumpConstantItemString(JavaClass.ConstantPoolInfo, Index) << endl;
+        }
+
+        ss << " -- AccessFlags(0x" << std::hex << JavaClass.AccessFlags << std::dec << "): " << DumpClassAccessFlags(JavaClass) << endl;
 
         return ss.str();
     }

@@ -1,7 +1,7 @@
 #include "./JD_Base.hpp"
 #include <string>
 
-namespace xjd
+namespace jdc
 {
 
     enum eJDResultCode : uint16_t

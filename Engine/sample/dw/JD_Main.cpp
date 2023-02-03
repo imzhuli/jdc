@@ -12,7 +12,7 @@
 
 using namespace xel;
 using namespace std;
-using namespace xjd;
+using namespace jdc;
 
 int main(int argc, char *argv[])
 {

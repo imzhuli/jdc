@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace xjd
+namespace jdc
 {
 
     enum struct eConstantTag : uint8_t
@@ -47,6 +47,41 @@ namespace xjd
         }
         return false;
     }
+
+    enum eFieldType : uint8_t
+    {
+        Byte    = (uint8_t)'B',
+        Char    = (uint8_t)'C',
+        Double  = (uint8_t)'D',
+        Float   = (uint8_t)'F',
+        Integer = (uint8_t)'I',
+        Long    = (uint8_t)'J',
+        Class   = (uint8_t)'L',
+        Short   = (uint8_t)'S',
+        Boolean = (uint8_t)'Z',
+        Array   = (uint8_t)'[',
+    };
+
+    using xAccessFlag = uint16_t;
+    constexpr const xAccessFlag ACC_PUBLIC       = 0x0001; // field | method
+    constexpr const xAccessFlag ACC_PRIVATE      = 0x0002; // field | method
+    constexpr const xAccessFlag ACC_PROTECTED    = 0x0004; // field | method
+    constexpr const xAccessFlag ACC_STATIC       = 0x0008; // field | method
+    constexpr const xAccessFlag ACC_FINAL        = 0x0010; // field | method
+    constexpr const xAccessFlag ACC_SYNCHRONIZED = 0x0020; // method
+    constexpr const xAccessFlag ACC_SUPER        = 0x0020; // class | interface
+    constexpr const xAccessFlag ACC_OPEN         = 0x0020; // module
+    constexpr const xAccessFlag ACC_VOLATILE     = 0x0040; // field | method
+    constexpr const xAccessFlag ACC_TRANSIENT    = 0x0080; // field | method
+    constexpr const xAccessFlag ACC_NATIVE       = 0x0100; // method
+    constexpr const xAccessFlag ACC_INTERFACE    = 0x0200; // class
+    constexpr const xAccessFlag ACC_ABSTRACT     = 0x0400; // method
+    constexpr const xAccessFlag ACC_STRICT       = 0x0800; // method
+    constexpr const xAccessFlag ACC_SYNTHETIC    = 0x1000; // class NOT_IN_SOURCE
+    constexpr const xAccessFlag ACC_ANNOTATION   = 0x2000; // class
+    constexpr const xAccessFlag ACC_ENUM         = 0x4000; // class
+    constexpr const xAccessFlag ACC_MODULE       = 0x8000; // class
+    constexpr const xAccessFlag ACC_MANDATED     = 0x8000; // module
 
     struct xConstantClassInfo
     {
@@ -118,38 +153,60 @@ namespace xjd
         uint16_t DescriptorIndex;
     };
 
+    struct xDynamicInfo
+    {
+        uint16_t BootstrapMethodAttributeIndex;
+        uint16_t NameAndTypeIndex;
+    };
+
+    struct xInvokeDynamicInfo
+    {
+        uint16_t BootstrapMethodAttributeIndex;
+        uint16_t NameAndTypeIndex;
+    };
+
+    struct xModuleInfo
+    {
+        uint16_t NameIndex;
+    };
+
+    struct xPackageInfo
+    {
+        uint16_t NameIndex;
+    };
+
     struct xConstantItemInfo
     {
         eConstantTag         Tag = eConstantTag::Unspecified;
         union {
-            xConstantClassInfo                ClassInfo;
-            xConstantFieldRefInfo             FieldRefInfo;
-            xConstantStringInfo               StringInfo;
-            xConstantMethodRefInfo            MethodRefInfo;
-            xConstantInterfaceMethodRefInfo   InterfaceMethodRefInfo;
-            xConstantIntegerInfo              IntegerInfo;
-            xConstantFloatInfo                FloatInfo;
-            xConstantLongInfo                 LongInfo;
-            xConstantDoubleInfo               DoubleInfo;
-            xConstnatNameAndTypeInfo          NameAndTypeInfo;
-            xConstantUtf8Info                 Utf8Info;
-            xConstMethodHandleInfo            MethodHandleInfo;
-            xConstMethodTypeInfo              MethodTypeInfo;
-        };
+            xConstantClassInfo                Class;
+            xConstantFieldRefInfo             FieldRef;
+            xConstantStringInfo               String;
+            xConstantMethodRefInfo            MethodRef;
+            xConstantInterfaceMethodRefInfo   InterfaceMethodRef;
+            xConstantIntegerInfo              Integer;
+            xConstantFloatInfo                Float;
+            xConstantLongInfo                 Long;
+            xConstantDoubleInfo               Double;
+            xConstnatNameAndTypeInfo          NameAndType;
+            xConstantUtf8Info                 Utf8;
+            xConstMethodHandleInfo            MethodHandle;
+            xConstMethodTypeInfo              MethodType;
+            xDynamicInfo                      Dynamic;
+            xInvokeDynamicInfo                InvokeDynamic;
+            xModuleInfo                       Module;
+            xPackageInfo                      Package;
+        } Info;
 
         xConstantItemInfo() = default;
         xConstantItemInfo(const xConstantItemInfo &Other);
+        xConstantItemInfo(xConstantItemInfo && Other);
         X_GAME_API_MEMBER ~xConstantItemInfo();
         X_GAME_API_MEMBER void SetUtf8(const char * DataPtr, size_t Length);
         X_GAME_API_MEMBER void Clear();
     };
 
     struct xClassInterface
-    {
-
-    };
-
-    struct xClassFieldInfo
     {
 
     };
@@ -162,6 +219,14 @@ namespace xjd
     struct xClassAttributeInfo
     {
 
+    };
+
+    struct xClassFieldInfo
+    {
+        xAccessFlag                        AccessFlags;
+        uint16_t                           NameIndex;
+        uint16_t                           DescriptorIndex;
+        std::vector<xClassAttributeInfo>   Attributes;
     };
 
     struct xClass
@@ -180,8 +245,24 @@ namespace xjd
         std::vector<xClassAttributeInfo>   Attributes;
     };
 
-    X_GAME_API const char * ConstantTypeString(const eConstantTag Tag);
+    X_GAME_API const char * ConstantTagString(const eConstantTag Tag);
+
+    X_GAME_API const std::string * GetConstantItemUtf8(const xConstantItemInfo & Item);
+    X_GAME_API const std::string * GetConstantItemUtf8(const std::vector<xConstantItemInfo> & Items, size_t Index);
+    X_GAME_API const std::string * GetConstantItemString(const std::vector<xConstantItemInfo> & Items, size_t Index);
+    X_GAME_API std::string DumpConstantItemString(const std::vector<xConstantItemInfo> & Items, size_t Index);
+
     X_GAME_API const char * ClassVersionString(uint16_t MajorVersion);
     X_GAME_API xJDResult<xClass> LoadClassInfoFromFile(const std::string & Filename);
     X_GAME_API std::string DumpStringFromClass(const xClass & JavaClass);
+
+    X_INLINE bool HasClassAccessFlag_Super(xAccessFlag Flag) { return Flag & ACC_SUPER; }
+    X_INLINE bool HasClassAccessFlag_Final(xAccessFlag Flag) { return Flag & ACC_FINAL; }
+    X_INLINE bool HasClassAccessFlag_Public(xAccessFlag Flag) { return Flag & ACC_PUBLIC; }
+    X_INLINE bool HasClassAccessFlag_Interface(xAccessFlag Flag) { return Flag & ACC_INTERFACE; }
+    X_INLINE bool HasClassAccessFlag_Abstract(xAccessFlag Flag) { return Flag & ACC_ABSTRACT; }
+    X_INLINE bool HasClassAccessFlag_Synthetic(xAccessFlag Flag) { return Flag & ACC_SYNTHETIC; } // not in source code
+    X_INLINE bool HasClassAccessFlag_Annotation(xAccessFlag Flag) { return Flag & ACC_ANNOTATION; }
+    X_INLINE bool HasClassAccessFlag_Enum(xAccessFlag Flag) { return Flag & ACC_ENUM; }
+    X_INLINE bool HasClassAccessFlag_Module(xAccessFlag Flag) { return Flag & ACC_MODULE; }
 }
