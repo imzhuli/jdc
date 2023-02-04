@@ -7,6 +7,26 @@
 namespace jdc
 {
 
+    enum struct eFieldType : uint8_t
+    {
+        Void,
+        Byte,
+        Short,
+        Integer,
+        Long,
+        Char,
+        Float,
+        Double,
+        Boolean,
+        Class,
+        Array,
+
+        // the following are used only when extracting types form descriptor:
+        ParamStart,
+        ParamEnd,
+        Invalid,
+    };
+
     enum struct eConstantTag : uint8_t
     {
         Unspecified        = 0,
@@ -47,20 +67,6 @@ namespace jdc
         }
         return false;
     }
-
-    enum eFieldType : uint8_t
-    {
-        Byte    = (uint8_t)'B',
-        Char    = (uint8_t)'C',
-        Double  = (uint8_t)'D',
-        Float   = (uint8_t)'F',
-        Integer = (uint8_t)'I',
-        Long    = (uint8_t)'J',
-        Class   = (uint8_t)'L',
-        Short   = (uint8_t)'S',
-        Boolean = (uint8_t)'Z',
-        Array   = (uint8_t)'[',
-    };
 
     using xAccessFlag = uint16_t;
     constexpr const xAccessFlag ACC_PUBLIC       = 0x0001; // field | method
@@ -211,9 +217,8 @@ namespace jdc
     struct xAttributeInfo
     {
         uint16_t                      NameIndex;
-        std::vector<xel::ubyte>       Info;
+        std::vector<xel::ubyte>       Binary;
     };
-
 
     struct xMethodInfo
     {
@@ -221,6 +226,18 @@ namespace jdc
         uint16_t                      NameIndex;
         uint16_t                      DescriptorIndex;
         std::vector<xAttributeInfo>   Attributes;
+    };
+
+    struct xVariableType
+    {
+        eFieldType   Type;
+        std::string  ClassPathName;
+    };
+
+    struct xMethodDescriptor
+    {
+        std::vector<xVariableType>   ParameterTypes;
+        xVariableType                ReturnType;
     };
 
     struct xFieldInfo
@@ -246,23 +263,18 @@ namespace jdc
         std::vector<xAttributeInfo>        Attributes;
     };
 
+    X_GAME_API const char * ClassVersionString(uint16_t MajorVersion);
     X_GAME_API const char * ConstantTagString(const eConstantTag Tag);
+    X_GAME_API const char * FieldTypeString(const eFieldType Type);
 
     X_GAME_API const std::string * GetConstantItemUtf8(const xConstantItemInfo & Item);
     X_GAME_API const std::string * GetConstantItemUtf8(const std::vector<xConstantItemInfo> & Items, size_t Index);
     X_GAME_API const std::string * GetConstantItemString(const std::vector<xConstantItemInfo> & Items, size_t Index);
     X_GAME_API const std::string * GetConstantItemClassPathName(const std::vector<xConstantItemInfo> & Items, size_t Index);
 
-    X_GAME_API const char * ClassVersionString(uint16_t MajorVersion);
+    X_GAME_API xVariableType ExtractVariableType(const std::string & Utf8, size_t & Index);
+    X_GAME_API xMethodDescriptor ExtractMethodDescriptor(const std::string & Utf8);
+
     X_GAME_API xJDResult<xClass> LoadClassInfoFromFile(const std::string & Filename);
 
-    X_INLINE bool HasClassAccessFlag_Super(xAccessFlag Flag) { return Flag & ACC_SUPER; }
-    X_INLINE bool HasClassAccessFlag_Final(xAccessFlag Flag) { return Flag & ACC_FINAL; }
-    X_INLINE bool HasClassAccessFlag_Public(xAccessFlag Flag) { return Flag & ACC_PUBLIC; }
-    X_INLINE bool HasClassAccessFlag_Interface(xAccessFlag Flag) { return Flag & ACC_INTERFACE; }
-    X_INLINE bool HasClassAccessFlag_Abstract(xAccessFlag Flag) { return Flag & ACC_ABSTRACT; }
-    X_INLINE bool HasClassAccessFlag_Synthetic(xAccessFlag Flag) { return Flag & ACC_SYNTHETIC; }
-    X_INLINE bool HasClassAccessFlag_Annotation(xAccessFlag Flag) { return Flag & ACC_ANNOTATION; }
-    X_INLINE bool HasClassAccessFlag_Enum(xAccessFlag Flag) { return Flag & ACC_ENUM; }
-    X_INLINE bool HasClassAccessFlag_Module(xAccessFlag Flag) { return Flag & ACC_MODULE; }
 }

@@ -65,31 +65,31 @@ namespace jdc
     {
         auto Flag = JavaClass.AccessFlags;
         std::vector<std::string> FlagStrings;
-        if (HasClassAccessFlag_Super(Flag)) {
+        if (Flag & ACC_SUPER) {
             FlagStrings.push_back("ACC_SUPER");
         }
-        if (HasClassAccessFlag_Final(Flag)) {
+        if (Flag & ACC_FINAL) {
             FlagStrings.push_back("ACC_FINAL");
         }
-        if (HasClassAccessFlag_Public(Flag)) {
+        if (Flag & ACC_PUBLIC) {
             FlagStrings.push_back("ACC_PUBLIC");
         }
-        if (HasClassAccessFlag_Interface(Flag)) {
+        if (Flag & ACC_INTERFACE) {
             FlagStrings.push_back("ACC_INTERFACE");
         }
-        if (HasClassAccessFlag_Abstract(Flag)) {
+        if (Flag & ACC_ABSTRACT) {
             FlagStrings.push_back("ACC_ABSTRACT");
         }
-        if (HasClassAccessFlag_Synthetic(Flag)) {
+        if (Flag & ACC_SYNTHETIC) {
             FlagStrings.push_back("ACC_SYNTHETIC");
         }
-        if (HasClassAccessFlag_Annotation(Flag)) {
+        if (Flag & ACC_ANNOTATION) {
             FlagStrings.push_back("ACC_ANNOTATION");
         }
-        if (HasClassAccessFlag_Enum(Flag)) {
+        if (Flag & ACC_ENUM) {
             FlagStrings.push_back("ACC_ENUM");
         }
-        if (HasClassAccessFlag_Module(Flag)) {
+        if (Flag & ACC_MODULE) {
             FlagStrings.push_back("ACC_MODULE");
         }
         return Join(FlagStrings.begin(), FlagStrings.end(), ' ');
@@ -171,9 +171,58 @@ namespace jdc
     }
 
 
-    std::string DumpStringFromClass(const xClass & JavaClass)
+    std::string DumpAttribute(const std::vector<xConstantItemInfo> & ConstantPool, const xAttributeInfo & AttributeInfo)
     {
         std::stringstream ss;
+        ss << "Attribute: " << *GetConstantItemUtf8(ConstantPool, AttributeInfo.NameIndex) << ", size=" << AttributeInfo.Binary.size() << endl;
+        return ss.str();
+    }
+
+    std::string DumpVariableType(const xVariableType & VType)
+    {
+        if (VType.Type == eFieldType::Class) {
+            return "Class:" + VType.ClassPathName;
+        }
+        return FieldTypeString(VType.Type);
+    }
+
+    std::string DumpMethodDescriptor(const xMethodDescriptor Descriptor)
+    {
+        std::stringstream ss;
+        ss << DumpVariableType(Descriptor.ReturnType) << " ";
+        std::vector<std::string> ParamTypeStrings;
+
+        for (size_t i = 0; i < Descriptor.ParameterTypes.size(); ++i) {
+            auto & VType = Descriptor.ParameterTypes[i];
+            if (VType.Type != eFieldType::Array) {
+                ParamTypeStrings.push_back(DumpVariableType(VType));
+                continue;
+            }
+
+            size_t ArraySize = 1;
+            std::string ArrayTypeString;
+            while(++i) {
+                auto & TestVType = Descriptor.ParameterTypes[i];
+                if (TestVType.Type != eFieldType::Array) {
+                    ArrayTypeString = DumpVariableType(TestVType);
+                    for (size_t ACounter = 0 ; ACounter < ArraySize; ++ACounter) {
+                        ArrayTypeString += "[]";
+                    }
+                    break;
+                } else {
+                    ++ArraySize;
+                }
+            }
+            ParamTypeStrings.push_back(ArrayTypeString);
+        }
+        ss << '(' << Join(ParamTypeStrings.begin(), ParamTypeStrings.end(), ',') << ')';
+        return ss.str();
+    }
+
+    std::string DumpClass(const xClass & JavaClass)
+    {
+        std::stringstream ss;
+
         ss << "ClassName " << *GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.ThisClass) << endl;
         ss << "ClassName " << *GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.SuperClass) << endl;
         ss << " - MagicCheck: " << YN(JavaClass.Magic == 0xCAFEBABE) << endl;
@@ -194,14 +243,34 @@ namespace jdc
 
         // dump fields:
         ss << " -- fields" << endl;
-        for(auto Field : JavaClass.Fields) {
+        for(auto & Field : JavaClass.Fields) {
             ss << " ---- " << *GetConstantItemUtf8(JavaClass.ConstantPool, Field.NameIndex) << " : " << DumpFieldAccessFlags(Field.AccessFlags) << endl;
+            ss << " ------ " << "Descriptor: " << *GetConstantItemUtf8(JavaClass.ConstantPool, Field.DescriptorIndex) << endl;
+            for(auto & AttributeInfo : Field.Attributes) {
+                ss << " ------ " << DumpAttribute(JavaClass.ConstantPool, AttributeInfo);
+                ss << HexShow(AttributeInfo.Binary.data(), AttributeInfo.Binary.size(), 8) << endl;
+            }
         }
 
         // dump methods:
         ss << " -- methods" << endl;
-        for(auto Method : JavaClass.Methods) {
+        for(auto & Method : JavaClass.Methods) {
             ss << " ---- " << *GetConstantItemUtf8(JavaClass.ConstantPool, Method.NameIndex) << " : " << DumpMethodAccessFlags(Method.AccessFlags) << endl;
+
+            auto DescriptorString =  *GetConstantItemUtf8(JavaClass.ConstantPool, Method.DescriptorIndex);
+            auto Descriptor = ExtractMethodDescriptor(DescriptorString);
+            ss << " ------ " << "Descriptor: " << DescriptorString << ": " << DumpMethodDescriptor(Descriptor) << endl;
+            for(auto & AttributeInfo : Method.Attributes) {
+                ss << " ------ " << DumpAttribute(JavaClass.ConstantPool, AttributeInfo);
+                ss << HexShow(AttributeInfo.Binary.data(), AttributeInfo.Binary.size(), 8) << endl;
+            }
+        }
+
+        // dump attributes:
+        ss << " -- attributes" << endl;
+        for(auto & AttributeInfo : JavaClass.Attributes) {
+            ss << " ---- " << DumpAttribute(JavaClass.ConstantPool, AttributeInfo);
+            ss << HexShow(AttributeInfo.Binary.data(), AttributeInfo.Binary.size(), 6) << endl;
         }
 
         return ss.str();

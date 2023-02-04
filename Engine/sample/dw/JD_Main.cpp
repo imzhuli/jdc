@@ -1,4 +1,5 @@
 #include <xel/Common.hpp>
+#include <xel/String.hpp>
 #include <xel/Util/Command.hpp>
 #include <iostream>
 
@@ -35,8 +36,8 @@ int main(int argc, char *argv[])
             cerr << "LoadClassError: " << LoadResult.ErrorMessage << endl;
             return -1;
         }
-        cout << DumpStringFromClass(LoadResult.Data) << endl;
-        cout << GenerateClassCode(LoadResult.Data) << endl;
+        cout << DumpClass(LoadResult.Data) << endl;
+        // cout << GenerateClassCode(LoadResult.Data) << endl;
         return 0;
     }
 

@@ -11,7 +11,7 @@ namespace jdc
 
     std::string GetPackageName(const std::string & ClassPathName)
     {
-        auto IndexIter = ClassPathName.find_last_of('/');
+        auto IndexIter = ClassPathName.rfind('/');
         auto PackageName = ClassPathName.substr(0, IndexIter);
         for (auto & C : PackageName) {
             if (C == '/') {
@@ -34,7 +34,7 @@ namespace jdc
 
     std::string GetClassName(const std::string & ClassPathName)
     {
-        auto IndexIter = ClassPathName.find_last_of('/');
+        auto IndexIter = ClassPathName.rfind('/');
         if (IndexIter == ClassPathName.npos) {
             return ClassPathName;
         }
@@ -43,7 +43,7 @@ namespace jdc
 
     std::pair<std::string, std::string> GetPackageAndClassName(const std::string & ClassPathName)
     {
-        auto IndexIter = ClassPathName.find_last_of('/');
+        auto IndexIter = ClassPathName.rfind('/');
         if (IndexIter == ClassPathName.npos) {
             return std::make_pair(std::string(""), ClassPathName);
         }
@@ -74,22 +74,22 @@ namespace jdc
 
         // qualifierss:
         auto AccessFlags = JavaClass.AccessFlags;
-        if (HasClassAccessFlag_Public(AccessFlags)) {
+        if (AccessFlags & ACC_PUBLIC) {
             TitleStrings.push_back("public");
         }
-        if (HasClassAccessFlag_Abstract(AccessFlags)) {
+        if (AccessFlags & ACC_ABSTRACT) {
             TitleStrings.push_back("abstract");
         }
-        if (HasClassAccessFlag_Final(AccessFlags)) {
+        if (AccessFlags & ACC_FINAL) {
             TitleStrings.push_back("final");
         }
 
         // class type:
-        if (HasClassAccessFlag_Enum(AccessFlags)) {
+        if (AccessFlags & ACC_ENUM) {
             TitleStrings.push_back("enum");
         }
-        else if (HasClassAccessFlag_Interface(AccessFlags)) {
-            if (HasClassAccessFlag_Annotation(AccessFlags)) {
+        else if (AccessFlags & ACC_INTERFACE) {
+            if (AccessFlags & ACC_ANNOTATION) {
                 TitleStrings.push_back("@interface");
             } else {
                 TitleStrings.push_back("interface");

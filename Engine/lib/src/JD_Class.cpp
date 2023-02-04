@@ -98,6 +98,49 @@ namespace jdc
         return "Unknown";
     }
 
+    const char * FieldTypeString(const eFieldType Type)
+    {
+        switch(Type) {
+            case eFieldType::Void: {
+                return "void";
+            }
+            case eFieldType::Byte: {
+                return "byte";
+            }
+            case eFieldType::Short: {
+                return "short";
+            }
+            case eFieldType::Integer: {
+                return "int";
+            }
+            case eFieldType::Long: {
+                return "long";
+            }
+            case eFieldType::Char: {
+                return "char";
+            }
+            case eFieldType::Float: {
+                return "float";
+            }
+            case eFieldType::Double: {
+                return "double";
+            }
+            case eFieldType::Boolean: {
+                return "boolean";
+            }
+            case eFieldType::Class: {
+                return "Class";
+            }
+            case eFieldType::Array: {
+                return "Array";
+            }
+            default: {
+                break;
+            }
+        }
+        return nullptr;
+    }
+
     const std::string * GetConstantItemUtf8(const xConstantItemInfo & Item)
     {
         if (Item.Tag == eConstantTag::Utf8) {
@@ -359,11 +402,11 @@ namespace jdc
             return false;
         }
         AttributeInfo.NameIndex = Reader.R2();
-        AttributeInfo.Info.resize(Reader.R4());
-        if ((RemainSize -= AttributeInfo.Info.size()) < 0) {
+        AttributeInfo.Binary.resize(Reader.R4());
+        if ((RemainSize -= AttributeInfo.Binary.size()) < 0) {
             return false;
         }
-        Reader.R(AttributeInfo.Info.data(), AttributeInfo.Info.size());
+        Reader.R(AttributeInfo.Binary.data(), AttributeInfo.Binary.size());
         return true;
     }
 
@@ -382,6 +425,86 @@ namespace jdc
             }
         }
         return true;
+    }
+
+    xVariableType ExtractVariableType(const std::string & Utf8, size_t & Index) {
+        switch(Utf8[Index]) {
+            case 'B': {
+                ++Index;
+                return { eFieldType::Byte };
+            }
+            case 'C': {
+                ++Index;
+                return { eFieldType::Char };
+            }
+            case 'D': {
+                ++Index;
+                return { eFieldType::Double };
+            }
+            case 'F': {
+                ++Index;
+                return { eFieldType::Float };
+            }
+            case 'I': {
+                ++Index;
+                return { eFieldType::Integer };
+            }
+            case 'J': {
+                ++Index;
+                return { eFieldType::Long };
+            }
+            case 'S': {
+                ++Index;
+                return { eFieldType::Short };
+            }
+            case 'Z': {
+                ++Index;
+                return { eFieldType::Boolean };
+            }
+            case '[': {
+                ++Index;
+                return { eFieldType::Array };
+            }
+            case 'L': {
+                auto EndIndex = Utf8.find(';', Index);
+                assert(EndIndex != Utf8.npos);
+                assert(EndIndex != Index + 1);
+
+                ++Index;
+                xVariableType VType = { eFieldType::Class, Utf8.substr(Index, EndIndex - Index) };
+                Index = EndIndex + 1;
+                return VType;
+            }
+            case 'V': {
+                ++Index;
+                return { eFieldType::Void };
+            }
+            case '(': {
+                ++Index;
+                return { eFieldType::ParamStart };
+            }
+            case ')': {
+                ++Index;
+                return { eFieldType::ParamEnd };
+            }
+        }
+        ++Index;
+        return { eFieldType::Invalid };
+    }
+
+    xMethodDescriptor ExtractMethodDescriptor(const std::string & Utf8)
+    {
+        xMethodDescriptor Descriptor;
+        size_t i = 1; // skip the first '('
+        for (;i < Utf8.size();) {
+            auto VType = ExtractVariableType(Utf8, i);
+            if (VType.Type == eFieldType::ParamEnd) {
+                break;
+            }
+            Descriptor.ParameterTypes.push_back(std::move(VType));
+        }
+        Descriptor.ReturnType = ExtractVariableType(Utf8, i);
+        return Descriptor;
     }
 
     static bool LoadMethodInfo(xStreamReader & Reader, ssize_t & RemainSize, xMethodInfo & MethodInfo)
@@ -485,6 +608,17 @@ namespace jdc
         for (auto & MethodInfo : JavaClass.Methods) {
             if (!LoadMethodInfo(Reader, RemainSize, MethodInfo)) {
                 return { JDR_DATA_SIZE_ERROR, "Read method info error @" X_STRINGIFY(__LINE__)};
+            }
+        }
+
+        // attributes:
+        if ((RemainSize -= 2) < 0) {
+            return { JDR_DATA_SIZE_ERROR, "Read attribute info error @" X_STRINGIFY(__LINE__)};
+        }
+        JavaClass.Attributes.resize(Reader.R2());
+        for (auto & AttributeInfo : JavaClass.Attributes) {
+            if (!LoadAttributeInfo(Reader, RemainSize, AttributeInfo)) {
+                return { JDR_DATA_SIZE_ERROR, "Read attribute info error @" X_STRINGIFY(__LINE__)};
             }
         }
 
