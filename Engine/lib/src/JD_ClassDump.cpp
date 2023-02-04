@@ -92,7 +92,7 @@ namespace jdc
         if (Flag & ACC_MODULE) {
             FlagStrings.push_back("ACC_MODULE");
         }
-        return Join(FlagStrings.begin(), FlagStrings.end(), ' ');
+        return JoinStr(FlagStrings.begin(), FlagStrings.end(), ' ');
     }
 
     static std::string DumpFieldAccessFlags(xAccessFlag Flags)
@@ -125,7 +125,7 @@ namespace jdc
         if (Flags & ACC_ENUM) {
             FlagStrings.push_back("ACC_ENUM");
         }
-        return Join(FlagStrings.begin(), FlagStrings.end(), ' ');
+        return JoinStr(FlagStrings.begin(), FlagStrings.end(), ' ');
     }
 
     static std::string DumpMethodAccessFlags(xAccessFlag Flags)
@@ -167,13 +167,13 @@ namespace jdc
         if (Flags & ACC_SYNTHETIC) {
             FlagStrings.push_back("ACC_SYNTHETIC");
         }
-        return Join(FlagStrings.begin(), FlagStrings.end(), ' ');
+        return JoinStr(FlagStrings.begin(), FlagStrings.end(), ' ');
     }
 
 
     std::string DumpAttribute(const std::vector<xConstantItemInfo> & ConstantPool, const xAttributeInfo & AttributeInfo)
     {
-        std::stringstream ss;
+        std::ostringstream ss;
         ss << "Attribute: " << *GetConstantItemUtf8(ConstantPool, AttributeInfo.NameIndex) << ", size=" << AttributeInfo.Binary.size() << endl;
         return ss.str();
     }
@@ -181,14 +181,14 @@ namespace jdc
     std::string DumpVariableType(const xVariableType & VType)
     {
         if (VType.Type == eFieldType::Class) {
-            return "Class:" + VType.ClassPathName;
+            return GetFullClassName(VType.ClassPathName);
         }
         return FieldTypeString(VType.Type);
     }
 
     std::string DumpMethodDescriptor(const xMethodDescriptor Descriptor)
     {
-        std::stringstream ss;
+        std::ostringstream ss;
         ss << DumpVariableType(Descriptor.ReturnType) << " ";
         std::vector<std::string> ParamTypeStrings;
 
@@ -215,13 +215,13 @@ namespace jdc
             }
             ParamTypeStrings.push_back(ArrayTypeString);
         }
-        ss << '(' << Join(ParamTypeStrings.begin(), ParamTypeStrings.end(), ',') << ')';
+        ss << '(' << JoinStr(ParamTypeStrings.begin(), ParamTypeStrings.end(), ", ") << ')';
         return ss.str();
     }
 
     std::string DumpClass(const xClass & JavaClass)
     {
-        std::stringstream ss;
+        std::ostringstream ss;
 
         ss << "ClassName " << *GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.ThisClass) << endl;
         ss << "ClassName " << *GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.SuperClass) << endl;

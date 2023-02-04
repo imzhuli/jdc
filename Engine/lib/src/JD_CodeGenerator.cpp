@@ -1,5 +1,6 @@
 #include <jdc/JD_CodeGenerator.hpp>
 #include <jdc/JD_Util.hpp>
+#include <xel/String.hpp>
 
 using namespace std;
 using namespace xel;
@@ -111,10 +112,10 @@ namespace jdc
         auto Interfaces = GetInterfaceNames(JavaClass);
         if (Interfaces.size()) {
             TitleStrings.push_back("implements");
-            TitleStrings.push_back(Join(Interfaces.begin(), Interfaces.end(), ", "));
+            TitleStrings.push_back(JoinStr(Interfaces.begin(), Interfaces.end(), ", "));
         }
 
-        return Join(TitleStrings.begin(), TitleStrings.end(), ' ');
+        return JoinStr(TitleStrings.begin(), TitleStrings.end(), ' ');
     }
 
     std::vector<std::string> GetImportNames(const xClass & JavaClass)
@@ -145,7 +146,7 @@ namespace jdc
         auto [PackageName, ClassName] = GetPackageAndClassName(ClassPathName);
         auto ClassTitle = GenerateClassTitle(JavaClass);
 
-        std::stringstream ss;
+        std::ostringstream ss;
         ss << "package " << PackageName << ';' << endl;
         ss << endl;
 
