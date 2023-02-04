@@ -1,4 +1,5 @@
 #include <jdc/JD_Class.hpp>
+#include <jdc/JD_ClassEx.hpp>
 #include <jdc/JD_Util.hpp>
 #include <jdc/JD_CodeGenerator.hpp>
 #include <xel/String.hpp>
@@ -172,6 +173,64 @@ namespace jdc
         }
         return nullptr;
     }
+
+    const std::string ConstantValueString(const std::vector<xConstantItemInfo> & Items, size_t Index)
+    {
+        auto & Item = Items[Index];
+        switch (Item.Tag) {
+            case eConstantTag::Integer:
+                return std::to_string(Item.Info.Integer.Value);
+            case eConstantTag::Long:
+                return std::to_string(Item.Info.Long.Value);
+            case eConstantTag::Float:
+                return std::to_string(Item.Info.Float.Value);
+            case eConstantTag::Double:
+                return std::to_string(Item.Info.Double.Value);
+            case eConstantTag::String:
+                return *GetConstantItemUtf8(Items, Item.Info.String.StringIndex);
+            default:
+                break;
+        }
+        return {};
+    }
+
+    const std::string ConstantFieldValueString(eFieldType FieldType, const std::vector<xConstantItemInfo> & Items, size_t Index)
+    {
+        auto & Item = Items[Index];
+        switch (FieldType) {
+            case eFieldType::Boolean: {
+                assert(Item.Tag == eConstantTag::Integer);
+                return Item.Info.Integer.Value ? "true" : "false";
+            }
+            case eFieldType::Byte:
+            case eFieldType::Short:
+            case eFieldType::Integer: {
+                assert(Item.Tag == eConstantTag::Integer);
+                return std::to_string(Item.Info.Integer.Value);
+            }
+            case eFieldType::Long: {
+                assert(Item.Tag == eConstantTag::Long);
+                return std::to_string(Item.Info.Long.Value);
+            }
+            case eFieldType::Float: {
+                assert(Item.Tag == eConstantTag::Float);
+                return std::to_string(Item.Info.Float.Value);
+            }
+            case eFieldType::Double: {
+                assert(Item.Tag == eConstantTag::Double);
+                return std::to_string(Item.Info.Double.Value);
+            }
+            case eFieldType::Class: {
+                assert(Item.Tag == eConstantTag::String);
+                return *GetConstantItemUtf8(Items, Item.Info.String.StringIndex);
+            }
+            default: {
+                break;
+            }
+        }
+        return {};
+    }
+
 
     static bool LoadConstantInfo(xStreamReader & Reader, ssize_t & RemainSize, xConstantItemInfo & TagInfo)
     {
@@ -396,6 +455,64 @@ namespace jdc
         Tag = eConstantTag::Unspecified;
     }
 
+    std::string GetPackageName(const std::string & ClassPathName)
+    {
+        auto IndexIter = ClassPathName.rfind('/');
+        auto PackageName = ClassPathName.substr(0, IndexIter);
+        for (auto & C : PackageName) {
+            if (C == '/') {
+                C = '.';
+            }
+        }
+        return PackageName;
+    }
+
+    std::string GetFullClassName(const std::string & ClassPathName)
+    {
+        auto Copy = ClassPathName;
+        for (auto & C : Copy) {
+            if (C == '/' || C == '$') {
+                C = '.';
+            }
+        }
+        return Copy;
+    }
+
+    std::string GetClassName(const std::string & ClassPathName)
+    {
+        auto IndexIter = ClassPathName.rfind('$');
+        if (IndexIter != ClassPathName.npos) {
+            return ClassPathName.substr(IndexIter + 1);
+        }
+
+        IndexIter = ClassPathName.rfind('/');
+        if (IndexIter != ClassPathName.npos) {
+            return ClassPathName.substr(IndexIter + 1);
+        }
+        return ClassPathName;
+    }
+
+    std::pair<std::string, std::string> GetPackageAndClassName(const std::string & ClassPathName)
+    {
+        auto IndexIter = ClassPathName.rfind('/');
+        if (IndexIter == ClassPathName.npos) {
+            return std::make_pair(std::string(""), ClassPathName);
+        }
+        auto PackageName = ClassPathName.substr(0, IndexIter);
+        for (auto & C : PackageName) {
+            if (C == '/') {
+                C = '.';
+            }
+        }
+        auto ClassName = ClassPathName.substr(IndexIter + 1);
+        for (auto & C : ClassName) {
+            if (C == '$') {
+                C = '.';
+            }
+        }
+        return std::make_pair(std::move(PackageName), std::move(ClassName));
+    }
+
     static bool LoadAttributeInfo(xStreamReader & Reader, ssize_t & RemainSize, xAttributeInfo & AttributeInfo)
     {
         if ((RemainSize -= 6) < 0) {
@@ -492,13 +609,46 @@ namespace jdc
         return { eFieldType::Invalid };
     }
 
+    std::string VariableTypeString(const xVariableType & VType)
+    {
+        if (VType.FieldType == eFieldType::Class) {
+            return GetFullClassName(VType.ClassPathName);
+        }
+        return FieldTypeString(VType.FieldType);
+    }
+
+    std::string VariableTypeString(const std::string & Utf8)
+    {
+        size_t i = 0; // skip the first '('
+        auto VType = ExtractVariableType(Utf8, i);
+        if (VType.FieldType != eFieldType::Array) {
+            return VariableTypeString(VType);
+        }
+
+        size_t ArraySize = 1;
+        std::string ArrayTypeString;
+        while (i < Utf8.size()) {
+            auto TestVType = ExtractVariableType(Utf8, i);
+            if (TestVType.FieldType != eFieldType::Array) {
+                ArrayTypeString = VariableTypeString(TestVType);
+                for (size_t ACounter = 0 ; ACounter < ArraySize; ++ACounter) {
+                    ArrayTypeString += "[]";
+                }
+                break;
+            } else {
+                ++ArraySize;
+            }
+        }
+        return ArrayTypeString;
+    }
+
     xMethodDescriptor ExtractMethodDescriptor(const std::string & Utf8)
     {
         xMethodDescriptor Descriptor;
         size_t i = 1; // skip the first '('
         for (;i < Utf8.size();) {
             auto VType = ExtractVariableType(Utf8, i);
-            if (VType.Type == eFieldType::ParamEnd) {
+            if (VType.FieldType == eFieldType::ParamEnd) {
                 break;
             }
             Descriptor.ParameterTypes.push_back(std::move(VType));

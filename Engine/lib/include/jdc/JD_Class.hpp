@@ -121,7 +121,7 @@ namespace jdc
 
     struct xConstantIntegerInfo
     {
-        uint32_t Value;
+        int32_t Value;
     };
 
     struct xConstantFloatInfo
@@ -131,7 +131,7 @@ namespace jdc
 
     struct xConstantLongInfo
     {
-        uint64_t Value;
+        int64_t Value;
     };
 
     struct xConstantDoubleInfo
@@ -230,7 +230,7 @@ namespace jdc
 
     struct xVariableType
     {
-        eFieldType   Type;
+        eFieldType   FieldType;
         std::string  ClassPathName;
     };
 
@@ -266,11 +266,20 @@ namespace jdc
     X_GAME_API const char * ClassVersionString(uint16_t MajorVersion);
     X_GAME_API const char * ConstantTagString(const eConstantTag Tag);
     X_GAME_API const char * FieldTypeString(const eFieldType Type);
+    X_GAME_API std::string VariableTypeString(const xVariableType & VType);
+    X_GAME_API std::string VariableTypeString(const std::string & Utf8);
 
     X_GAME_API const std::string * GetConstantItemUtf8(const xConstantItemInfo & Item);
     X_GAME_API const std::string * GetConstantItemUtf8(const std::vector<xConstantItemInfo> & Items, size_t Index);
     X_GAME_API const std::string * GetConstantItemString(const std::vector<xConstantItemInfo> & Items, size_t Index);
     X_GAME_API const std::string * GetConstantItemClassPathName(const std::vector<xConstantItemInfo> & Items, size_t Index);
+    X_GAME_API const std::string ConstantValueString(const std::vector<xConstantItemInfo> & Items, size_t Index);
+    X_GAME_API const std::string ConstantFieldValueString(eFieldType FieldType, const std::vector<xConstantItemInfo> & Items, size_t Index);
+
+    X_GAME_API std::string GetPackageName(const std::string & ClassPathName);
+    X_GAME_API std::string GetFullClassName(const std::string & ClassPathName);
+    X_GAME_API std::string GetClassName(const std::string & ClassPathName);
+    X_GAME_API std::pair<std::string, std::string> GetPackageAndClassName(const std::string & ClassPathName);
 
     X_GAME_API xVariableType ExtractVariableType(const std::string & Utf8, size_t & Index);
     X_GAME_API xMethodDescriptor ExtractMethodDescriptor(const std::string & Utf8);

@@ -178,24 +178,17 @@ namespace jdc
         return ss.str();
     }
 
-    std::string DumpVariableType(const xVariableType & VType)
-    {
-        if (VType.Type == eFieldType::Class) {
-            return GetFullClassName(VType.ClassPathName);
-        }
-        return FieldTypeString(VType.Type);
-    }
 
     std::string DumpMethodDescriptor(const std::string & MethodName, const xMethodDescriptor & Descriptor)
     {
         std::ostringstream ss;
-        ss << DumpVariableType(Descriptor.ReturnType);
+        ss << VariableTypeString(Descriptor.ReturnType);
         std::vector<std::string> ParamTypeStrings;
 
         for (size_t i = 0; i < Descriptor.ParameterTypes.size(); ++i) {
             auto & VType = Descriptor.ParameterTypes[i];
-            if (VType.Type != eFieldType::Array) {
-                ParamTypeStrings.push_back(DumpVariableType(VType));
+            if (VType.FieldType != eFieldType::Array) {
+                ParamTypeStrings.push_back(VariableTypeString(VType));
                 continue;
             }
 
@@ -203,8 +196,8 @@ namespace jdc
             std::string ArrayTypeString;
             while(++i) {
                 auto & TestVType = Descriptor.ParameterTypes[i];
-                if (TestVType.Type != eFieldType::Array) {
-                    ArrayTypeString = DumpVariableType(TestVType);
+                if (TestVType.FieldType != eFieldType::Array) {
+                    ArrayTypeString = VariableTypeString(TestVType);
                     for (size_t ACounter = 0 ; ACounter < ArraySize; ++ACounter) {
                         ArrayTypeString += "[]";
                     }
@@ -216,6 +209,13 @@ namespace jdc
             ParamTypeStrings.push_back(ArrayTypeString);
         }
         ss << " " << MethodName << '(' << JoinStr(ParamTypeStrings.begin(), ParamTypeStrings.end(), ", ") << ')';
+        return ss.str();
+    }
+
+    std::string Dump(const xFieldEx & FieldEx)
+    {
+        std::ostringstream ss;
+        ss << FieldEx.Name << " AccessFlags=" << FieldEx.AccessFlags << " TypeString=[" << FieldEx.TypeString << "] Init=" << FieldEx.InitValueString;
         return ss.str();
     }
 
@@ -244,8 +244,9 @@ namespace jdc
         // dump fields:
         ss << " -- fields" << endl;
         for(auto & Field : JavaClass.Fields) {
+            auto FieldEx = Extend(JavaClass, Field);
             ss << " ---- " << *GetConstantItemUtf8(JavaClass.ConstantPool, Field.NameIndex) << " : " << DumpFieldAccessFlags(Field.AccessFlags) << endl;
-            ss << " ------ " << "Descriptor: " << *GetConstantItemUtf8(JavaClass.ConstantPool, Field.DescriptorIndex) << endl;
+            ss << " ------ " << Dump(FieldEx) << endl;
             for(auto & AttributeInfo : Field.Attributes) {
                 ss << " ------ " << DumpAttribute(JavaClass.ConstantPool, AttributeInfo);
                 ss << HexShow(AttributeInfo.Binary.data(), AttributeInfo.Binary.size(), 8) << endl;

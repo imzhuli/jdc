@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
             return -1;
         }
         cout << DumpClass(LoadResult.Data) << endl;
-        // cout << GenerateClassCode(LoadResult.Data) << endl;
+        cout << GenerateClassCode(LoadResult.Data) << endl;
         return 0;
     }
 

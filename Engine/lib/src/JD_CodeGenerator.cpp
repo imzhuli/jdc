@@ -1,4 +1,5 @@
 #include <jdc/JD_CodeGenerator.hpp>
+#include <jdc/JD_ClassEx.hpp>
 #include <jdc/JD_Util.hpp>
 #include <xel/String.hpp>
 
@@ -9,54 +10,6 @@ namespace jdc
 {
 
     static const std::string JavaDefaultRootClassPathName = "java/lang/Object";
-
-    std::string GetPackageName(const std::string & ClassPathName)
-    {
-        auto IndexIter = ClassPathName.rfind('/');
-        auto PackageName = ClassPathName.substr(0, IndexIter);
-        for (auto & C : PackageName) {
-            if (C == '/') {
-                C = '.';
-            }
-        }
-        return PackageName;
-    }
-
-    std::string GetFullClassName(const std::string & ClassPathName)
-    {
-        auto Copy = ClassPathName;
-        for (auto & C : Copy) {
-            if (C == '/') {
-                C = '.';
-            }
-        }
-        return Copy;
-    }
-
-    std::string GetClassName(const std::string & ClassPathName)
-    {
-        auto IndexIter = ClassPathName.rfind('/');
-        if (IndexIter == ClassPathName.npos) {
-            return ClassPathName;
-        }
-        return ClassPathName.substr(IndexIter + 1);
-    }
-
-    std::pair<std::string, std::string> GetPackageAndClassName(const std::string & ClassPathName)
-    {
-        auto IndexIter = ClassPathName.rfind('/');
-        if (IndexIter == ClassPathName.npos) {
-            return std::make_pair(std::string(""), ClassPathName);
-        }
-        auto PackageName = ClassPathName.substr(0, IndexIter);
-        for (auto & C : PackageName) {
-            if (C == '/') {
-                C = '.';
-            }
-        }
-        auto ClassName = ClassPathName.substr(IndexIter + 1);
-        return std::make_pair(std::move(PackageName), std::move(ClassName));
-    }
 
     std::vector<std::string> GetInterfaceNames(const xClass & JavaClass)
     {
@@ -139,6 +92,11 @@ namespace jdc
         return ImportNames;
     }
 
+    std::string GenerateField(const std::vector<xConstantItemInfo> & ConstantPool, const xFieldInfo & FieldInfo)
+    {
+        return {};
+    }
+
     std::string GenerateClassCode(const xClass & JavaClass)
     {
         auto ClassPathName = *GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.ThisClass);
@@ -157,6 +115,16 @@ namespace jdc
 
         ss << ClassTitle << " {" << endl;
 
+        //////// fields:
+        for (auto & FieldInfo : JavaClass.Fields) {
+            auto FieldString = GenerateField(JavaClass.ConstantPool, FieldInfo);
+            if (FieldString.size()) {
+                ss << GenerateField(JavaClass.ConstantPool, FieldInfo) << endl;
+            }
+        }
+
+
+        //// end of fields
 
         ss << endl << "}" << endl;
 
