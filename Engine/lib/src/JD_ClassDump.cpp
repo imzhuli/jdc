@@ -261,10 +261,6 @@ namespace jdc
             auto DescriptorString =  *GetConstantItemUtf8(JavaClass.ConstantPool, Method.DescriptorIndex);
             auto Descriptor = ExtractMethodDescriptor(DescriptorString);
             ss << " ------ " << "Descriptor: " << DescriptorString << ": " << DumpMethodDescriptor(MethodName, Descriptor) << endl;
-            for(auto & AttributeInfo : Method.Attributes) {
-                ss << " ------ " << DumpAttribute(JavaClass.ConstantPool, AttributeInfo);
-                ss << HexShow(AttributeInfo.Binary.data(), AttributeInfo.Binary.size(), 8) << endl;
-            }
         }
 
         // dump attributes:
