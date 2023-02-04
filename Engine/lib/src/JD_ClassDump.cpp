@@ -186,10 +186,10 @@ namespace jdc
         return FieldTypeString(VType.Type);
     }
 
-    std::string DumpMethodDescriptor(const xMethodDescriptor Descriptor)
+    std::string DumpMethodDescriptor(const std::string & MethodName, const xMethodDescriptor & Descriptor)
     {
         std::ostringstream ss;
-        ss << DumpVariableType(Descriptor.ReturnType) << " ";
+        ss << DumpVariableType(Descriptor.ReturnType);
         std::vector<std::string> ParamTypeStrings;
 
         for (size_t i = 0; i < Descriptor.ParameterTypes.size(); ++i) {
@@ -215,7 +215,7 @@ namespace jdc
             }
             ParamTypeStrings.push_back(ArrayTypeString);
         }
-        ss << '(' << JoinStr(ParamTypeStrings.begin(), ParamTypeStrings.end(), ", ") << ')';
+        ss << " " << MethodName << '(' << JoinStr(ParamTypeStrings.begin(), ParamTypeStrings.end(), ", ") << ')';
         return ss.str();
     }
 
@@ -255,11 +255,12 @@ namespace jdc
         // dump methods:
         ss << " -- methods" << endl;
         for(auto & Method : JavaClass.Methods) {
-            ss << " ---- " << *GetConstantItemUtf8(JavaClass.ConstantPool, Method.NameIndex) << " : " << DumpMethodAccessFlags(Method.AccessFlags) << endl;
+            auto & MethodName = *GetConstantItemUtf8(JavaClass.ConstantPool, Method.NameIndex);
+            ss << " ---- " << MethodName << " : " << DumpMethodAccessFlags(Method.AccessFlags) << endl;
 
             auto DescriptorString =  *GetConstantItemUtf8(JavaClass.ConstantPool, Method.DescriptorIndex);
             auto Descriptor = ExtractMethodDescriptor(DescriptorString);
-            ss << " ------ " << "Descriptor: " << DescriptorString << ": " << DumpMethodDescriptor(Descriptor) << endl;
+            ss << " ------ " << "Descriptor: " << DescriptorString << ": " << DumpMethodDescriptor(MethodName, Descriptor) << endl;
             for(auto & AttributeInfo : Method.Attributes) {
                 ss << " ------ " << DumpAttribute(JavaClass.ConstantPool, AttributeInfo);
                 ss << HexShow(AttributeInfo.Binary.data(), AttributeInfo.Binary.size(), 8) << endl;
