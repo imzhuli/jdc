@@ -61,7 +61,7 @@ namespace jdc
         return IndexString + "Unknown";
     }
 
-    static std::string DumpClassAccessFlags(const xClass & JavaClass)
+    std::string DumpClassAccessFlags(const xClass & JavaClass)
     {
         auto Flag = JavaClass.AccessFlags;
         std::vector<std::string> FlagStrings;
@@ -95,7 +95,7 @@ namespace jdc
         return JoinStr(FlagStrings.begin(), FlagStrings.end(), ' ');
     }
 
-    static std::string DumpFieldAccessFlags(xAccessFlag Flags)
+    std::string DumpFieldAccessFlags(xAccessFlag Flags)
     {
         std::vector<std::string> FlagStrings;
         if (Flags & ACC_PUBLIC) {
@@ -215,11 +215,14 @@ namespace jdc
     std::string Dump(const xFieldEx & FieldEx)
     {
         std::ostringstream ss;
-        ss << FieldEx.Name << " AccessFlags=" << FieldEx.AccessFlags << " TypeString=[" << FieldEx.TypeString << "] Init=" << FieldEx.InitValueString;
+        ss << FieldEx.TypeString << ' ' <<  FieldEx.Name;
+        if (FieldEx.InitValueString.size()) {
+            ss << " = " << FieldEx.InitValueString;
+        }
         return ss.str();
     }
 
-    std::string DumpClass(const xClass & JavaClass)
+    std::string Dump(const xClass & JavaClass)
     {
         std::ostringstream ss;
 
@@ -237,7 +240,7 @@ namespace jdc
 
         ss << "SourceFile: " << ClassEx.SourceFile << endl;
         ss << "ClassName " << ClassEx.FullClassName << endl;
-        ss << "SuperClassName " << ClassEx.FullSuperClassName << endl;
+        ss << " -- SuperClassName " << ClassEx.FullSuperClassName << endl;
         ss << " -- AccessFlags(0x" << std::hex << JavaClass.AccessFlags << std::dec << "): " << DumpClassAccessFlags(JavaClass) << endl;
 
         ss << " -- Interfaces" << endl;
@@ -249,8 +252,7 @@ namespace jdc
         ss << " -- fields" << endl;
         for(auto & Field : JavaClass.Fields) {
             auto FieldEx = Extend(JavaClass, Field);
-            ss << " ---- " << *GetConstantItemUtf8(JavaClass.ConstantPool, Field.NameIndex) << " : " << DumpFieldAccessFlags(Field.AccessFlags) << endl;
-            ss << " ------ " << Dump(FieldEx) << endl;
+            ss << " ---- " << Dump(FieldEx) << endl;
             for(auto & AttributeInfo : Field.Attributes) {
                 ss << " ------ " << DumpAttribute(JavaClass.ConstantPool, AttributeInfo);
                 ss << HexShow(AttributeInfo.Binary.data(), AttributeInfo.Binary.size(), 8) << endl;

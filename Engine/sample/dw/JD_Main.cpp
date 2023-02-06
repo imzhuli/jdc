@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
             cerr << "LoadClassError: " << LoadResult.ErrorMessage << endl;
             return -1;
         }
-        cout << DumpClass(LoadResult.Data) << endl;
+        cout << Dump(LoadResult.Data) << endl;
         cout << GenerateClassCode(LoadResult.Data) << endl;
         return 0;
     }
