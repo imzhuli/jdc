@@ -223,8 +223,8 @@ namespace jdc
     {
         std::ostringstream ss;
 
-        ss << "ClassName " << *GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.ThisClass) << endl;
-        ss << "ClassName " << *GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.SuperClass) << endl;
+        // classex:
+        auto ClassEx = Extend(JavaClass);
         ss << " - MagicCheck: " << YN(JavaClass.Magic == 0xCAFEBABE) << endl;
         ss << " - MajorVersion: " << JavaClass.MajorVersion << " ( " << ClassVersionString(JavaClass.MajorVersion) << " ) "<< endl;
         ss << " - MinorVersion: " << JavaClass.MinorVersion << endl;
@@ -233,12 +233,16 @@ namespace jdc
         for (size_t Index = 0; Index < JavaClass.ConstantPool.size(); ++Index) {
             ss << " ---- " << DumpConstantItemString(JavaClass.ConstantPool, Index) << endl;
         }
+        ss << endl;
 
+        ss << "SourceFile: " << ClassEx.SourceFile << endl;
+        ss << "ClassName " << ClassEx.FullClassName << endl;
+        ss << "SuperClassName " << ClassEx.FullSuperClassName << endl;
         ss << " -- AccessFlags(0x" << std::hex << JavaClass.AccessFlags << std::dec << "): " << DumpClassAccessFlags(JavaClass) << endl;
 
         ss << " -- Interfaces" << endl;
-        for(auto InterfaceIndex : JavaClass.InterfaceIndices) {
-            ss << " ---- " << *GetConstantItemClassPathName(JavaClass.ConstantPool, InterfaceIndex) << endl;
+        for(auto & InterafceName : ClassEx.InterfaceNames) {
+            ss << " ---- " << InterafceName << endl;
         }
 
         // dump fields:
@@ -270,6 +274,7 @@ namespace jdc
             ss << " ---- " << DumpAttribute(JavaClass.ConstantPool, AttributeInfo);
             ss << HexShow(AttributeInfo.Binary.data(), AttributeInfo.Binary.size(), 6) << endl;
         }
+
 
         return ss.str();
     }

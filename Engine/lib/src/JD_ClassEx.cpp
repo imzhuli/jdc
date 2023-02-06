@@ -14,6 +14,36 @@ namespace jdc
         return Reader.R2();
     }
 
+    uint16_t ExtractSourceAttribute(const std::vector<ubyte> & Binary)
+    {
+        assert(Binary.size() == 2);
+        xStreamReader Reader(Binary.data());
+        return Reader.R2();
+    }
+
+    xClassEx Extend(const xClass& JavaClass)
+    {
+        xClassEx Ex;
+        auto & ConstantPool = JavaClass.ConstantPool;
+
+        for (auto & AttributeInfo : JavaClass.Attributes) {
+            auto & Name = *GetConstantItemUtf8(ConstantPool, AttributeInfo.NameIndex);
+            if (Name == "SourceFile") {
+                auto NameIndex = ExtractSourceAttribute(AttributeInfo.Binary);
+                Ex.SourceFile = *GetConstantItemUtf8(JavaClass.ConstantPool, NameIndex);
+            }
+        }
+
+        Ex.FullClassName = GetFullClassName(*GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.ThisClass));
+        Ex.FullSuperClassName = GetFullClassName(*GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.SuperClass));
+
+        for (auto InterfaceIndex : JavaClass.InterfaceIndices) {
+            auto InterfaceName = *GetConstantItemClassPathName(JavaClass.ConstantPool, InterfaceIndex);
+            Ex.InterfaceNames.push_back(InterfaceName);
+        }
+        return Ex;
+    }
+
     xFieldEx Extend(const xClass& JavaClass, const xFieldInfo & FieldInfo)
     {
         xFieldEx Ex;
