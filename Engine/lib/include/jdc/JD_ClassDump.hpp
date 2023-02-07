@@ -11,9 +11,11 @@ namespace jdc
     X_GAME_API std::string DumpMethodDescriptor(const std::string & MethodName, const xMethodDescriptor & Descriptor);
     X_GAME_API std::string Dump(const xClass & JavaClass);
 
-    X_GAME_API std::string DumpFieldAccessFlags(xAccessFlag Flags);
     X_GAME_API std::string DumpClassAccessFlags(const xClass & JavaClass);
+    X_GAME_API std::string DumpFieldAccessFlags(xAccessFlag Flags);
+    X_GAME_API std::string DumpMethodAccessFlags(xAccessFlag Flags);
 
     X_GAME_API std::string Dump(const xFieldEx & FieldEx);
+    X_GAME_API std::string Dump(const xMethodEx & MethodEx);
 
 }

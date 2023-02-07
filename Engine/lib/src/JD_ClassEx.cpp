@@ -1,7 +1,6 @@
 #include <jdc/JD_Class.hpp>
 #include <jdc/JD_ClassEx.hpp>
-#include <string>
-#include <sstream>
+#include <xel/String.hpp>
 
 using namespace xel;
 
@@ -102,6 +101,90 @@ namespace jdc
 
         return Ex;
     }
+
+    xMethodEx Extend(const xClass& JavaClass, const xMethodInfo & MethodInfo)
+    {
+        xMethodEx Ex;
+        auto & ConstantPool = JavaClass.ConstantPool;
+
+        Ex.Name = *GetConstantItemUtf8(ConstantPool, MethodInfo.NameIndex);
+
+        do {
+            Ex.AccessFlags = MethodInfo.AccessFlags;
+            if (MethodInfo.AccessFlags & ACC_SYNTHETIC) {
+                break;
+            }
+            if (MethodInfo.AccessFlags & ACC_BRIDGE) {
+                break;
+            }
+
+            std::ostringstream ss;
+            if (MethodInfo.AccessFlags & ACC_PUBLIC) {
+                ss << "public ";
+            }
+            if (MethodInfo.AccessFlags & ACC_PRIVATE) {
+                ss << "private ";
+            }
+            if (MethodInfo.AccessFlags & ACC_PROTECTED) {
+                ss << "protected ";
+            }
+            if (MethodInfo.AccessFlags & ACC_STATIC) {
+                ss << "static ";
+            }
+            if (MethodInfo.AccessFlags & ACC_FINAL) {
+                ss << "final ";
+            }
+            if (MethodInfo.AccessFlags & ACC_SYNCHRONIZED) {
+                ss << "synchronized ";
+            }
+            if (MethodInfo.AccessFlags & ACC_VARARGS) {
+                // do nothing here
+            }
+            if (MethodInfo.AccessFlags & ACC_NATIVE) {
+                // do nothing here
+            }
+            if (MethodInfo.AccessFlags & ACC_ABSTRACT) {
+                ss << "abstract ";
+            }
+            if (MethodInfo.AccessFlags & ACC_STRICT) {
+                ss << "strictfp ";
+            }
+
+            auto DescriptorString =  *GetConstantItemUtf8(ConstantPool, MethodInfo.DescriptorIndex);
+            auto Descriptor = ExtractMethodDescriptor(DescriptorString);
+            ss << ' ' << VariableTypeString(Descriptor.ReturnType);
+            std::vector<std::string> ParamTypeStrings;
+
+            for (size_t i = 0; i < Descriptor.ParameterTypes.size(); ++i) {
+                auto & VType = Descriptor.ParameterTypes[i];
+                if (VType.FieldType != eFieldType::Array) {
+                    ParamTypeStrings.push_back(VariableTypeString(VType));
+                    continue;
+                }
+
+                size_t ArraySize = 1;
+                std::string ArrayTypeString;
+                while(++i) {
+                    auto & TestVType = Descriptor.ParameterTypes[i];
+                    if (TestVType.FieldType != eFieldType::Array) {
+                        ArrayTypeString = VariableTypeString(TestVType);
+                        for (size_t ACounter = 0 ; ACounter < ArraySize; ++ACounter) {
+                            ArrayTypeString += "[]";
+                        }
+                        break;
+                    } else {
+                        ++ArraySize;
+                    }
+                }
+                ParamTypeStrings.push_back(ArrayTypeString);
+            }
+            ss << " " << Ex.Name << '(' << JoinStr(ParamTypeStrings.begin(), ParamTypeStrings.end(), ", ") << ')';
+            Ex.TypeString = ss.str();
+        } while(false);
+
+        return Ex;
+    }
+
 
 };
 

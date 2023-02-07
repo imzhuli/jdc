@@ -128,7 +128,7 @@ namespace jdc
         return JoinStr(FlagStrings.begin(), FlagStrings.end(), ' ');
     }
 
-    static std::string DumpMethodAccessFlags(xAccessFlag Flags)
+    std::string DumpMethodAccessFlags(xAccessFlag Flags)
     {
         std::vector<std::string> FlagStrings;
         if (Flags & ACC_PUBLIC) {
@@ -222,6 +222,18 @@ namespace jdc
         return ss.str();
     }
 
+    std::string Dump(const xMethodEx & MethodEx)
+    {
+        std::ostringstream ss;
+        ss << MethodEx.TypeString << ' ' << MethodEx.Name;
+        ss << "CodeBinary: " << endl;
+        ss << HexShow(MethodEx.CodeBinary.data(), MethodEx.CodeBinary.size()) << endl;
+        // for (auto & Attribute : MethodEx.Attributes) {
+        //     DumpAttribute()
+        // }
+        return ss.str();
+    }
+
     std::string Dump(const xClass & JavaClass)
     {
         std::ostringstream ss;
@@ -262,12 +274,11 @@ namespace jdc
         // dump methods:
         ss << " -- methods" << endl;
         for(auto & Method : JavaClass.Methods) {
-            auto & MethodName = *GetConstantItemUtf8(JavaClass.ConstantPool, Method.NameIndex);
-            ss << " ---- " << MethodName << " : " << DumpMethodAccessFlags(Method.AccessFlags) << endl;
-
+            auto MethodEx = Extend(JavaClass, Method);
+            Dump(MethodEx);
             auto DescriptorString =  *GetConstantItemUtf8(JavaClass.ConstantPool, Method.DescriptorIndex);
             auto Descriptor = ExtractMethodDescriptor(DescriptorString);
-            ss << " ------ " << "Descriptor: " << DescriptorString << ": " << DumpMethodDescriptor(MethodName, Descriptor) << endl;
+            ss << " ------ " << "Descriptor: " << DescriptorString << ": " << DumpMethodDescriptor(MethodEx.Name, Descriptor) << endl;
         }
 
         // dump attributes:

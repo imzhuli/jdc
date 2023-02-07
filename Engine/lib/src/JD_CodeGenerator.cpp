@@ -74,21 +74,6 @@ namespace jdc
     std::vector<std::string> GetImportNames(const xClass & JavaClass)
     {
         std::vector<std::string> ImportNames;
-        for (size_t Index = 1 ; Index < JavaClass.ConstantPool.size(); ++Index) {
-            auto & Item = JavaClass.ConstantPool[Index];
-            if (Item.Tag != eConstantTag::Class) {
-                continue;
-            }
-            if (Index == JavaClass.ThisClass) {
-                continue;
-            }
-            auto ClassPathName = *GetConstantItemClassPathName(JavaClass.ConstantPool, Index);
-            if (ClassPathName == JavaDefaultRootClassPathName) {
-                continue;
-            }
-            auto FullClassName = GetFullClassName(ClassPathName);
-            ImportNames.push_back(FullClassName);
-        }
         return ImportNames;
     }
 

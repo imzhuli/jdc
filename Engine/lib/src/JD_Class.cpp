@@ -469,7 +469,7 @@ namespace jdc
 
     std::string GetFullClassName(const std::string & ClassPathName)
     {
-        auto Copy = ClassPathName;
+        auto Copy = (ClassPathName.find("java/lang/") == 0) ? ClassPathName.substr(10) : ClassPathName;
         for (auto & C : Copy) {
             if (C == '/' || C == '$') {
                 C = '.';
