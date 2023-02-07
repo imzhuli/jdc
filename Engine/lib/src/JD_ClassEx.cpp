@@ -152,7 +152,7 @@ namespace jdc
 
             auto DescriptorString =  *GetConstantItemUtf8(ConstantPool, MethodInfo.DescriptorIndex);
             auto Descriptor = ExtractMethodDescriptor(DescriptorString);
-            ss << ' ' << VariableTypeString(Descriptor.ReturnType);
+            ss << VariableTypeString(Descriptor.ReturnType);
             std::vector<std::string> ParamTypeStrings;
 
             for (size_t i = 0; i < Descriptor.ParameterTypes.size(); ++i) {

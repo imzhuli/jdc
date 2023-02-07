@@ -225,9 +225,9 @@ namespace jdc
     std::string Dump(const xMethodEx & MethodEx)
     {
         std::ostringstream ss;
-        ss << MethodEx.TypeString << ' ' << MethodEx.Name;
-        ss << "CodeBinary: " << endl;
-        ss << HexShow(MethodEx.CodeBinary.data(), MethodEx.CodeBinary.size()) << endl;
+        ss << MethodEx.TypeString;
+        // ss << "CodeBinary: " << endl;
+        // ss << HexShow(MethodEx.CodeBinary.data(), MethodEx.CodeBinary.size()) << endl;
         // for (auto & Attribute : MethodEx.Attributes) {
         //     DumpAttribute()
         // }
@@ -275,10 +275,7 @@ namespace jdc
         ss << " -- methods" << endl;
         for(auto & Method : JavaClass.Methods) {
             auto MethodEx = Extend(JavaClass, Method);
-            Dump(MethodEx);
-            auto DescriptorString =  *GetConstantItemUtf8(JavaClass.ConstantPool, Method.DescriptorIndex);
-            auto Descriptor = ExtractMethodDescriptor(DescriptorString);
-            ss << " ------ " << "Descriptor: " << DescriptorString << ": " << DumpMethodDescriptor(MethodEx.Name, Descriptor) << endl;
+            ss << Dump(MethodEx) << endl;
         }
 
         // dump attributes:
