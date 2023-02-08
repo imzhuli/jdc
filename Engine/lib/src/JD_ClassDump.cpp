@@ -175,6 +175,7 @@ namespace jdc
     {
         std::ostringstream ss;
         ss << "Attribute: " << *GetConstantItemUtf8(ConstantPool, AttributeInfo.NameIndex) << ", size=" << AttributeInfo.Binary.size() << endl;
+        ss << HexShow(AttributeInfo.Binary.data(), AttributeInfo.Binary.size(), 4);
         return ss.str();
     }
 
@@ -228,15 +229,23 @@ namespace jdc
         ss << MethodEx.TypeString;
         // ss << "CodeBinary: " << endl;
         // ss << HexShow(MethodEx.CodeBinary.data(), MethodEx.CodeBinary.size()) << endl;
-        // for (auto & Attribute : MethodEx.Attributes) {
-        //     DumpAttribute()
-        // }
+
+        return ss.str();
+    }
+
+    std::string Dump(const std::vector<xConstantItemInfo> & ConstantPool, const xMethodInfo & MethodInfo)
+    {
+        std::ostringstream ss;
+        for (auto & Attribute : MethodInfo.Attributes) {
+            ss << DumpAttribute(ConstantPool, Attribute) << endl;
+        }
         return ss.str();
     }
 
     std::string Dump(const xClass & JavaClass)
     {
         std::ostringstream ss;
+        auto & ConstantPool = JavaClass.ConstantPool;
 
         // classex:
         auto ClassEx = Extend(JavaClass);
@@ -244,9 +253,9 @@ namespace jdc
         ss << " - MajorVersion: " << JavaClass.MajorVersion << " ( " << ClassVersionString(JavaClass.MajorVersion) << " ) "<< endl;
         ss << " - MinorVersion: " << JavaClass.MinorVersion << endl;
 
-        ss << " -- ConstantPoolSize: " << JavaClass.ConstantPool.size() << endl;
-        for (size_t Index = 0; Index < JavaClass.ConstantPool.size(); ++Index) {
-            ss << " ---- " << DumpConstantItemString(JavaClass.ConstantPool, Index) << endl;
+        ss << " -- ConstantPoolSize: " << ConstantPool.size() << endl;
+        for (size_t Index = 0; Index < ConstantPool.size(); ++Index) {
+            ss << " ---- " << DumpConstantItemString(ConstantPool, Index) << endl;
         }
         ss << endl;
 
@@ -266,8 +275,7 @@ namespace jdc
             auto FieldEx = Extend(JavaClass, Field);
             ss << " ---- " << Dump(FieldEx) << endl;
             for(auto & AttributeInfo : Field.Attributes) {
-                ss << " ------ " << DumpAttribute(JavaClass.ConstantPool, AttributeInfo);
-                ss << HexShow(AttributeInfo.Binary.data(), AttributeInfo.Binary.size(), 8) << endl;
+                ss << " ------ " << DumpAttribute(ConstantPool, AttributeInfo) << endl;
             }
         }
 
@@ -276,13 +284,13 @@ namespace jdc
         for(auto & Method : JavaClass.Methods) {
             auto MethodEx = Extend(JavaClass, Method);
             ss << Dump(MethodEx) << endl;
+            ss << Dump(ConstantPool, Method) << endl;
         }
 
         // dump attributes:
         ss << " -- attributes" << endl;
         for(auto & AttributeInfo : JavaClass.Attributes) {
-            ss << " ---- " << DumpAttribute(JavaClass.ConstantPool, AttributeInfo);
-            ss << HexShow(AttributeInfo.Binary.data(), AttributeInfo.Binary.size(), 6) << endl;
+            ss << " ---- " << DumpAttribute(ConstantPool, AttributeInfo) << endl;
         }
 
 
