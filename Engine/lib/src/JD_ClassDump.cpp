@@ -293,7 +293,6 @@ namespace jdc
             ss << " ---- " << DumpAttribute(ConstantPool, AttributeInfo) << endl;
         }
 
-
         return ss.str();
     }
 

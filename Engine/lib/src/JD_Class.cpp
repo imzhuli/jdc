@@ -337,10 +337,10 @@ namespace jdc
             }
             case eConstantTag::MethodHandle: {
                 auto & Info = TagInfo.Info.MethodHandle;
-                if ((RemainSize -= 4) < 0) {
+                if ((RemainSize -= 3) < 0) {
                     return false;
                 }
-                Info.ReferenceKind = Reader.R2();
+                Info.ReferenceKind = Reader.R1();
                 Info.ReferenceIndex = Reader.R2();
                 break;
             }
