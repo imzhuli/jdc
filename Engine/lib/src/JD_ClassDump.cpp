@@ -20,7 +20,7 @@ namespace jdc
         switch(Item.Tag)
         {
             case eConstantTag::Unspecified:
-                return IndexString + "Unspecified";
+                return IndexString + "<unspecified>";
             case eConstantTag::Utf8:
                 return IndexString + "Utf8: " + *GetConstantItemUtf8(Item);
             case eConstantTag::Integer:

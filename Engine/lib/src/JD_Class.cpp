@@ -58,7 +58,7 @@ namespace jdc
     {
         switch (Tag) {
             case eConstantTag::Unspecified:
-                return "Unspecified";
+                return "<unspecified>";
             case eConstantTag::Utf8:
                 return "Utf8";
             case eConstantTag::Integer:
