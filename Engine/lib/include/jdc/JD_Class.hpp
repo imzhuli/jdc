@@ -272,6 +272,14 @@ namespace jdc
         uint16_t CatchType;
     };
 
+    struct xInnerClassAttribute
+    {
+        uint16_t InnerClassInfoIndex;
+        uint16_t OuterClassInfoIndex;
+        uint16_t InnerNameIndex;
+        uint16_t InnerAccessFlags;
+    };
+
     struct xCodeAttribute
     {
         bool                                Enabled = false;
@@ -306,6 +314,7 @@ namespace jdc
 
     X_GAME_API bool ExtractAttributeInfo(xel::xStreamReader & Reader, ssize_t & RemainSize, xAttributeInfo & AttributeInfo);
     X_GAME_API bool ExtractFieldInfo(xel::xStreamReader & Reader, ssize_t & RemainSize, xFieldInfo & FieldInfo);
+    X_GAME_API bool ExtractInnerClassAttribute(const std::vector<xel::ubyte> & Binary, std::vector<xInnerClassAttribute> & Output);
     X_GAME_API bool ExtractCodeAttribute(const std::vector<xel::ubyte> & Binary, xCodeAttribute & Output);
     X_GAME_API xJDResult<xClass> LoadClassInfoFromFile(const std::string & Filename);
 

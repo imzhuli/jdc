@@ -238,6 +238,8 @@ namespace jdc
                 ss << "  HandlerPC: " << Item.HandlerPC << endl;
                 ss << "  CatchType: " << Item.CatchType << endl;
             }
+            ss << "CodeBinary: " << endl;
+            ss << HexShow(CA.Binary.data(), CA.Binary.size()) << endl;
             ss << "AttributeLength: " << CA.Attributes.size() << endl;
             for (const auto & Item : CA.Attributes) {
                 ss << "  " << DumpAttribute(ConstantPool, Item) << endl;
@@ -278,8 +280,13 @@ namespace jdc
         ss << " -- AccessFlags(0x" << std::hex << JavaClass.AccessFlags << std::dec << "): " << DumpClassAccessFlags(JavaClass) << endl;
 
         ss << " -- Interfaces" << endl;
-        for(auto & InterafceName : ClassEx.InterfaceNames) {
+        for (auto & InterafceName : ClassEx.InterfaceNames) {
             ss << " ---- " << InterafceName << endl;
+        }
+
+        ss << " -- InnerClasses" << endl;
+        for (auto & InnerClass : ClassEx.InnerClasses) {
+            ss << " ---- " << GetFullClassName(*GetConstantItemClassPathName(ConstantPool, InnerClass.InnerClassInfoIndex)) << endl;
         }
 
         // dump fields:
@@ -299,7 +306,7 @@ namespace jdc
         }
 
         // dump methods:
-        cout << endl;
+        ss << endl;
         ss << "vvvvvvvvvv methods" << endl;
         for(auto & Method : JavaClass.Methods) {
             auto MethodEx = Extend(JavaClass, Method);

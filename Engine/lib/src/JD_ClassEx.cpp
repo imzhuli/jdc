@@ -30,6 +30,13 @@ namespace jdc
             if (Name == "SourceFile") {
                 auto NameIndex = ExtractSourceAttribute(AttributeInfo.Binary);
                 Ex.SourceFile = *GetConstantItemUtf8(JavaClass.ConstantPool, NameIndex);
+                continue;
+            }
+            if (Name == "InnerClasses") {
+                if (!ExtractInnerClassAttribute(AttributeInfo.Binary, Ex.InnerClasses)) {
+                    assert("Failed to ExtractInnerClassAttribute @" X_STRINGIFY(__LINE__));
+                }
+                continue;
             }
         }
 

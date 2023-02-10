@@ -6,10 +6,11 @@ namespace jdc
 
     struct xClassEx
     {
-        std::string SourceFile;
-        std::string FullClassName;
-        std::string FullSuperClassName;
-        std::vector<std::string> InterfaceNames;
+        std::string                        SourceFile;
+        std::string                        FullClassName;
+        std::string                        FullSuperClassName;
+        std::vector<std::string>           InterfaceNames;
+        std::vector<xInnerClassAttribute>  InnerClasses;
     };
 
     struct xFieldEx

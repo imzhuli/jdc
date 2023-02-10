@@ -469,7 +469,7 @@ namespace jdc
 
     std::string GetFullClassName(const std::string & ClassPathName)
     {
-        auto Copy = (ClassPathName.find("java/lang/") == 0) ? ClassPathName.substr(10) : ClassPathName;
+        auto Copy = ClassPathName;
         for (auto & C : Copy) {
             if (C == '/' || C == '$') {
                 C = '.';
@@ -655,6 +655,30 @@ namespace jdc
         }
         Descriptor.ReturnType = ExtractVariableType(Utf8, i);
         return Descriptor;
+    }
+
+    bool ExtractInnerClassAttribute(const std::vector<xel::ubyte> & Binary, std::vector<xInnerClassAttribute> & Output)
+    {
+        Output.clear();
+
+        auto Reader = xStreamReader(Binary.data());
+        auto RemainSize = ssize_t(Binary.size());
+        if ((RemainSize -= 2) < 0) {
+            return false;
+        }
+        size_t Total = Reader.R2();
+        if ((RemainSize -= Total * 8) < 0) {
+            return false;
+        }
+        for (size_t i = 0 ; i < Total; ++i) {
+            xInnerClassAttribute ICA;
+            ICA.InnerClassInfoIndex = Reader.R2();
+            ICA.OuterClassInfoIndex = Reader.R2();
+            ICA.InnerNameIndex = Reader.R2();
+            ICA.InnerAccessFlags = Reader.R2();
+            Output.push_back(ICA);
+        }
+        return true;
     }
 
     bool ExtractCodeAttribute(const std::vector<xel::ubyte> & Binary, xCodeAttribute & Output)
