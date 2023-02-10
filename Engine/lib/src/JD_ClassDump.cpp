@@ -213,7 +213,7 @@ namespace jdc
         return ss.str();
     }
 
-    std::string Dump(const xFieldEx & FieldEx)
+    std::string Dump(const std::vector<xConstantItemInfo> & ConstantPool, const xFieldEx & FieldEx)
     {
         std::ostringstream ss;
         ss << FieldEx.TypeString << ' ' <<  FieldEx.Name;
@@ -223,13 +223,26 @@ namespace jdc
         return ss.str();
     }
 
-    std::string Dump(const xMethodEx & MethodEx)
+    std::string Dump(const std::vector<xConstantItemInfo> & ConstantPool, const xMethodEx & MethodEx)
     {
         std::ostringstream ss;
-        ss << MethodEx.TypeString;
-        // ss << "CodeBinary: " << endl;
-        // ss << HexShow(MethodEx.CodeBinary.data(), MethodEx.CodeBinary.size()) << endl;
-
+        ss << MethodEx.TypeString << endl;
+        if (MethodEx.CodeAttribute.Enabled) {
+            auto & CA = MethodEx.CodeAttribute;
+            ss << "MaxStack: " << CA.MaxStack << endl;
+            ss << "MaxLocals: " << CA.MaxLocals << endl;
+            ss << "ExceptionTableLength: " << CA.ExceptionTable.size() << endl;
+            for (const auto & Item : CA.ExceptionTable) {
+                ss << "  StartPC: " << Item.StartPC << endl;
+                ss << "  EndPC: " << Item.EndPC << endl;
+                ss << "  HandlerPC: " << Item.HandlerPC << endl;
+                ss << "  CatchType: " << Item.CatchType << endl;
+            }
+            ss << "AttributeLength: " << CA.Attributes.size() << endl;
+            for (const auto & Item : CA.Attributes) {
+                ss << "  " << DumpAttribute(ConstantPool, Item) << endl;
+            }
+        }
         return ss.str();
     }
 
@@ -273,18 +286,10 @@ namespace jdc
         ss << " -- fields" << endl;
         for(auto & Field : JavaClass.Fields) {
             auto FieldEx = Extend(JavaClass, Field);
-            ss << " ---- " << Dump(FieldEx) << endl;
+            ss << " ---- " << Dump(ConstantPool, FieldEx) << endl;
             for(auto & AttributeInfo : Field.Attributes) {
                 ss << " ------ " << DumpAttribute(ConstantPool, AttributeInfo) << endl;
             }
-        }
-
-        // dump methods:
-        ss << " -- methods" << endl;
-        for(auto & Method : JavaClass.Methods) {
-            auto MethodEx = Extend(JavaClass, Method);
-            ss << Dump(MethodEx) << endl;
-            ss << Dump(ConstantPool, Method) << endl;
         }
 
         // dump attributes:
@@ -292,6 +297,16 @@ namespace jdc
         for(auto & AttributeInfo : JavaClass.Attributes) {
             ss << " ---- " << DumpAttribute(ConstantPool, AttributeInfo) << endl;
         }
+
+        // dump methods:
+        cout << endl;
+        ss << "vvvvvvvvvv methods" << endl;
+        for(auto & Method : JavaClass.Methods) {
+            auto MethodEx = Extend(JavaClass, Method);
+            ss << Dump(ConstantPool, MethodEx) << endl;
+        }
+        ss << "^^^^^^^^^^ end of methods" << endl;
+
 
         return ss.str();
     }

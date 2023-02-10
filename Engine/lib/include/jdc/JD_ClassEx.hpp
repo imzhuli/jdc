@@ -27,29 +27,12 @@ namespace jdc
 
     };
 
-    struct xExceptionTableItem
-    {
-        uint16_t StartPC;
-        uint16_t EndPC;
-        uint16_t HandlerPC;
-        uint16_t CatchType;
-    };
-
-    struct xCode
-    {
-        uint16_t MaxStack;
-        uint16_t MaxLocals;
-        std::vector<xel::ubyte>             Binary;
-        std::vector<xExceptionTableItem>    ExceptionTable;
-        std::vector<xAttributeInfo>         Attributes;
-    };
-
     struct xMethodEx
     {
         std::string              Name;
         xAccessFlag              AccessFlags;
         std::string              TypeString;
-        std::vector<xel::ubyte>  CodeBinary;
+        xCodeAttribute           CodeAttribute;
     };
 
     X_GAME_API uint16_t ExtractConstantValueAttribute(const std::vector<xel::ubyte> & Binary);

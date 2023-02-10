@@ -110,15 +110,14 @@ namespace jdc
         Ex.Name = *GetConstantItemUtf8(ConstantPool, MethodInfo.NameIndex);
 
         do {
+            std::ostringstream ss;
             Ex.AccessFlags = MethodInfo.AccessFlags;
             if (MethodInfo.AccessFlags & ACC_SYNTHETIC) {
-                break;
+                ss << "<synthetic> ";
             }
             if (MethodInfo.AccessFlags & ACC_BRIDGE) {
-                break;
+                ss << "<bridged> ";
             }
-
-            std::ostringstream ss;
             if (MethodInfo.AccessFlags & ACC_PUBLIC) {
                 ss << "public ";
             }
@@ -182,9 +181,21 @@ namespace jdc
             Ex.TypeString = ss.str();
         } while(false);
 
+        // If the method is either native or abstract,
+        // and is not a class or interface initialization method, then its method_info structure must not have a Code attribute in its attributes table.
+        // Otherwise, its method_info structure must have exactly one Code attribute in its attributes table.
+        for (auto & Attribute : MethodInfo.Attributes) {
+            const auto & Name = *GetConstantItemUtf8(ConstantPool, Attribute.NameIndex);
+            if (Name == "Code") {
+                if (!ExtractCodeAttribute(Attribute.Binary, Ex.CodeAttribute)) {
+                    assert(!"Failed to ExtractCodeAttribute @" X_STRINGIFY(__LINE__));
+                }
+                continue;
+            }
+        }
+
         return Ex;
     }
-
 
 };
 

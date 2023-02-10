@@ -513,7 +513,7 @@ namespace jdc
         return std::make_pair(std::move(PackageName), std::move(ClassName));
     }
 
-    static bool LoadAttributeInfo(xStreamReader & Reader, ssize_t & RemainSize, xAttributeInfo & AttributeInfo)
+    bool ExtractAttributeInfo(xStreamReader & Reader, ssize_t & RemainSize, xAttributeInfo & AttributeInfo)
     {
         if ((RemainSize -= 6) < 0) {
             return false;
@@ -527,7 +527,7 @@ namespace jdc
         return true;
     }
 
-    static bool LoadFieldInfo(xStreamReader & Reader, ssize_t & RemainSize, xFieldInfo & FieldInfo)
+    bool ExtractFieldInfo(xStreamReader & Reader, ssize_t & RemainSize, xFieldInfo & FieldInfo)
     {
         if ((RemainSize -= 8) < 0) {
             return false;
@@ -537,7 +537,7 @@ namespace jdc
         FieldInfo.DescriptorIndex = Reader.R2();
         FieldInfo.Attributes.resize(Reader.R2());
         for (auto & AttributeInfo : FieldInfo.Attributes) {
-            if (!LoadAttributeInfo(Reader, RemainSize, AttributeInfo)) {
+            if (!ExtractAttributeInfo(Reader, RemainSize, AttributeInfo)) {
                 return false;
             }
         }
@@ -657,6 +657,51 @@ namespace jdc
         return Descriptor;
     }
 
+    bool ExtractCodeAttribute(const std::vector<xel::ubyte> & Binary, xCodeAttribute & Output)
+    {
+        auto CA = xCodeAttribute();
+        auto Reader = xStreamReader(Binary.data());
+        ssize_t RemainSize = Binary.size();
+        if ((RemainSize -= 8) < 0) {
+            return false;
+        }
+
+        CA.MaxStack = Reader.R2();
+        CA.MaxLocals = Reader.R2();
+        size_t CodeBinarySize = Reader.R4();
+        if ((RemainSize -= (CodeBinarySize + 2)) < 0) {
+            return false;
+        }
+        CA.Binary.resize(CodeBinarySize);
+        Reader.R(CA.Binary.data(), CodeBinarySize);
+
+        size_t ExceptionTableLength = Reader.R2();
+        if ((RemainSize -= ExceptionTableLength * 8 + 2) < 0) {
+            return false;
+        }
+        for (size_t i = 0 ; i < ExceptionTableLength; ++i) {
+            xExceptionTableItem Item;
+            Item.StartPC = Reader.R2();
+            Item.EndPC = Reader.R2();
+            Item.HandlerPC = Reader.R2();
+            Item.CatchType = Reader.R2();
+            CA.ExceptionTable.push_back(std::move(Item));
+        }
+
+        size_t SubAttributeCount = Reader.R2();
+        for (size_t i = 0 ; i < SubAttributeCount; ++i) {
+            xAttributeInfo AttributeInfo;
+            if (!ExtractAttributeInfo(Reader, RemainSize, AttributeInfo)) {
+                return false;
+            }
+            CA.Attributes.push_back(std::move(AttributeInfo));
+        }
+
+        Output = std::move(CA);
+        Output.Enabled = true;
+        return true;
+    }
+
     static bool LoadMethodInfo(xStreamReader & Reader, ssize_t & RemainSize, xMethodInfo & MethodInfo)
     {
         if ((RemainSize -= 8) < 0) {
@@ -667,7 +712,7 @@ namespace jdc
         MethodInfo.DescriptorIndex = Reader.R2();
         MethodInfo.Attributes.resize(Reader.R2());
         for (auto & AttributeInfo : MethodInfo.Attributes) {
-            if (!LoadAttributeInfo(Reader, RemainSize, AttributeInfo)) {
+            if (!ExtractAttributeInfo(Reader, RemainSize, AttributeInfo)) {
                 return false;
             }
         }
@@ -745,7 +790,7 @@ namespace jdc
         }
         JavaClass.Fields.resize(Reader.R2());
         for (auto & FieldInfo : JavaClass.Fields) {
-            if (!LoadFieldInfo(Reader, RemainSize, FieldInfo)) {
+            if (!ExtractFieldInfo(Reader, RemainSize, FieldInfo)) {
                 return { JDR_DATA_SIZE_ERROR, "Read field info error @" X_STRINGIFY(__LINE__)};
             }
         }
@@ -767,7 +812,7 @@ namespace jdc
         }
         JavaClass.Attributes.resize(Reader.R2());
         for (auto & AttributeInfo : JavaClass.Attributes) {
-            if (!LoadAttributeInfo(Reader, RemainSize, AttributeInfo)) {
+            if (!ExtractAttributeInfo(Reader, RemainSize, AttributeInfo)) {
                 return { JDR_DATA_SIZE_ERROR, "Read attribute info error @" X_STRINGIFY(__LINE__)};
             }
         }

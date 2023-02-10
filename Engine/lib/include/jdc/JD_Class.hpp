@@ -1,6 +1,7 @@
 #pragma once
 #include "./JD_Base.hpp"
 #include "./JD_BaseError.hpp"
+#include <xel/Byte.hpp>
 #include <string>
 #include <vector>
 
@@ -263,6 +264,25 @@ namespace jdc
         std::vector<xAttributeInfo>        Attributes;
     };
 
+    struct xExceptionTableItem
+    {
+        uint16_t StartPC;
+        uint16_t EndPC;
+        uint16_t HandlerPC;
+        uint16_t CatchType;
+    };
+
+    struct xCodeAttribute
+    {
+        bool                                Enabled = false;
+        uint16_t                            MaxStack;
+        uint16_t                            MaxLocals;
+        std::vector<xel::ubyte>             Binary;
+        std::vector<xExceptionTableItem>    ExceptionTable;
+        std::vector<xAttributeInfo>         Attributes;
+    };
+
+
     X_GAME_API const char * ClassVersionString(uint16_t MajorVersion);
     X_GAME_API const char * ConstantTagString(const eConstantTag Tag);
     X_GAME_API const char * FieldTypeString(const eFieldType Type);
@@ -284,6 +304,9 @@ namespace jdc
     X_GAME_API xVariableType ExtractVariableType(const std::string & Utf8, size_t & Index);
     X_GAME_API xMethodDescriptor ExtractMethodDescriptor(const std::string & Utf8);
 
+    X_GAME_API bool ExtractAttributeInfo(xel::xStreamReader & Reader, ssize_t & RemainSize, xAttributeInfo & AttributeInfo);
+    X_GAME_API bool ExtractFieldInfo(xel::xStreamReader & Reader, ssize_t & RemainSize, xFieldInfo & FieldInfo);
+    X_GAME_API bool ExtractCodeAttribute(const std::vector<xel::ubyte> & Binary, xCodeAttribute & Output);
     X_GAME_API xJDResult<xClass> LoadClassInfoFromFile(const std::string & Filename);
 
 }
