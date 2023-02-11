@@ -1,3 +1,4 @@
+#pragma once
 #include "./JD_Base.hpp"
 #include <string>
 

@@ -1,6 +1,7 @@
 #include <jdc/JD_ClassDump.hpp>
 #include <jdc/JD_Util.hpp>
 #include <jdc/JD_CodeGenerator.hpp>
+#include <jdc/JD_Instructions.hpp>
 #include <xel/String.hpp>
 #include <xel/Byte.hpp>
 #include <sstream>
@@ -231,6 +232,7 @@ namespace jdc
             auto & CA = MethodEx.CodeAttribute;
             ss << "MaxStack: " << CA.MaxStack << endl;
             ss << "MaxLocals: " << CA.MaxLocals << endl;
+            ss << "ArgumentSize: " << MethodEx.ArgumentSize << endl;
             ss << "ExceptionTableLength: " << CA.ExceptionTable.size() << endl;
             for (const auto & Item : CA.ExceptionTable) {
                 ss << "  StartPC: " << Item.StartPC << endl;
@@ -294,23 +296,26 @@ namespace jdc
         for(auto & Field : JavaClass.Fields) {
             auto FieldEx = Extend(JavaClass, Field);
             ss << " ---- " << Dump(ConstantPool, FieldEx) << endl;
-            for(auto & AttributeInfo : Field.Attributes) {
-                ss << " ------ " << DumpAttribute(ConstantPool, AttributeInfo) << endl;
-            }
+            // for(auto & AttributeInfo : Field.Attributes) {
+            //     ss << " ------ " << DumpAttribute(ConstantPool, AttributeInfo) << endl;
+            // }
         }
 
         // dump attributes:
-        ss << " -- attributes" << endl;
-        for(auto & AttributeInfo : JavaClass.Attributes) {
-            ss << " ---- " << DumpAttribute(ConstantPool, AttributeInfo) << endl;
-        }
+        // ss << " -- attributes" << endl;
+        // for(auto & AttributeInfo : JavaClass.Attributes) {
+        //     ss << " ---- " << DumpAttribute(ConstantPool, AttributeInfo) << endl;
+        // }
 
         // dump methods:
         ss << endl;
-        ss << "vvvvvvvvvv methods" << endl;
+        ss << "vvvvvvvvvv methods" << endl << endl;
         for(auto & Method : JavaClass.Methods) {
             auto MethodEx = Extend(JavaClass, Method);
+            auto Code = BuildCode(MethodEx);
             ss << Dump(ConstantPool, MethodEx) << endl;
+
+            (void)Code;
         }
         ss << "^^^^^^^^^^ end of methods" << endl;
 

@@ -1,3 +1,4 @@
+#pragma once
 #include "./JD_Class.hpp"
 #include <xel/Byte.hpp>
 
@@ -33,6 +34,7 @@ namespace jdc
         std::string              Name;
         xAccessFlag              AccessFlags;
         std::string              TypeString;
+        size_t                   ArgumentSize;
         xCodeAttribute           CodeAttribute;
     };
 

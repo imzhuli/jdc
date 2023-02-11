@@ -290,7 +290,6 @@ namespace jdc
         std::vector<xAttributeInfo>         Attributes;
     };
 
-
     X_GAME_API const char * ClassVersionString(uint16_t MajorVersion);
     X_GAME_API const char * ConstantTagString(const eConstantTag Tag);
     X_GAME_API const char * FieldTypeString(const eFieldType Type);
@@ -317,5 +316,8 @@ namespace jdc
     X_GAME_API bool ExtractInnerClassAttribute(const std::vector<xel::ubyte> & Binary, std::vector<xInnerClassAttribute> & Output);
     X_GAME_API bool ExtractCodeAttribute(const std::vector<xel::ubyte> & Binary, xCodeAttribute & Output);
     X_GAME_API xJDResult<xClass> LoadClassInfoFromFile(const std::string & Filename);
+
+    X_INLINE std::string MakeArgumentName(size_t Index) { return "__arg_" + std::to_string(Index); }
+    X_INLINE std::string MakeVariableName(size_t Index) { return "__var_" + std::to_string(Index); }
 
 }

@@ -161,10 +161,11 @@ namespace jdc
             ss << VariableTypeString(Descriptor.ReturnType);
             std::vector<std::string> ParamTypeStrings;
 
+            size_t ArgumentSize = 0;
             for (size_t i = 0; i < Descriptor.ParameterTypes.size(); ++i) {
                 auto & VType = Descriptor.ParameterTypes[i];
                 if (VType.FieldType != eFieldType::Array) {
-                    ParamTypeStrings.push_back(VariableTypeString(VType));
+                    ParamTypeStrings.push_back(VariableTypeString(VType) + MakeArgumentName(ArgumentSize++));
                     continue;
                 }
 
@@ -176,6 +177,7 @@ namespace jdc
                         ArrayTypeString = VariableTypeString(TestVType);
                         for (size_t ACounter = 0 ; ACounter < ArraySize; ++ACounter) {
                             ArrayTypeString += "[]";
+                            ArrayTypeString += MakeArgumentName(ArgumentSize++);
                         }
                         break;
                     } else {
@@ -186,6 +188,7 @@ namespace jdc
             }
             ss << " " << Ex.Name << '(' << JoinStr(ParamTypeStrings.begin(), ParamTypeStrings.end(), ", ") << ')';
             Ex.TypeString = ss.str();
+            Ex.ArgumentSize = ArgumentSize;
         } while(false);
 
         // If the method is either native or abstract,
