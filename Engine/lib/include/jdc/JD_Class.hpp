@@ -319,5 +319,6 @@ namespace jdc
 
     X_INLINE std::string MakeArgumentName(size_t Index) { return "__arg_" + std::to_string(Index); }
     X_INLINE std::string MakeVariableName(size_t Index) { return "__var_" + std::to_string(Index); }
+    X_INLINE bool IsLocalVariableName(const std::string & Name) { return 0 == Name.find("__var_"); }
 
 }

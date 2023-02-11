@@ -232,7 +232,7 @@ namespace jdc
             auto & CA = MethodEx.CodeAttribute;
             ss << "MaxStack: " << CA.MaxStack << endl;
             ss << "MaxLocals: " << CA.MaxLocals << endl;
-            ss << "ArgumentSize: " << MethodEx.ArgumentSize << endl;
+            ss << "ArgumentSize: " << MethodEx.ArgumentTypeStrings.size() << endl;
             ss << "ExceptionTableLength: " << CA.ExceptionTable.size() << endl;
             for (const auto & Item : CA.ExceptionTable) {
                 ss << "  StartPC: " << Item.StartPC << endl;
@@ -320,7 +320,7 @@ namespace jdc
         ss << "^^^^^^^^^^ end of methods" << endl;
 
 
-        return ss.str();
+        return ""; // ss.str();
     }
 
 }

@@ -114,6 +114,7 @@ namespace jdc
         xMethodEx Ex;
         auto & ConstantPool = JavaClass.ConstantPool;
 
+        Ex.ClassName = GetFullClassName(*GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.ThisClass));
         Ex.Name = *GetConstantItemUtf8(ConstantPool, MethodInfo.NameIndex);
 
         do {
@@ -165,7 +166,9 @@ namespace jdc
             for (size_t i = 0; i < Descriptor.ParameterTypes.size(); ++i) {
                 auto & VType = Descriptor.ParameterTypes[i];
                 if (VType.FieldType != eFieldType::Array) {
-                    ParamTypeStrings.push_back(VariableTypeString(VType) + MakeArgumentName(ArgumentSize++));
+                    auto TypeNameString = VariableTypeString(VType);
+                    Ex.ArgumentTypeStrings.push_back(TypeNameString);
+                    ParamTypeStrings.push_back(TypeNameString + ' ' + MakeArgumentName(ArgumentSize++));
                     continue;
                 }
 
@@ -177,18 +180,17 @@ namespace jdc
                         ArrayTypeString = VariableTypeString(TestVType);
                         for (size_t ACounter = 0 ; ACounter < ArraySize; ++ACounter) {
                             ArrayTypeString += "[]";
-                            ArrayTypeString += MakeArgumentName(ArgumentSize++);
                         }
                         break;
                     } else {
                         ++ArraySize;
                     }
                 }
-                ParamTypeStrings.push_back(ArrayTypeString);
+                Ex.ArgumentTypeStrings.push_back(ArrayTypeString);
+                ParamTypeStrings.push_back(ArrayTypeString + ' ' + MakeArgumentName(ArgumentSize++));
             }
             ss << " " << Ex.Name << '(' << JoinStr(ParamTypeStrings.begin(), ParamTypeStrings.end(), ", ") << ')';
             Ex.TypeString = ss.str();
-            Ex.ArgumentSize = ArgumentSize;
         } while(false);
 
         // If the method is either native or abstract,

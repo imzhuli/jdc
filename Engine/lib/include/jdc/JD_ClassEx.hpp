@@ -23,19 +23,14 @@ namespace jdc
         std::string        InitValueString;
     };
 
-    struct xInstruction
-    {
-
-
-    };
-
     struct xMethodEx
     {
-        std::string              Name;
-        xAccessFlag              AccessFlags;
-        std::string              TypeString;
-        size_t                   ArgumentSize;
-        xCodeAttribute           CodeAttribute;
+        std::string                ClassName;
+        std::string                Name;
+        xAccessFlag                AccessFlags;
+        std::string                TypeString;
+        std::vector<std::string>   ArgumentTypeStrings;
+        xCodeAttribute             CodeAttribute;
     };
 
     X_GAME_API uint16_t ExtractConstantValueAttribute(const std::vector<xel::ubyte> & Binary);
