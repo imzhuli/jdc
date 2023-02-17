@@ -120,8 +120,8 @@ namespace jdc
     constexpr const uint8_t OP_iconst_5  = 0x08;
     constexpr const uint8_t OP_idiv = 0x6c;
 
-    constexpr const uint8_t OP_if_acmpeq = 0xa5; // equal
-    constexpr const uint8_t OP_if_acmpne = 0xa6; // not equal
+    constexpr const uint8_t OP_if_acmpeq = 0xa5;
+    constexpr const uint8_t OP_if_acmpne = 0xa6;
     constexpr const uint8_t OP_if_icmpeq = 0x9f;
     constexpr const uint8_t OP_if_icmpne = 0xa0;
     constexpr const uint8_t OP_if_icmplt = 0xa1;
@@ -227,6 +227,44 @@ namespace jdc
     constexpr const uint8_t OP_tableswitch = 0xaa;
     constexpr const uint8_t OP_wide = 0xc4;
 
-    X_GAME_API std::string BuildCode(const xMethodEx & Method);
+
+    struct xLocalVariable
+    {
+        std::string Name;
+        std::string TypeString;
+    };
+
+    enum struct eFloatControlFlag
+    {
+        IF,
+        DO_WHILE,
+    };
+
+    enum struct eValueType
+    {
+        Integer,
+        Long,
+        Float,
+        Double,
+        Enum,
+        Reference,
+    };
+
+    struct xEntryMark
+    {
+        size_t EntryCount = 0;
+        size_t JumpUpCount = 0;
+        size_t JumpDownCount = 0;
+        size_t ExitCount = 0;
+    };
+
+    X_GAME_API std::vector<xEntryMark> BuildEntryMarks(const std::vector<xel::ubyte> & Binary);
+    X_GAME_API xel::xOptional<std::string> BuildExpressionLines(
+        const std::vector<xel::ubyte> & Binary,
+        const std::vector<xConstantItemInfo> & ConstantPool,
+        std::vector<xLocalVariable> & LocalVariables,
+        const std::vector<xEntryMark> & EntryMarks);
+    X_GAME_API bool FindEntryPoints(std::vector<xEntryMark> & Marks);
+    X_GAME_API std::string BuildCode(const xMethodEx & Method, const std::vector<xConstantItemInfo> & ConstantPool);
 
 }

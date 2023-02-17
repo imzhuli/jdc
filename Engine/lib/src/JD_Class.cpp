@@ -142,6 +142,42 @@ namespace jdc
         return nullptr;
     }
 
+    std::string EscapeString(const std::string & S)
+    {
+        std::ostringstream ss;
+        for (auto c : S) {
+            if (c == '\\') {
+                ss << "\\\\";
+                continue;
+            }
+            if (c == '"') {
+                ss << "\\\"";
+                continue;
+            }
+            ss << c;
+        }
+        return ss.str();
+    }
+
+    std::string EscapeStringQuoted(const std::string & S)
+    {
+        std::ostringstream ss;
+        ss << '"';
+        for (auto c : S) {
+            if (c == '\\') {
+                ss << "\\\\";
+                continue;
+            }
+            if (c == '"') {
+                ss << "\\\"";
+                continue;
+            }
+            ss << c;
+        }
+        ss << '"';
+        return ss.str();
+    }
+
     const std::string * GetConstantItemUtf8(const xConstantItemInfo & Item)
     {
         if (Item.Tag == eConstantTag::Utf8) {
@@ -187,7 +223,7 @@ namespace jdc
             case eConstantTag::Double:
                 return std::to_string(Item.Info.Double.Value);
             case eConstantTag::String:
-                return *GetConstantItemUtf8(Items, Item.Info.String.StringIndex);
+                return EscapeStringQuoted(*GetConstantItemUtf8(Items, Item.Info.String.StringIndex));
             default:
                 break;
         }

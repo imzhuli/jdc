@@ -312,7 +312,7 @@ namespace jdc
         ss << "vvvvvvvvvv methods" << endl << endl;
         for(auto & Method : JavaClass.Methods) {
             auto MethodEx = Extend(JavaClass, Method);
-            auto Code = BuildCode(MethodEx);
+            auto Code = BuildCode(MethodEx, ConstantPool);
             ss << Dump(ConstantPool, MethodEx) << endl;
 
             (void)Code;

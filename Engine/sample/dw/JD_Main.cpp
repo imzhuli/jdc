@@ -1,11 +1,13 @@
 #include <xel/Common.hpp>
 #include <xel/String.hpp>
 #include <xel/Util/Command.hpp>
+#include <xel_ext/Util/FileSystem.hpp>
 #include <iostream>
 
 #include <jdc/JD_Class.hpp>
 #include <jdc/JD_ClassDump.hpp>
 #include <jdc/JD_CodeGenerator.hpp>
+#include <jdc/JD_Util.hpp>
 
 #ifdef X_SYSTEM_WINDOWS
 #include <windows.h>
@@ -26,6 +28,7 @@ int main(int argc, char *argv[])
     xCommandLine Cmd { argc, argv, {
         { 'r', nullptr, "class_root", true },
         { 'c', nullptr, "class_path", true },
+        { 't', nullptr, "test", false},
     }};
 
     if (Cmd["class_path"]()) {
@@ -39,6 +42,12 @@ int main(int argc, char *argv[])
         cout << Dump(LoadResult.Data) << endl;
         cout << GenerateClassCode(LoadResult.Data) << endl;
         return 0;
+    }
+
+    if (Cmd["test"]()) {
+        auto Tmp = xTempPath();
+        cout << "TempDir: " << Tmp.ToString() << endl;
+        cin.get();
     }
 
     return 0;
