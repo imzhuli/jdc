@@ -1,4 +1,4 @@
-#include <jdc/JD_Class.hpp>
+#include <jdc/jvm/JD_Class.hpp>
 #include <jdc/JD_ClassEx.hpp>
 #include <xel/String.hpp>
 
@@ -20,7 +20,7 @@ namespace jdc
         return Reader.R2();
     }
 
-    xClassEx Extend(const xClass& JavaClass)
+    xClassEx Extend(const xClassInfo& JavaClass)
     {
         xClassEx Ex;
         auto & ConstantPool = JavaClass.ConstantPool;
@@ -40,17 +40,17 @@ namespace jdc
             }
         }
 
-        Ex.FullClassName = GetFullClassName(*GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.ThisClass));
-        Ex.FullSuperClassName = GetFullClassName(*GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.SuperClass));
+        Ex.FullClassName = GetFullClassName(*GetConstantItemClassBinaryName(JavaClass.ConstantPool, JavaClass.ThisClass));
+        Ex.FullSuperClassName = GetFullClassName(*GetConstantItemClassBinaryName(JavaClass.ConstantPool, JavaClass.SuperClass));
 
         for (auto InterfaceIndex : JavaClass.InterfaceIndices) {
-            auto InterfaceName = *GetConstantItemClassPathName(JavaClass.ConstantPool, InterfaceIndex);
+            auto InterfaceName = *GetConstantItemClassBinaryName(JavaClass.ConstantPool, InterfaceIndex);
             Ex.InterfaceNames.push_back(InterfaceName);
         }
         return Ex;
     }
 
-    xFieldEx Extend(const xClass& JavaClass, const xFieldInfo & FieldInfo)
+    xFieldEx Extend(const xClassInfo& JavaClass, const xFieldInfo & FieldInfo)
     {
         xFieldEx Ex;
         auto & ConstantPool = JavaClass.ConstantPool;
@@ -109,12 +109,12 @@ namespace jdc
         return Ex;
     }
 
-    xMethodEx Extend(const xClass& JavaClass, const xMethodInfo & MethodInfo)
+    xMethodEx Extend(const xClassInfo& JavaClass, const xMethodInfo & MethodInfo)
     {
         xMethodEx Ex;
         auto & ConstantPool = JavaClass.ConstantPool;
 
-        Ex.ClassName = GetFullClassName(*GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.ThisClass));
+        Ex.ClassName = GetFullClassName(*GetConstantItemClassBinaryName(JavaClass.ConstantPool, JavaClass.ThisClass));
         Ex.Name = *GetConstantItemUtf8(ConstantPool, MethodInfo.NameIndex);
 
         do {

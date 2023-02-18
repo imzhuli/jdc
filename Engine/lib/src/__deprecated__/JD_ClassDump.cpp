@@ -33,7 +33,7 @@ namespace jdc
             case eConstantTag::Double:
                 return IndexString + "Double: " + std::to_string(Item.Info.Double.Value);
             case eConstantTag::Class:
-                return IndexString + "Class: @" + std::to_string(Item.Info.Class.PathNameIndex);
+                return IndexString + "Class: @" + std::to_string(Item.Info.Class.BinaryNameIndex);
             case eConstantTag::String:
                 return IndexString + "String: @" + std::to_string(Item.Info.String.StringIndex) + " ==> " + *GetConstantItemString(Items, Index);
             case eConstantTag::FieldRef:
@@ -62,7 +62,7 @@ namespace jdc
         return IndexString + "Unknown";
     }
 
-    std::string DumpClassAccessFlags(const xClass & JavaClass)
+    std::string DumpClassAccessFlags(const xClassInfo & JavaClass)
     {
         auto Flag = JavaClass.AccessFlags;
         std::vector<std::string> FlagStrings;

@@ -9,20 +9,20 @@ using namespace xel;
 namespace jdc
 {
 
-    static const std::string JavaDefaultRootClassPathName = "java/lang/Object";
+    static const std::string JavaDefaultRootClassBinaryName = "java/lang/Object";
 
-    std::vector<std::string> GetInterfaceNames(const xClass & JavaClass)
+    std::vector<std::string> GetInterfaceNames(const xClassInfo & JavaClass)
     {
         std::vector<std::string> InterfaceNames;
         InterfaceNames.resize(JavaClass.InterfaceIndices.size());
         for (size_t Index = 0; Index < JavaClass.InterfaceIndices.size(); ++Index) {
             auto InterfaceIndex = JavaClass.InterfaceIndices[Index];
-            InterfaceNames[Index] = GetClassName(*GetConstantItemClassPathName(JavaClass.ConstantPool, InterfaceIndex));
+            InterfaceNames[Index] = GetClassName(*GetConstantItemClassBinaryName(JavaClass.ConstantPool, InterfaceIndex));
         }
         return InterfaceNames;
     }
 
-    std::string GenerateClassTitle(const xClass & JavaClass)
+    std::string GenerateClassTitle(const xClassInfo & JavaClass)
     {
         std::vector<std::string> TitleStrings;
 
@@ -53,11 +53,11 @@ namespace jdc
             TitleStrings.push_back("class");
         }
 
-        auto ThisClassName = *GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.ThisClass);
-        auto SuperClassName = *GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.SuperClass);
+        auto ThisClassName = *GetConstantItemClassBinaryName(JavaClass.ConstantPool, JavaClass.ThisClass);
+        auto SuperClassName = *GetConstantItemClassBinaryName(JavaClass.ConstantPool, JavaClass.SuperClass);
         TitleStrings.push_back(GetClassName(ThisClassName));
 
-        if (SuperClassName != JavaDefaultRootClassPathName) {
+        if (SuperClassName != JavaDefaultRootClassBinaryName) {
             TitleStrings.push_back("extends");
             TitleStrings.push_back(GetClassName(SuperClassName));
         }
@@ -71,7 +71,7 @@ namespace jdc
         return JoinStr(TitleStrings.begin(), TitleStrings.end(), ' ');
     }
 
-    std::vector<std::string> GetImportNames(const xClass & JavaClass)
+    std::vector<std::string> GetImportNames(const xClassInfo & JavaClass)
     {
         std::vector<std::string> ImportNames;
         return ImportNames;
@@ -82,11 +82,11 @@ namespace jdc
         return {};
     }
 
-    std::string GenerateClassCode(const xClass & JavaClass)
+    std::string GenerateClassCode(const xClassInfo & JavaClass)
     {
-        auto ClassPathName = *GetConstantItemClassPathName(JavaClass.ConstantPool, JavaClass.ThisClass);
+        auto ClassBinaryName = *GetConstantItemClassBinaryName(JavaClass.ConstantPool, JavaClass.ThisClass);
         auto ImportNames = GetImportNames(JavaClass);
-        auto [PackageName, ClassName] = GetPackageAndClassName(ClassPathName);
+        auto [PackageName, ClassName] = GetPackageAndClassName(ClassBinaryName);
         auto ClassTitle = GenerateClassTitle(JavaClass);
 
         std::ostringstream ss;

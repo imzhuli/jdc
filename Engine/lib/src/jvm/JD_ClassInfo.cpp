@@ -1,7 +1,4 @@
-#include <jdc/JD_Class.hpp>
-#include <jdc/JD_ClassEx.hpp>
-#include <jdc/JD_Util.hpp>
-#include <jdc/JD_CodeGenerator.hpp>
+#include <jdc/jvm/JD_ClassInfo.hpp>
 #include <xel/String.hpp>
 #include <xel/Byte.hpp>
 #include <sstream>
@@ -13,7 +10,7 @@ using namespace xel;
 
 namespace jdc
 {
-    const char * ClassVersionString(uint16_t MajorVersion)
+    const char * GetClassVersionString(uint16_t MajorVersion)
     {
         if (MajorVersion <= 49) {
             return "Prior_to_1.5";
@@ -54,7 +51,7 @@ namespace jdc
         return "UnknownVersion";
     }
 
-    const char * ConstantTagString(const eConstantTag Tag)
+    const char * GetConstantTagString(const eConstantTag Tag)
     {
         switch (Tag) {
             case eConstantTag::Unspecified:
@@ -99,7 +96,7 @@ namespace jdc
         return "Unknown";
     }
 
-    const char * FieldTypeString(const eFieldType Type)
+    const char * GetFieldTypeString(const eFieldType Type)
     {
         switch(Type) {
             case eFieldType::Void: {
@@ -201,11 +198,11 @@ namespace jdc
         return nullptr;
     }
 
-    const std::string * GetConstantItemClassPathName(const std::vector<xConstantItemInfo> & Items, size_t Index)
+    const std::string * GetConstantItemClassBinaryName(const std::vector<xConstantItemInfo> & Items, size_t Index)
     {
         auto & Item = Items[Index];
         if (Item.Tag == eConstantTag::Class) {
-            return GetConstantItemUtf8(Items, Item.Info.Class.PathNameIndex);
+            return GetConstantItemUtf8(Items, Item.Info.Class.BinaryNameIndex);
         }
         return nullptr;
     }
@@ -280,7 +277,7 @@ namespace jdc
                 if ((RemainSize -= 2) < 0) {
                     return false;
                 }
-                Info.PathNameIndex = Reader.R2();
+                Info.BinaryNameIndex = Reader.R2();
                 break;
             }
             case eConstantTag::FieldRef: {
@@ -491,10 +488,10 @@ namespace jdc
         Tag = eConstantTag::Unspecified;
     }
 
-    std::string GetPackageName(const std::string & ClassPathName)
+    std::string GetPackageName(const std::string & ClassBinaryName)
     {
-        auto IndexIter = ClassPathName.rfind('/');
-        auto PackageName = ClassPathName.substr(0, IndexIter);
+        auto IndexIter = ClassBinaryName.rfind('/');
+        auto PackageName = ClassBinaryName.substr(0, IndexIter);
         for (auto & C : PackageName) {
             if (C == '/') {
                 C = '.';
@@ -503,9 +500,9 @@ namespace jdc
         return PackageName;
     }
 
-    std::string GetFullClassName(const std::string & ClassPathName)
+    std::string GetFullClassName(const std::string & ClassBinaryName)
     {
-        auto Copy = ClassPathName;
+        auto Copy = ClassBinaryName;
         for (auto & C : Copy) {
             if (C == '/' || C == '$') {
                 C = '.';
@@ -514,33 +511,33 @@ namespace jdc
         return Copy;
     }
 
-    std::string GetClassName(const std::string & ClassPathName)
+    std::string GetClassName(const std::string & ClassBinaryName)
     {
-        auto IndexIter = ClassPathName.rfind('$');
-        if (IndexIter != ClassPathName.npos) {
-            return ClassPathName.substr(IndexIter + 1);
+        auto IndexIter = ClassBinaryName.rfind('$');
+        if (IndexIter != ClassBinaryName.npos) {
+            return ClassBinaryName.substr(IndexIter + 1);
         }
 
-        IndexIter = ClassPathName.rfind('/');
-        if (IndexIter != ClassPathName.npos) {
-            return ClassPathName.substr(IndexIter + 1);
+        IndexIter = ClassBinaryName.rfind('/');
+        if (IndexIter != ClassBinaryName.npos) {
+            return ClassBinaryName.substr(IndexIter + 1);
         }
-        return ClassPathName;
+        return ClassBinaryName;
     }
 
-    std::pair<std::string, std::string> GetPackageAndClassName(const std::string & ClassPathName)
+    std::pair<std::string, std::string> GetPackageAndClassName(const std::string & ClassBinaryName)
     {
-        auto IndexIter = ClassPathName.rfind('/');
-        if (IndexIter == ClassPathName.npos) {
-            return std::make_pair(std::string(""), ClassPathName);
+        auto IndexIter = ClassBinaryName.rfind('/');
+        if (IndexIter == ClassBinaryName.npos) {
+            return std::make_pair(std::string(""), ClassBinaryName);
         }
-        auto PackageName = ClassPathName.substr(0, IndexIter);
+        auto PackageName = ClassBinaryName.substr(0, IndexIter);
         for (auto & C : PackageName) {
             if (C == '/') {
                 C = '.';
             }
         }
-        auto ClassName = ClassPathName.substr(IndexIter + 1);
+        auto ClassName = ClassBinaryName.substr(IndexIter + 1);
         for (auto & C : ClassName) {
             if (C == '$') {
                 C = '.';
@@ -648,9 +645,9 @@ namespace jdc
     std::string VariableTypeString(const xVariableType & VType)
     {
         if (VType.FieldType == eFieldType::Class) {
-            return GetFullClassName(VType.ClassPathName);
+            return GetFullClassName(VType.ClassBinaryName);
         }
-        return FieldTypeString(VType.FieldType);
+        return GetFieldTypeString(VType.FieldType);
     }
 
     std::string VariableTypeString(const std::string & Utf8)
@@ -779,9 +776,9 @@ namespace jdc
         return true;
     }
 
-    xJDResult<xClass> LoadClassInfoFromFile(const std::string & Filename)
+    xResult<xClassInfo> LoadClassInfoFromFile(const std::string & Filename)
     {
-        xClass JavaClass = {};
+        xClassInfo JavaClass = {};
 
         auto FileDataOpt = FileToStr(Filename);
         if (!FileDataOpt()) {

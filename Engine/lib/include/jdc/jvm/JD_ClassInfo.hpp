@@ -1,6 +1,5 @@
 #pragma once
-#include "./JD_Base.hpp"
-#include "./JD_BaseError.hpp"
+#include "../base/JD_Base.hpp"
 #include <xel/Byte.hpp>
 #include <string>
 #include <vector>
@@ -8,93 +7,9 @@
 namespace jdc
 {
 
-    enum struct eFieldType : uint8_t
-    {
-        Void,
-        Byte,
-        Short,
-        Integer,
-        Long,
-        Char,
-        Float,
-        Double,
-        Boolean,
-        Class,
-        Array,
-
-        // the following are used only when extracting types form descriptor:
-        ParamStart,
-        ParamEnd,
-        Invalid,
-    };
-
-    enum struct eConstantTag : uint8_t
-    {
-        Unspecified        = 0,
-        Utf8               = 1,
-        Integer            = 3,
-        Float              = 4,
-        Long               = 5,
-        Double             = 6,
-        Class              = 7,
-        String             = 8,
-        FieldRef           = 9,
-        MethodRef          = 10,
-        InterfaceMethodRef = 11,
-        NameAndType        = 12,
-        MethodHandle       = 15,
-        MethodType         = 16,
-        Dynamic            = 17,
-        InvokeDynamic      = 18,
-        Module             = 19,
-        Package            = 20,
-    };
-
-    constexpr bool IsLoadableConstantTag(const eConstantTag Tag)
-    {
-        switch (Tag) {
-            case eConstantTag::Integer:
-            case eConstantTag::Float:
-            case eConstantTag::Long:
-            case eConstantTag::Double:
-            case eConstantTag::Class:
-            case eConstantTag::String:
-            case eConstantTag::MethodHandle:
-            case eConstantTag::MethodType:
-            case eConstantTag::Dynamic:
-                return true;
-            default:
-                break;
-        }
-        return false;
-    }
-
-    using xAccessFlag = uint16_t;
-    constexpr const xAccessFlag ACC_PUBLIC       = 0x0001; // field | method
-    constexpr const xAccessFlag ACC_PRIVATE      = 0x0002; // field | method
-    constexpr const xAccessFlag ACC_PROTECTED    = 0x0004; // field | method
-    constexpr const xAccessFlag ACC_STATIC       = 0x0008; // field | method
-    constexpr const xAccessFlag ACC_FINAL        = 0x0010; // field | method
-    constexpr const xAccessFlag ACC_SYNCHRONIZED = 0x0020; // method
-    constexpr const xAccessFlag ACC_SUPER        = 0x0020; // class | interface
-    constexpr const xAccessFlag ACC_OPEN         = 0x0020; // module
-    constexpr const xAccessFlag ACC_BRIDGE       = 0x0040; // method
-    constexpr const xAccessFlag ACC_VOLATILE     = 0x0040; // field
-    constexpr const xAccessFlag ACC_VARARGS      = 0x0080; // method
-    constexpr const xAccessFlag ACC_TRANSIENT    = 0x0080; // field
-    constexpr const xAccessFlag ACC_NATIVE       = 0x0100; // method
-    constexpr const xAccessFlag ACC_INTERFACE    = 0x0200; // class
-    constexpr const xAccessFlag ACC_ABSTRACT     = 0x0400; // method
-    constexpr const xAccessFlag ACC_STRICT       = 0x0800; // method
-    constexpr const xAccessFlag ACC_SYNTHETIC    = 0x1000; // class
-    constexpr const xAccessFlag ACC_ANNOTATION   = 0x2000; // class
-    constexpr const xAccessFlag ACC_ENUM         = 0x4000; // class
-    constexpr const xAccessFlag ACC_MODULE       = 0x8000; // class
-    constexpr const xAccessFlag ACC_MANDATED     = 0x8000; // module
-
     struct xConstantClassInfo
     {
-        uint16_t PathNameIndex;
+        uint16_t BinaryNameIndex;
     };
 
     struct xConstantFieldRefInfo
@@ -232,7 +147,7 @@ namespace jdc
     struct xVariableType
     {
         eFieldType   FieldType;
-        std::string  ClassPathName;
+        std::string  ClassBinaryName;
     };
 
     struct xMethodDescriptor
@@ -249,7 +164,7 @@ namespace jdc
         std::vector<xAttributeInfo>   Attributes;
     };
 
-    struct xClass
+    struct xClassInfo
     {
         uint32_t                           Magic;
         uint16_t                           MinorVersion;
@@ -290,23 +205,20 @@ namespace jdc
         std::vector<xAttributeInfo>         Attributes;
     };
 
-    X_GAME_API const char * ClassVersionString(uint16_t MajorVersion);
-    X_GAME_API const char * ConstantTagString(const eConstantTag Tag);
-    X_GAME_API const char * FieldTypeString(const eFieldType Type);
     X_GAME_API std::string VariableTypeString(const xVariableType & VType);
     X_GAME_API std::string VariableTypeString(const std::string & Utf8);
 
     X_GAME_API const std::string * GetConstantItemUtf8(const xConstantItemInfo & Item);
     X_GAME_API const std::string * GetConstantItemUtf8(const std::vector<xConstantItemInfo> & Items, size_t Index);
     X_GAME_API const std::string * GetConstantItemString(const std::vector<xConstantItemInfo> & Items, size_t Index);
-    X_GAME_API const std::string * GetConstantItemClassPathName(const std::vector<xConstantItemInfo> & Items, size_t Index);
+    X_GAME_API const std::string * GetConstantItemClassBinaryName(const std::vector<xConstantItemInfo> & Items, size_t Index);
     X_GAME_API const std::string ConstantValueString(const std::vector<xConstantItemInfo> & Items, size_t Index);
     X_GAME_API const std::string ConstantFieldValueString(eFieldType FieldType, const std::vector<xConstantItemInfo> & Items, size_t Index);
 
-    X_GAME_API std::string GetPackageName(const std::string & ClassPathName);
-    X_GAME_API std::string GetFullClassName(const std::string & ClassPathName);
-    X_GAME_API std::string GetClassName(const std::string & ClassPathName);
-    X_GAME_API std::pair<std::string, std::string> GetPackageAndClassName(const std::string & ClassPathName);
+    X_GAME_API std::string GetPackageName(const std::string & ClassBinaryName);
+    X_GAME_API std::string GetFullClassName(const std::string & ClassBinaryName);
+    X_GAME_API std::string GetClassName(const std::string & ClassBinaryName);
+    X_GAME_API std::pair<std::string, std::string> GetPackageAndClassName(const std::string & ClassBinaryName);
 
     X_GAME_API xVariableType ExtractVariableType(const std::string & Utf8, size_t & Index);
     X_GAME_API xMethodDescriptor ExtractMethodDescriptor(const std::string & Utf8);
@@ -315,10 +227,11 @@ namespace jdc
     X_GAME_API bool ExtractFieldInfo(xel::xStreamReader & Reader, ssize_t & RemainSize, xFieldInfo & FieldInfo);
     X_GAME_API bool ExtractInnerClassAttribute(const std::vector<xel::ubyte> & Binary, std::vector<xInnerClassAttribute> & Output);
     X_GAME_API bool ExtractCodeAttribute(const std::vector<xel::ubyte> & Binary, xCodeAttribute & Output);
-    X_GAME_API xJDResult<xClass> LoadClassInfoFromFile(const std::string & Filename);
 
     X_INLINE std::string MakeArgumentName(size_t Index) { return "__arg_" + std::to_string(Index); }
     X_INLINE std::string MakeVariableName(size_t Index) { return "__var_" + std::to_string(Index); }
     X_INLINE bool IsLocalVariableName(const std::string & Name) { return 0 == Name.find("__var_"); }
+
+    X_GAME_API xResult<xClassInfo> LoadClassInfoFromFile(const std::string & Filename);
 
 }

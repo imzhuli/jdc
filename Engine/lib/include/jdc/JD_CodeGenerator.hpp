@@ -6,10 +6,10 @@
 namespace jdc
 {
 
-    X_GAME_API std::vector<std::string> GetImportNames(const xClass & JavaClass);
-    X_GAME_API std::vector<std::string> GetInterfaceNames(const xClass & JavaClass);
-    X_GAME_API std::string GenerateClassTitle(const xClass & JavaClass);
+    X_GAME_API std::vector<std::string> GetImportNames(const xClassInfo & JavaClass);
+    X_GAME_API std::vector<std::string> GetInterfaceNames(const xClassInfo & JavaClass);
+    X_GAME_API std::string GenerateClassTitle(const xClassInfo & JavaClass);
 
-    X_GAME_API std::string GenerateClassCode(const xClass & JavaClass);
+    X_GAME_API std::string GenerateClassCode(const xClassInfo & JavaClass);
 
 }

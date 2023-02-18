@@ -216,7 +216,7 @@ namespace jdc
     };
 
     #define CASE_OP_NAME(x) case x: return #x
-    const char * GetOpName(uint8_t OpCode)
+    const char * GetOpName(xOpCode OpCode)
     {
         auto NamePtr = OpNameTable[OpCode];
         return NamePtr ? (NamePtr + 3) : "";
