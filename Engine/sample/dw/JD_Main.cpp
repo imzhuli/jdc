@@ -8,6 +8,7 @@
 #include <jdc/JD_ClassDump.hpp>
 #include <jdc/JD_CodeGenerator.hpp>
 #include <jdc/JD_Util.hpp>
+#include <jdc/JD_Zip.hpp>
 
 #ifdef X_SYSTEM_WINDOWS
 #include <windows.h>
@@ -29,6 +30,8 @@ int main(int argc, char *argv[])
         { 'r', nullptr, "class_root", true },
         { 'c', nullptr, "class_path", true },
         { 't', nullptr, "test", false},
+        { 'x', nullptr, "unzip", true},
+        { 'o', nullptr, "output", true},
     }};
 
     if (Cmd["class_path"]()) {
@@ -48,6 +51,18 @@ int main(int argc, char *argv[])
         auto Tmp = xTempPath();
         cout << "TempDir: " << Tmp.ToString() << endl;
         cin.get();
+        return 0;
+    }
+
+    if (Cmd["unzip"]() && Cmd["output"]()) {
+        auto Source = *Cmd["unzip"];
+        auto Target = *Cmd["output"];
+
+        if (!UnzipJar(Target, Source)) {
+            cerr << "Failed to unzip file" << endl;
+            return -1;
+        }
+        return 0;
     }
 
     return 0;

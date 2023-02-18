@@ -17,7 +17,6 @@ endif()
 
 # local dependencies
 include_directories(
-	../lib/src/
 	../lib/include/
 	${X_INCLUDE_DIRS}
 	)
