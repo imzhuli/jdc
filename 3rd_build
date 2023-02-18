@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+
+PROJECT_HOME=`pwd`
+
+rm -rf ./build_3rd/
+mkdir -p ./build_3rd/zlib
+
+cd build_3rd/zlib
+cmake -DCMAKE_INSTALL_PREFIX=${PROJECT_HOME}/build_3rd/zlib/.local ../../3rd/zlib
+make
+make install
+cd ../..
+cd 3rd/zlib
+git reset --hard
+git clean -f -d
+cd ../..
+
+

@@ -39,11 +39,7 @@
 
 # default local build directory
 build
-build_d
-build_r
-_build
-_build_d
-_build_r
+build_3rd
 /test_assets/
 /Assets/Shader/
 .vscode
