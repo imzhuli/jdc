@@ -31,7 +31,8 @@ set(shared_lib_dependency_private
 	)
 set(shared_lib_dependency_public)
 
-aux_source_directory(./src/                   X_GAME_SOURCE)
+aux_source_directory(./src/                X_GAME_SOURCE)
+aux_source_directory(./src/decompiler      X_GAME_SOURCE)
 
 if (X_GAME_OPTION_STATIC)
 #static lib:

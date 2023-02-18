@@ -1,7 +1,7 @@
 #include <jdc/JD_ClassDump.hpp>
 #include <jdc/JD_Util.hpp>
 #include <jdc/JD_CodeGenerator.hpp>
-#include <jdc/JD_Instructions.hpp>
+#include <jdc/decompiler/JD_Instructions.hpp>
 #include <xel/String.hpp>
 #include <xel/Byte.hpp>
 #include <sstream>
@@ -257,70 +257,6 @@ namespace jdc
             ss << DumpAttribute(ConstantPool, Attribute) << endl;
         }
         return ss.str();
-    }
-
-    std::string Dump(const xClass & JavaClass)
-    {
-        std::ostringstream ss;
-        auto & ConstantPool = JavaClass.ConstantPool;
-
-        // classex:
-        auto ClassEx = Extend(JavaClass);
-        ss << " - MagicCheck: " << YN(JavaClass.Magic == 0xCAFEBABE) << endl;
-        ss << " - MajorVersion: " << JavaClass.MajorVersion << " ( " << ClassVersionString(JavaClass.MajorVersion) << " ) "<< endl;
-        ss << " - MinorVersion: " << JavaClass.MinorVersion << endl;
-
-        ss << " -- ConstantPoolSize: " << ConstantPool.size() << endl;
-        for (size_t Index = 0; Index < ConstantPool.size(); ++Index) {
-            ss << " ---- " << DumpConstantItemString(ConstantPool, Index) << endl;
-        }
-        ss << endl;
-
-        ss << "SourceFile: " << ClassEx.SourceFile << endl;
-        ss << "ClassName " << ClassEx.FullClassName << endl;
-        ss << " -- SuperClassName " << ClassEx.FullSuperClassName << endl;
-        ss << " -- AccessFlags(0x" << std::hex << JavaClass.AccessFlags << std::dec << "): " << DumpClassAccessFlags(JavaClass) << endl;
-
-        ss << " -- Interfaces" << endl;
-        for (auto & InterafceName : ClassEx.InterfaceNames) {
-            ss << " ---- " << InterafceName << endl;
-        }
-
-        ss << " -- InnerClasses" << endl;
-        for (auto & InnerClass : ClassEx.InnerClasses) {
-            ss << " ---- " << GetFullClassName(*GetConstantItemClassPathName(ConstantPool, InnerClass.InnerClassInfoIndex)) << endl;
-        }
-
-        // dump fields:
-        ss << " -- fields" << endl;
-        for(auto & Field : JavaClass.Fields) {
-            auto FieldEx = Extend(JavaClass, Field);
-            ss << " ---- " << Dump(ConstantPool, FieldEx) << endl;
-            // for(auto & AttributeInfo : Field.Attributes) {
-            //     ss << " ------ " << DumpAttribute(ConstantPool, AttributeInfo) << endl;
-            // }
-        }
-
-        // dump attributes:
-        // ss << " -- attributes" << endl;
-        // for(auto & AttributeInfo : JavaClass.Attributes) {
-        //     ss << " ---- " << DumpAttribute(ConstantPool, AttributeInfo) << endl;
-        // }
-
-        // dump methods:
-        ss << endl;
-        ss << "vvvvvvvvvv methods" << endl << endl;
-        for(auto & Method : JavaClass.Methods) {
-            auto MethodEx = Extend(JavaClass, Method);
-            auto Code = BuildCode(MethodEx, ConstantPool);
-            ss << Dump(ConstantPool, MethodEx) << endl;
-
-            (void)Code;
-        }
-        ss << "^^^^^^^^^^ end of methods" << endl;
-
-
-        return ""; // ss.str();
     }
 
 }
