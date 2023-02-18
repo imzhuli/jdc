@@ -250,21 +250,26 @@ namespace jdc
         Reference,
     };
 
-    struct xEntryMark
+    struct xCodeLine
     {
-        size_t EntryCount = 0;
-        size_t JumpUpCount = 0;
-        size_t JumpDownCount = 0;
-        size_t ExitCount = 0;
+        size_t ElseEntry      = {};
+        size_t ElseFinish     = {};
+        size_t WhileEntry     = {};
+        size_t WhileFinish    = {};
+        size_t IfDefault      = {};
+        size_t SwitchDefault  = {};
+        size_t Return         = {};
+        size_t Break          = {};
+        std::string Expression;
     };
 
-    X_GAME_API std::vector<xEntryMark> BuildEntryMarks(const std::vector<xel::ubyte> & Binary);
+    X_GAME_API std::vector<xCodeLine> BuildEntryMarks(const std::vector<xel::ubyte> & Binary);
     X_GAME_API xel::xOptional<std::string> BuildExpressionLines(
         const std::vector<xel::ubyte> & Binary,
         const std::vector<xConstantItemInfo> & ConstantPool,
         std::vector<xLocalVariable> & LocalVariables,
-        const std::vector<xEntryMark> & EntryMarks);
-    X_GAME_API bool FindEntryPoints(std::vector<xEntryMark> & Marks);
+        const std::vector<xCodeLine> & EntryMarks);
+    X_GAME_API bool FindEntryPoints(std::vector<xCodeLine> & Marks);
     X_GAME_API std::string BuildCode(const xMethodEx & Method, const std::vector<xConstantItemInfo> & ConstantPool);
 
 }

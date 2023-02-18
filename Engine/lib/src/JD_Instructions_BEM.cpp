@@ -12,9 +12,9 @@ namespace jdc
     #define Check(x) do { if ((RemainSize -= (x)) < 0) { return {}; } } while(false)
     #define CheckAndSkip(x) do { if ((RemainSize -= (x)) < 0) { return {}; } else { Reader.Skip(1); } } while(false)
 
-    std::vector<xEntryMark> BuildEntryMarks(const std::vector<xel::ubyte> & Binary)
+    std::vector<xCodeLine> BuildEntryMarks(const std::vector<xel::ubyte> & Binary)
     {
-        auto Marks = std::vector<xEntryMark>(Binary.size());
+        auto Marks = std::vector<xCodeLine>(Binary.size());
         auto Reader = xStreamReader(Binary.data());
         auto RemainSize = ssize_t(Binary.size());
 
@@ -162,10 +162,16 @@ namespace jdc
                 case OP_if_icmpgt:
                 case OP_if_icmple: {
                     Check(2);
-                    uint16_t BlockEndOffset = Reader.R2();
-                    uint16_t EntryPointOffset = Offset + BlockEndOffset;
-                    auto & Mark = Marks[EntryPointOffset];
-                    ++Mark.EntryCount;
+                    int16_t SubOffset = Reader.R2();
+                    uint16_t EntryPoint = Offset + SubOffset;
+                    auto & Mark = Marks[EntryPoint];
+                    if (SubOffset < 0) {
+                        Mark.WhileEntry = true;
+                    } else {
+                        Mark.IfDefault = true;
+                        Marks[Offset+1].ElseEntry = true;
+                        Marks[EntryPoint - 1].ElseFinish = true;
+                    }
                     break;
                 }
 
@@ -175,7 +181,7 @@ namespace jdc
                 case OP_dreturn:
                 case OP_areturn: {
                     auto & Mark = Marks[Offset];
-                    ++Mark.ExitCount;
+                    Mark.Return = true;
                 }
 
                 // switch:
@@ -195,7 +201,7 @@ namespace jdc
         return Marks;
     }
 
-    bool FindEntryPoints(std::vector<xEntryMark> & Marks)
+    bool FindEntryPoints(std::vector<xCodeLine> & Marks)
     {
         auto JumpStack = std::vector<int32_t>();
         JumpStack.reserve(128);

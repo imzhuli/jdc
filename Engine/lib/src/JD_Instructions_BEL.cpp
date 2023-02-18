@@ -44,7 +44,7 @@ namespace jdc
         Stack.push_back(Value);
     }
 
-    xel::xOptional<std::string> BuildExpressionLines(const std::vector<xel::ubyte> & Binary, const std::vector<xConstantItemInfo> & ConstantPool, std::vector<xLocalVariable> & LocalVariables, const std::vector<xEntryMark> & EntryMarks)
+    xel::xOptional<std::string> BuildExpressionLines(const std::vector<xel::ubyte> & Binary, const std::vector<xConstantItemInfo> & ConstantPool, std::vector<xLocalVariable> & LocalVariables, const std::vector<xCodeLine> & EntryMarks)
     {
         auto ss = ostringstream();
         auto Reader = xStreamReader(Binary.data());
