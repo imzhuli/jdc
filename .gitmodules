@@ -1,3 +1,6 @@
 [submodule "CppSample"]
 	path = CppSample
 	url = git@github.com:imzhuli/CppSample
+[submodule "3rd/zlib"]
+	path = 3rd/zlib
+	url = https://github.com/madler/zlib.git
