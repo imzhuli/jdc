@@ -113,6 +113,8 @@ namespace jdc
         xResult(eResultCode ResultCode, const std::string & ErrorMessage)
         : ResultCode(ResultCode), ErrorMessage(ErrorMessage)
         {}
+
+        X_INLINE bool IsOk() const { return ResultCode == JDR_OK; }
     };
 
     X_GAME_API bool IsLoadableConstantTag(const eConstantTag Tag);

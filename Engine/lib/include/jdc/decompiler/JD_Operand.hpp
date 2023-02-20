@@ -13,20 +13,34 @@ namespace jdc
         std::vector<std::string> ArgumentTypeBinaryName;
     };
 
-    struct xOperand
+    struct xVariable
     {
         std::string Name;
         std::string TypeBinaryName;
-        uint16_t    LocalVariableIndex        = -1; // undetermined
-        uint16_t    RuntimeStackIndex         = -1; // undetermined
+        uint32_t    LocalVariableIndex        = -1; // undetermined
+        uint32_t    RuntimeStackIndex         = -1; // undetermined
 
-        bool IsTempVariable() const { return RuntimeStackIndex != -1; }
+        bool IsTempVariable() const { return RuntimeStackIndex != static_cast<uint32_t>(-1); }
     };
 
-    struct xOperationTreeNode
+    struct xOpTreeNode
     {
-        xOpCode OpCode;
-        std::vector<xOperationTreeNode*> OperandNodes;
+        xOpCode                     OpCode;
+        uint16_t                    OpInstructionLineIndex;
+
+        xVariable                   Result;
+        std::vector<xOpTreeNode*>   OperandNodes;
+    };
+
+    struct xOpInstrucionLine
+    {
+        size_t WhileEntryCount  = 0;
+        size_t IfEntryCount     = 0;
+        size_t ElseEntryCount   = 0;
+        size_t SwitchEntryCount = 0;
+
+        uint32_t LineIndex     = -1;
+        bool     IsFlowControl = false;
     };
 
 

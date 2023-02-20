@@ -177,6 +177,8 @@ namespace jdc
         std::vector<xFieldInfo>            Fields;
         std::vector<xMethodInfo>           Methods;
         std::vector<xAttributeInfo>        Attributes;
+
+        X_GAME_API_MEMBER const std::string & GetConstantName(size_t Index);
     };
 
     struct xExceptionTableItem

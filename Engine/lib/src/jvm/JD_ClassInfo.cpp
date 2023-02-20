@@ -511,41 +511,6 @@ namespace jdc
         return Copy;
     }
 
-    std::string GetClassName(const std::string & ClassBinaryName)
-    {
-        auto IndexIter = ClassBinaryName.rfind('$');
-        if (IndexIter != ClassBinaryName.npos) {
-            return ClassBinaryName.substr(IndexIter + 1);
-        }
-
-        IndexIter = ClassBinaryName.rfind('/');
-        if (IndexIter != ClassBinaryName.npos) {
-            return ClassBinaryName.substr(IndexIter + 1);
-        }
-        return ClassBinaryName;
-    }
-
-    std::pair<std::string, std::string> GetPackageAndClassName(const std::string & ClassBinaryName)
-    {
-        auto IndexIter = ClassBinaryName.rfind('/');
-        if (IndexIter == ClassBinaryName.npos) {
-            return std::make_pair(std::string(""), ClassBinaryName);
-        }
-        auto PackageName = ClassBinaryName.substr(0, IndexIter);
-        for (auto & C : PackageName) {
-            if (C == '/') {
-                C = '.';
-            }
-        }
-        auto ClassName = ClassBinaryName.substr(IndexIter + 1);
-        for (auto & C : ClassName) {
-            if (C == '$') {
-                C = '.';
-            }
-        }
-        return std::make_pair(std::move(PackageName), std::move(ClassName));
-    }
-
     bool ExtractAttributeInfo(xStreamReader & Reader, ssize_t & RemainSize, xAttributeInfo & AttributeInfo)
     {
         if ((RemainSize -= 6) < 0) {
@@ -642,38 +607,38 @@ namespace jdc
         return { eFieldType::Invalid };
     }
 
-    std::string VariableTypeString(const xVariableType & VType)
-    {
-        if (VType.FieldType == eFieldType::Class) {
-            return GetFullClassName(VType.ClassBinaryName);
-        }
-        return GetFieldTypeString(VType.FieldType);
-    }
+    // std::string VariableTypeString(const xVariableType & VType)
+    // {
+    //     if (VType.FieldType == eFieldType::Class) {
+    //         return GetFullClassName(VType.ClassBinaryName);
+    //     }
+    //     return GetFieldTypeString(VType.FieldType);
+    // }
 
-    std::string VariableTypeString(const std::string & Utf8)
-    {
-        size_t i = 0; // skip the first '('
-        auto VType = ExtractVariableType(Utf8, i);
-        if (VType.FieldType != eFieldType::Array) {
-            return VariableTypeString(VType);
-        }
+    // std::string VariableTypeString(const std::string & Utf8)
+    // {
+    //     size_t i = 0; // skip the first '('
+    //     auto VType = ExtractVariableType(Utf8, i);
+    //     if (VType.FieldType != eFieldType::Array) {
+    //         return VariableTypeString(VType);
+    //     }
 
-        size_t ArraySize = 1;
-        std::string ArrayTypeString;
-        while (i < Utf8.size()) {
-            auto TestVType = ExtractVariableType(Utf8, i);
-            if (TestVType.FieldType != eFieldType::Array) {
-                ArrayTypeString = VariableTypeString(TestVType);
-                for (size_t ACounter = 0 ; ACounter < ArraySize; ++ACounter) {
-                    ArrayTypeString += "[]";
-                }
-                break;
-            } else {
-                ++ArraySize;
-            }
-        }
-        return ArrayTypeString;
-    }
+    //     size_t ArraySize = 1;
+    //     std::string ArrayTypeString;
+    //     while (i < Utf8.size()) {
+    //         auto TestVType = ExtractVariableType(Utf8, i);
+    //         if (TestVType.FieldType != eFieldType::Array) {
+    //             ArrayTypeString = VariableTypeString(TestVType);
+    //             for (size_t ACounter = 0 ; ACounter < ArraySize; ++ACounter) {
+    //                 ArrayTypeString += "[]";
+    //             }
+    //             break;
+    //         } else {
+    //             ++ArraySize;
+    //         }
+    //     }
+    //     return ArrayTypeString;
+    // }
 
     xMethodDescriptor ExtractMethodDescriptor(const std::string & Utf8)
     {
