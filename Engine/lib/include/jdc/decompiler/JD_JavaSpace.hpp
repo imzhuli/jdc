@@ -18,20 +18,27 @@ namespace jdc
         std::string BinaryName;
         std::string PathName;
         std::string CodeName;
-        std::vector<std::unique_ptr<xJavaClass>> Classes;
+        std::vector<xJavaClass*> Classes;
     };
 
     class xJavaClass
     {
     public:
         xJavaPackage * PackagePtr;
+
+        std::string PackageBinaryName;
         std::string PathName;
         std::string BinaryName;
         std::string SimpleBinaryName;
         std::string CodeName;
         std::string SimpleCodeName;
-
         xClassInfo ClassInfo;
+
+        struct {
+            std::string SourceFilename;
+
+
+        } Extend;
 
         X_INLINE const std::string & GetPackageBinaryName() const { return PackagePtr->BinaryName; }
         X_INLINE const std::string & GetPackagePathName() const { return PackagePtr->PathName; }

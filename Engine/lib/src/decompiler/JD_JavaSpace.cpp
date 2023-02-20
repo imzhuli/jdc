@@ -68,6 +68,7 @@ namespace jdc
                     continue;
                 }
                 auto FilePathString = Path.string();
+                auto PackageBinaryName = ConvertPathNameToBinaryName(Path.parent_path().string().substr(NamePrefixLength));
                 auto RelativePathString = FilePathString.substr(NamePrefixLength);
                 auto ClassPathName = RelativePathString.substr(0, RelativePathString.length() - 6);
                 auto ClassBinaryName = ConvertPathNameToBinaryName(ClassPathName);
@@ -79,21 +80,23 @@ namespace jdc
                     continue;
                 }
                 auto & JavaClass = *Iter->second;
+                JavaClass.PackageBinaryName = PackageBinaryName;
                 JavaClass.PathName = RelativePathString;
                 JavaClass.BinaryName = ClassBinaryName;
                 JavaClass.SimpleBinaryName = GetSimpleClassBinaryName(ClassBinaryName);
                 JavaClass.CodeName = ConvertBinaryNameToCodeName(JavaClass.BinaryName);
                 JavaClass.SimpleCodeName = ConvertBinaryNameToCodeName(JavaClass.SimpleBinaryName);
 
-
                 auto & ClassInfo = JavaClass.ClassInfo;
                 ClassInfo = std::move(LoadResult.Data);
-
-                // TODO:
-                cout << "Class: " << ClassBinaryName << endl;
-                cout << "Info.CodeName: " << JavaClass.CodeName << endl;
-                cout << "Info.SimpleCodeName: " << JavaClass.SimpleCodeName << endl;
             }
+        }
+
+        for(auto & Entry : ClassMap) {
+            auto & JavaClassUPtr = Entry.second;
+            auto & PackageUPtr = PackageMap[JavaClassUPtr->PackageBinaryName];
+            PackageUPtr->Classes.push_back(JavaClassUPtr.get());
+            JavaClassUPtr->PackagePtr = PackageUPtr.get();
         }
 
         return JavaSpace;

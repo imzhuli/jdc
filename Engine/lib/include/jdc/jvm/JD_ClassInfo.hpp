@@ -179,6 +179,10 @@ namespace jdc
         std::vector<xAttributeInfo>        Attributes;
 
         X_GAME_API_MEMBER const std::string & GetConstantName(size_t Index);
+        X_GAME_API_MEMBER const std::string GetConstantValueString(size_t Index);
+        X_GAME_API_MEMBER const std::string GetConstantFieldValueString(eFieldType FieldType, size_t Index);
+
+
     };
 
     struct xExceptionTableItem
@@ -209,18 +213,8 @@ namespace jdc
 
     X_GAME_API std::string VariableTypeString(const xVariableType & VType);
     X_GAME_API std::string VariableTypeString(const std::string & Utf8);
-
-    X_GAME_API const std::string * GetConstantItemUtf8(const xConstantItemInfo & Item);
-    X_GAME_API const std::string * GetConstantItemUtf8(const std::vector<xConstantItemInfo> & Items, size_t Index);
-    X_GAME_API const std::string * GetConstantItemString(const std::vector<xConstantItemInfo> & Items, size_t Index);
-    X_GAME_API const std::string * GetConstantItemClassBinaryName(const std::vector<xConstantItemInfo> & Items, size_t Index);
-    X_GAME_API const std::string ConstantValueString(const std::vector<xConstantItemInfo> & Items, size_t Index);
-    X_GAME_API const std::string ConstantFieldValueString(eFieldType FieldType, const std::vector<xConstantItemInfo> & Items, size_t Index);
-
-    X_GAME_API std::string GetPackageName(const std::string & ClassBinaryName);
-    X_GAME_API std::string GetFullClassName(const std::string & ClassBinaryName);
-    X_GAME_API std::string GetClassName(const std::string & ClassBinaryName);
-    X_GAME_API std::pair<std::string, std::string> GetPackageAndClassName(const std::string & ClassBinaryName);
+    X_GAME_API std::string EscapeString(const std::string & S);
+    X_GAME_API std::string EscapeStringQuoted(const std::string & S);
 
     X_GAME_API xVariableType ExtractVariableType(const std::string & Utf8, size_t & Index);
     X_GAME_API xMethodDescriptor ExtractMethodDescriptor(const std::string & Utf8);
