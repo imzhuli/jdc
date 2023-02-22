@@ -477,29 +477,6 @@ namespace jdc
         Tag = eConstantTag::Unspecified;
     }
 
-    std::string GetPackageName(const std::string & ClassBinaryName)
-    {
-        auto IndexIter = ClassBinaryName.rfind('/');
-        auto PackageName = ClassBinaryName.substr(0, IndexIter);
-        for (auto & C : PackageName) {
-            if (C == '/') {
-                C = '.';
-            }
-        }
-        return PackageName;
-    }
-
-    std::string GetFullClassName(const std::string & ClassBinaryName)
-    {
-        auto Copy = ClassBinaryName;
-        for (auto & C : Copy) {
-            if (C == '/' || C == '$') {
-                C = '.';
-            }
-        }
-        return Copy;
-    }
-
     bool ExtractAttributeInfo(xStreamReader & Reader, ssize_t & RemainSize, xAttributeInfo & AttributeInfo)
     {
         if ((RemainSize -= 6) < 0) {
@@ -595,39 +572,6 @@ namespace jdc
         ++Index;
         return { eFieldType::Invalid };
     }
-
-    // std::string VariableTypeString(const xVariableType & VType)
-    // {
-    //     if (VType.FieldType == eFieldType::Class) {
-    //         return GetFullClassName(VType.ClassBinaryName);
-    //     }
-    //     return GetFieldTypeString(VType.FieldType);
-    // }
-
-    // std::string VariableTypeString(const std::string & Utf8)
-    // {
-    //     size_t i = 0; // skip the first '('
-    //     auto VType = ExtractVariableType(Utf8, i);
-    //     if (VType.FieldType != eFieldType::Array) {
-    //         return VariableTypeString(VType);
-    //     }
-
-    //     size_t ArraySize = 1;
-    //     std::string ArrayTypeString;
-    //     while (i < Utf8.size()) {
-    //         auto TestVType = ExtractVariableType(Utf8, i);
-    //         if (TestVType.FieldType != eFieldType::Array) {
-    //             ArrayTypeString = VariableTypeString(TestVType);
-    //             for (size_t ACounter = 0 ; ACounter < ArraySize; ++ACounter) {
-    //                 ArrayTypeString += "[]";
-    //             }
-    //             break;
-    //         } else {
-    //             ++ArraySize;
-    //         }
-    //     }
-    //     return ArrayTypeString;
-    // }
 
     xMethodDescriptor ExtractMethodDescriptor(const std::string & Utf8)
     {

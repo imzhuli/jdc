@@ -211,8 +211,6 @@ namespace jdc
         std::vector<xAttributeInfo>         Attributes;
     };
 
-    X_GAME_API std::string VariableTypeString(const xVariableType & VType);
-    X_GAME_API std::string VariableTypeString(const std::string & Utf8);
     X_GAME_API std::string EscapeString(const std::string & S);
     X_GAME_API std::string EscapeStringQuoted(const std::string & S);
 
