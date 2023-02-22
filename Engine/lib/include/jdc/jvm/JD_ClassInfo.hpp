@@ -178,10 +178,10 @@ namespace jdc
         std::vector<xMethodInfo>           Methods;
         std::vector<xAttributeInfo>        Attributes;
 
-        X_GAME_API_MEMBER const std::string & GetConstantName(size_t Index);
+        X_GAME_API_MEMBER const std::string & GetConstantUtf8(size_t Index);
+        X_GAME_API_MEMBER const std::string & GetConstantString(size_t Index);
+        X_GAME_API_MEMBER const std::string & GetConstantClassBinaryName(size_t Index);
         X_GAME_API_MEMBER const std::string GetConstantValueString(size_t Index);
-        X_GAME_API_MEMBER const std::string GetConstantFieldValueString(eFieldType FieldType, size_t Index);
-
 
     };
 

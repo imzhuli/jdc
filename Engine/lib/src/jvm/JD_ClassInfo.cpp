@@ -175,22 +175,25 @@ namespace jdc
         return ss.str();
     }
 
-    static const std::string InvalidConstantName = {};
-    const std::string & xClassInfo::GetConstantName(size_t Index)
+    const std::string & xClassInfo::GetConstantUtf8(size_t Index)
     {
         auto & Item = ConstantPool[Index];
-        if (Item.Tag == eConstantTag::Utf8) {
-            return *Item.Info.Utf8.DataPtr;
-        }
-        if (Item.Tag == eConstantTag::String) {
-            auto & Utf8Item = ConstantPool[Item.Info.String.StringIndex];
-            return *Utf8Item.Info.Utf8.DataPtr;
-        }
-        if (Item.Tag == eConstantTag::Class) {
-            auto & Utf8Item = ConstantPool[Item.Info.Class.BinaryNameIndex];
-            return *Utf8Item.Info.Utf8.DataPtr;
-        }
-        return InvalidConstantName;
+        assert(Item.Tag == eConstantTag::Utf8);
+        return *Item.Info.Utf8.DataPtr;
+    }
+
+    const std::string & xClassInfo::GetConstantString(size_t Index)
+    {
+        auto & Item = ConstantPool[Index];
+        assert(Item.Tag == eConstantTag::String);
+        return GetConstantUtf8(Item.Info.String.StringIndex);
+    }
+
+    const std::string & xClassInfo::GetConstantClassBinaryName(size_t Index)
+    {
+        auto & Item = ConstantPool[Index];
+        assert(Item.Tag == eConstantTag::Class);
+        return GetConstantUtf8(Item.Info.Class.BinaryNameIndex);
     }
 
     const std::string xClassInfo::GetConstantValueString(size_t Index)
@@ -205,54 +208,15 @@ namespace jdc
                 return std::to_string(Item.Info.Float.Value);
             case eConstantTag::Double:
                 return std::to_string(Item.Info.Double.Value);
-            case eConstantTag::String: {
-                auto & Utf8Item = ConstantPool[Item.Info.Class.BinaryNameIndex];
-                return *Utf8Item.Info.Utf8.DataPtr;
-            }
+            case eConstantTag::String:
+                return GetConstantUtf8(Item.Info.String.StringIndex);
+            case eConstantTag::Class:
+                return GetConstantUtf8(Item.Info.Class.BinaryNameIndex);
             default:
                 break;
         }
         return {};
     }
-
-    const std::string xClassInfo::GetConstantFieldValueString(eFieldType FieldType, size_t Index)
-    {
-        auto & Item = ConstantPool[Index];
-        switch (FieldType) {
-            case eFieldType::Boolean: {
-                assert(Item.Tag == eConstantTag::Integer);
-                return Item.Info.Integer.Value ? "true" : "false";
-            }
-            case eFieldType::Byte:
-            case eFieldType::Short:
-            case eFieldType::Integer: {
-                assert(Item.Tag == eConstantTag::Integer);
-                return std::to_string(Item.Info.Integer.Value);
-            }
-            case eFieldType::Long: {
-                assert(Item.Tag == eConstantTag::Long);
-                return std::to_string(Item.Info.Long.Value);
-            }
-            case eFieldType::Float: {
-                assert(Item.Tag == eConstantTag::Float);
-                return std::to_string(Item.Info.Float.Value);
-            }
-            case eFieldType::Double: {
-                assert(Item.Tag == eConstantTag::Double);
-                return std::to_string(Item.Info.Double.Value);
-            }
-            case eFieldType::Class: {
-                assert(Item.Tag == eConstantTag::String);
-                auto & Utf8Item = ConstantPool[Item.Info.Class.BinaryNameIndex];
-                return *Utf8Item.Info.Utf8.DataPtr;
-            }
-            default: {
-                break;
-            }
-        }
-        return {};
-    }
-
 
     static bool LoadConstantInfo(xStreamReader & Reader, ssize_t & RemainSize, xConstantItemInfo & TagInfo)
     {
