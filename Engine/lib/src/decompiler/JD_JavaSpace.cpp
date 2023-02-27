@@ -116,27 +116,32 @@ namespace jdc
     void xJavaClass::DoExtend()
     {
         X_DEBUG_PRINTF("xJavaClass::DoExtend %s\n", BinaryName.c_str());
-        for (auto & Attrib : ClassInfo.Attributes) {
-            auto & AttribName = ClassInfo.GetConstantUtf8(Attrib.NameIndex);
-            auto Reader = xStreamReader(Attrib.Binary.data());
-            if (AttribName == "SourceFile") {
+        for (auto & Attribute : ClassInfo.Attributes) {
+            auto & AttributeName = ClassInfo.GetConstantUtf8(Attribute.NameIndex);
+            auto Reader = xStreamReader(Attribute.Binary.data());
+            if (AttributeName == "SourceFile") {
                 uint16_t SourceFilenameIndex = Reader.R2();
                 auto & SourceFilename = ClassInfo.GetConstantUtf8(SourceFilenameIndex);
                 X_DEBUG_PRINTF("SourceFilename: %s\n", SourceFilename.c_str());
                 Extend.SourceFilename = SourceFilename;
                 continue;
             }
-            if (AttribName == "Synthetic") {
+            if (AttributeName == "Synthetic") {
                 X_DEBUG_PRINTF("Synthetic: yes\n");
                 Extend.Synthetic = true;
                 continue;
             }
-            if (AttribName == "Deprecated") {
+            if (AttributeName == "Deprecated") {
                 X_DEBUG_PRINTF("Deprecated: yes\n");
                 Extend.Deprecated = true;
                 continue;
             }
         }
+
+        for (size_t Index = 0 ; Index < ClassInfo.Methods.size() ; ++Index) {
+            Extend.Methods.push_back(ExtractMethod(Index));
+        }
     }
+
 
 }

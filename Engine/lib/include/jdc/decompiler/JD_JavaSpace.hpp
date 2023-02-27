@@ -1,6 +1,8 @@
 #pragma once
 #include "../base/JD_Base.hpp"
 #include "../jvm/JD_ClassInfo.hpp"
+#include "./JD_Instructions.hpp"
+#include "./JD_Operand.hpp"
 #include <memory>
 #include <vector>
 #include <string>
@@ -49,10 +51,10 @@ namespace jdc
         xClassInfo  ClassInfo;
 
         struct {
-            std::string SourceFilename;
-            bool        Synthetic = false;
-            bool        Deprecated = false;
-
+            std::string             SourceFilename;
+            bool                    Synthetic = false;
+            bool                    Deprecated = false;
+            std::vector<xMethod>    Methods;
 
         } Extend;
 
@@ -61,6 +63,7 @@ namespace jdc
         X_INLINE const std::string & GetPackageCodeName() const { return PackagePtr->CodeName; }
 
         X_GAME_API_MEMBER void DoExtend();
+        X_GAME_API_MEMBER xMethod ExtractMethod(size_t Index);
     };
 
     using xPackageMap = std::unordered_map<std::string, std::unique_ptr<xJavaPackage>>;

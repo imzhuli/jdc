@@ -196,7 +196,7 @@ namespace jdc
         return GetConstantUtf8(Item.Info.Class.BinaryNameIndex);
     }
 
-    const std::string xClassInfo::GetConstantValueString(size_t Index)
+    std::string xClassInfo::GetConstantValueString(size_t Index)
     {
         auto & Item = ConstantPool[Index];
         switch (Item.Tag) {
@@ -218,6 +218,96 @@ namespace jdc
                 break;
         }
         return {};
+    }
+
+    static const char * TranslateSimpleTypeBinaryName(const char C)
+    {
+        switch(C) {
+            case 'B': {
+                return "byte";
+            }
+            case 'C': {
+                return "char";
+            }
+            case 'D': {
+                return "double";
+            }
+            case 'F': {
+                return "float";
+            }
+            case 'I': {
+                return "int";
+            }
+            case 'J': {
+                return "long";
+            }
+            case 'S': {
+                return "short";
+            }
+            case 'Z': {
+                return "boolean";
+            }
+            case 'V': {
+                return "void";
+            }
+        }
+        return nullptr;
+    }
+
+    std::vector<std::string> xClassInfo::ExtractTypeBinaryNames(const std::string & Descriptor)
+    {
+        X_DEBUG_PRINTF("xClassInfo::ExtractTypeBinaryNames: %s\n", Descriptor.c_str());
+        size_t Index = 0;
+        std::vector<std::string> BinaryNames;
+        while(Index < Descriptor.size()) {
+            auto C = Descriptor[Index];
+
+            if (C == 'L') {
+                const char * Start = &Descriptor[++Index];
+                const char * End = Start + 1;
+                while(*End != ';') {
+                    ++End;
+                }
+                size_t Length = End - Start;
+                Index += Length + 1;
+                BinaryNames.push_back({ Start, Length });
+                continue;
+            }
+            else if (C == '[') {
+                size_t ArraySize = 1;
+                while((C = Descriptor[++Index]) == '[') {
+                    ++ArraySize;
+                }
+                std::string TypeName;
+                if (C == 'L') {
+                    const char * Start = &Descriptor[++Index];
+                    const char * End = Start + 1;
+                    while(*End != ';') {
+                        ++End;
+                    }
+                    size_t Length = End - Start;
+                    Index += Length + 1;
+                    TypeName = std::string{ Start, Length };
+                } else {
+                    TypeName = TranslateSimpleTypeBinaryName(C);
+                }
+                while(ArraySize--) {
+                    TypeName += "[]";
+                }
+                BinaryNames.push_back(std::move(TypeName));
+                continue;
+            }
+            else if (C == '(' || C == ')') {
+                ++Index;
+                continue;
+            }
+            else { // SimpleTypeName
+                BinaryNames.push_back(TranslateSimpleTypeBinaryName(C));
+                ++Index;
+                continue;
+            }
+        }
+        return BinaryNames;
     }
 
     static bool LoadConstantInfo(xStreamReader & Reader, ssize_t & RemainSize, xConstantItemInfo & TagInfo)
@@ -472,86 +562,6 @@ namespace jdc
             }
         }
         return true;
-    }
-
-    xVariableType ExtractVariableType(const std::string & Utf8, size_t & Index) {
-        switch(Utf8[Index]) {
-            case 'B': {
-                ++Index;
-                return { eFieldType::Byte };
-            }
-            case 'C': {
-                ++Index;
-                return { eFieldType::Char };
-            }
-            case 'D': {
-                ++Index;
-                return { eFieldType::Double };
-            }
-            case 'F': {
-                ++Index;
-                return { eFieldType::Float };
-            }
-            case 'I': {
-                ++Index;
-                return { eFieldType::Integer };
-            }
-            case 'J': {
-                ++Index;
-                return { eFieldType::Long };
-            }
-            case 'S': {
-                ++Index;
-                return { eFieldType::Short };
-            }
-            case 'Z': {
-                ++Index;
-                return { eFieldType::Boolean };
-            }
-            case '[': {
-                ++Index;
-                return { eFieldType::Array };
-            }
-            case 'L': {
-                auto EndIndex = Utf8.find(';', Index);
-                assert(EndIndex != Utf8.npos);
-                assert(EndIndex != Index + 1);
-
-                ++Index;
-                xVariableType VType = { eFieldType::Class, Utf8.substr(Index, EndIndex - Index) };
-                Index = EndIndex + 1;
-                return VType;
-            }
-            case 'V': {
-                ++Index;
-                return { eFieldType::Void };
-            }
-            case '(': {
-                ++Index;
-                return { eFieldType::ParamStart };
-            }
-            case ')': {
-                ++Index;
-                return { eFieldType::ParamEnd };
-            }
-        }
-        ++Index;
-        return { eFieldType::Invalid };
-    }
-
-    xMethodDescriptor ExtractMethodDescriptor(const std::string & Utf8)
-    {
-        xMethodDescriptor Descriptor;
-        size_t i = 1; // skip the first '('
-        for (;i < Utf8.size();) {
-            auto VType = ExtractVariableType(Utf8, i);
-            if (VType.FieldType == eFieldType::ParamEnd) {
-                break;
-            }
-            Descriptor.ParameterTypes.push_back(std::move(VType));
-        }
-        Descriptor.ReturnType = ExtractVariableType(Utf8, i);
-        return Descriptor;
     }
 
     bool ExtractInnerClassAttribute(const std::vector<xel::ubyte> & Binary, std::vector<xInnerClassAttribute> & Output)

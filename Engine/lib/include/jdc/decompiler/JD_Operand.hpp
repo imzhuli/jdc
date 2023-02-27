@@ -7,18 +7,12 @@
 namespace jdc
 {
 
-    struct xMethod
-    {
-        std::string ResultTypeBinaryName;
-        std::vector<std::string> ArgumentTypeBinaryName;
-    };
-
     struct xVariable
     {
-        std::string Name;
-        std::string TypeBinaryName;
-        uint32_t    LocalVariableIndex        = -1; // undetermined
-        uint32_t    RuntimeStackIndex         = -1; // undetermined
+        std::string  Name;
+        const char * TypeBinaryName;
+        uint32_t     LocalVariableIndex        = -1; // undetermined
+        uint32_t     RuntimeStackIndex         = -1; // undetermined
 
         bool IsTempVariable() const { return RuntimeStackIndex != static_cast<uint32_t>(-1); }
     };
@@ -43,5 +37,12 @@ namespace jdc
         bool     IsFlowControl = false;
     };
 
+    struct xMethod
+    {
+        std::vector<xOpInstrucionLine>    InstructionLines;
+
+        std::string Identifier;
+        bool Synthetic = false;
+    };
 
 }

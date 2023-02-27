@@ -144,18 +144,6 @@ namespace jdc
         std::vector<xAttributeInfo>   Attributes;
     };
 
-    struct xVariableType
-    {
-        eFieldType   FieldType;
-        std::string  ClassBinaryName;
-    };
-
-    struct xMethodDescriptor
-    {
-        std::vector<xVariableType>   ParameterTypes;
-        xVariableType                ReturnType;
-    };
-
     struct xFieldInfo
     {
         xAccessFlag                   AccessFlags;
@@ -181,8 +169,8 @@ namespace jdc
         X_GAME_API_MEMBER const std::string & GetConstantUtf8(size_t Index);
         X_GAME_API_MEMBER const std::string & GetConstantString(size_t Index);
         X_GAME_API_MEMBER const std::string & GetConstantClassBinaryName(size_t Index);
-        X_GAME_API_MEMBER const std::string GetConstantValueString(size_t Index);
-
+        X_GAME_API_MEMBER std::string GetConstantValueString(size_t Index);
+        X_GAME_API_MEMBER std::vector<std::string> ExtractTypeBinaryNames(const std::string & Descriptor);
     };
 
     struct xExceptionTableItem
@@ -213,9 +201,6 @@ namespace jdc
 
     X_GAME_API std::string EscapeString(const std::string & S);
     X_GAME_API std::string EscapeStringQuoted(const std::string & S);
-
-    X_GAME_API xVariableType ExtractVariableType(const std::string & Utf8, size_t & Index);
-    X_GAME_API xMethodDescriptor ExtractMethodDescriptor(const std::string & Utf8);
 
     X_GAME_API bool ExtractAttributeInfo(xel::xStreamReader & Reader, ssize_t & RemainSize, xAttributeInfo & AttributeInfo);
     X_GAME_API bool ExtractFieldInfo(xel::xStreamReader & Reader, ssize_t & RemainSize, xFieldInfo & FieldInfo);
