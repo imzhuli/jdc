@@ -41,7 +41,7 @@ namespace jdc
         return BinaryName.substr(Index + 1);
     }
 
-    xJavaSpace LoadJavaSpace(const std::string & RootDirectoryName)
+    std::unique_ptr<xJavaSpace> LoadJavaSpace(const std::string & RootDirectoryName)
     {
         auto RootDirectory = std::filesystem::path(RootDirectoryName);
         if (!std::filesystem::is_directory(RootDirectory)) {
@@ -50,9 +50,9 @@ namespace jdc
         RootDirectory /= "./"; // force adding an extra '/' to the end of path. so sub directory path should not start with '/'
         auto NamePrefixLength = RootDirectory.string().length();
 
-        xJavaSpace JavaSpace;
-        auto & PackageMap = JavaSpace.PackageMap;
-        auto & ClassMap = JavaSpace.ClassMap;
+        auto JavaSpaceUPtr = std::unique_ptr<xJavaSpace>(new xJavaSpace());
+        auto & PackageMap = JavaSpaceUPtr->PackageMap;
+        auto & ClassMap = JavaSpaceUPtr->ClassMap;
         PackageMap.insert(std::make_pair(std::string(), std::make_unique<xJavaPackage>()));
         for(auto & Entry : std::filesystem::recursive_directory_iterator(RootDirectory)) {
             auto & Path = Entry.path();
@@ -91,14 +91,52 @@ namespace jdc
             }
         }
 
+        for(auto & Entry : PackageMap) {
+            auto & PackageUPtr = Entry.second;
+            PackageUPtr->JavaSpacePtr = JavaSpaceUPtr.get();
+        }
+
         for(auto & Entry : ClassMap) {
             auto & JavaClassUPtr = Entry.second;
             auto & PackageUPtr = PackageMap[JavaClassUPtr->PackageBinaryName];
             PackageUPtr->Classes.push_back(JavaClassUPtr.get());
+
+            JavaClassUPtr->JavaSpacePtr = JavaSpaceUPtr.get();
             JavaClassUPtr->PackagePtr = PackageUPtr.get();
         }
 
-        return JavaSpace;
+        for(auto & Entry : ClassMap) {
+            auto & JavaClassUPtr = Entry.second;
+            JavaClassUPtr->DoExtend();
+        }
+
+        return JavaSpaceUPtr;
+    }
+
+    void xJavaClass::DoExtend()
+    {
+        X_DEBUG_PRINTF("xJavaClass::DoExtend %s\n", BinaryName.c_str());
+        for (auto & Attrib : ClassInfo.Attributes) {
+            auto & AttribName = ClassInfo.GetConstantUtf8(Attrib.NameIndex);
+            auto Reader = xStreamReader(Attrib.Binary.data());
+            if (AttribName == "SourceFile") {
+                uint16_t SourceFilenameIndex = Reader.R2();
+                auto & SourceFilename = ClassInfo.GetConstantUtf8(SourceFilenameIndex);
+                X_DEBUG_PRINTF("SourceFilename: %s\n", SourceFilename.c_str());
+                Extend.SourceFilename = SourceFilename;
+                continue;
+            }
+            if (AttribName == "Synthetic") {
+                X_DEBUG_PRINTF("Synthetic: yes\n");
+                Extend.Synthetic = true;
+                continue;
+            }
+            if (AttribName == "Deprecated") {
+                X_DEBUG_PRINTF("Deprecated: yes\n");
+                Extend.Deprecated = true;
+                continue;
+            }
+        }
     }
 
 }

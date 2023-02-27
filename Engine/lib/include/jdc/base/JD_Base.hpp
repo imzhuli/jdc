@@ -46,6 +46,24 @@ namespace jdc
         Invalid,
     };
 
+    enum struct eElementType : uint8_t
+    {
+        Byte          = 'B',
+        Short         = 'S',
+        Integer       = 'I',
+        Long          = 'J',
+        Char          = 'C',
+        Float         = 'F',
+        Double        = 'D',
+        Boolean       = 'Z',
+        String        = 's',
+
+        Enum          = 'e',
+        Class         = 'c',
+        Annotation    = '@',
+        Array         = '[',
+    };
+
     enum struct eConstantTag : uint8_t
     {
         Unspecified        = 0,

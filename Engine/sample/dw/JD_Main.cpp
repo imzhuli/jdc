@@ -36,9 +36,9 @@ int main(int argc, char *argv[])
     std::string OutputDir = OptOutputDir() ? OptOutputDir->c_str() : "./logs";
 
     if (Cmd["decompile"]()) {
-        auto JavaSpace = LoadJavaSpace(InputDir);
+        auto JavaSpaceUPtr = LoadJavaSpace(InputDir);
 
-        (void)JavaSpace;
+        (void)JavaSpaceUPtr;
     }
 
     (void)InputDir;
