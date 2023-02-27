@@ -208,6 +208,8 @@ namespace jdc
                 return std::to_string(Item.Info.Float.Value);
             case eConstantTag::Double:
                 return std::to_string(Item.Info.Double.Value);
+            case eConstantTag::Utf8:
+                return *Item.Info.Utf8.DataPtr;
             case eConstantTag::String:
                 return GetConstantUtf8(Item.Info.String.StringIndex);
             case eConstantTag::Class:

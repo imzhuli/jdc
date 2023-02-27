@@ -43,7 +43,6 @@ namespace jdc
 
     xJavaSpace LoadJavaSpace(const std::string & RootDirectoryName)
     {
-
         auto RootDirectory = std::filesystem::path(RootDirectoryName);
         if (!std::filesystem::is_directory(RootDirectory)) {
             return {};
