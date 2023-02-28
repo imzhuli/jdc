@@ -1,5 +1,7 @@
 #include <jdc/decompiler/JD_Instructions.hpp>
 #include <jdc/decompiler/JD_CodeGenerator.hpp>
+#include <xel/String.hpp>
+#include <sstream>
 #include <iostream>
 
 using namespace xel;
@@ -13,56 +15,99 @@ namespace jdc
         auto & MethodInfo = ClassInfo.Methods[Index];
         auto MethodName = ClassInfo.GetConstantUtf8(MethodInfo.NameIndex);
         xMethod Method;
-
-        const ubyte * CodeAttribute = nullptr;
-        size_t CodeLength = 0;
-        for (auto & Attribute : MethodInfo.Attributes) {
-            auto & AttributeName = ClassInfo.GetConstantUtf8(Attribute.NameIndex);
-            if (AttributeName == "Code") {
-                CodeAttribute = (const ubyte*)Attribute.Binary.data();
-                CodeLength = Attribute.Binary.size();
-                continue;
-            }
-        }
+        Method.ClassInfoPtr = &ClassInfo;
+        Method.MethodInfoPtr = &MethodInfo;
+        Method.OriginalNameView = MethodName;
 
         // build method identifier:
         if (MethodName == "<clinit>") {
             Method.Identifier = "static";
         }
         else if (MethodName == "<init>") {
-            Method.Identifier = SimpleCodeName;
+            Method.Identifier = InnermostCodeName;
+        }
+        else {
+            Method.Identifier = MethodName;
         }
 
-        do { // extract some marks:
-            if (MethodInfo.AccessFlags & ACC_SYNTHETIC) {
-                Method.Synthetic = true;
+        for (auto & Attribute : MethodInfo.Attributes) {
+            auto & AttributeName = ClassInfo.GetConstantUtf8(Attribute.NameIndex);
+            if (AttributeName == "Code") {
+                Method.CodeBinaryView = { Attribute.Binary.data(), Attribute.Binary.size() };
+                continue;
             }
-        } while(false);
+        }
 
-        X_DEBUG_PRINTF("MethodName: %s, %" PRIx32 "\n", MethodName.c_str(), (uint32_t)MethodInfo.AccessFlags);
+
         do { // extract Param types
-            auto & Descriptor = ClassInfo.GetConstantUtf8(MethodInfo.DescriptorIndex);
-            auto TypeBinaryNames = ClassInfo.ExtractTypeBinaryNames(Descriptor);
-            for (auto & Name : TypeBinaryNames) {
-                X_DEBUG_PRINTF("  Type: %s\n", Name.c_str());
-            }
 
         } while(false);
-
-        if (Method.Synthetic) {
-            return Method;
-        }
 
         // decode:
-        if (!CodeAttribute || !CodeLength) {
-            X_DEBUG_PRINTF("NoCode\n");
-            return Method;
-        }
-
-
+        Method.Decode();
+        X_DEBUG_PRINTF("DecodedMethod: %s\n", Method.GetQualifiedName().c_str());
 
         return Method;
     }
 
+    void xMethod::Decode()
+    {
+        DecodeNameStrings();
+        Decode_Round_1();
+    }
+
+    void xMethod::DecodeNameStrings()
+    {
+        // typenames
+        auto & Descriptor = ClassInfoPtr->GetConstantUtf8(MethodInfoPtr->DescriptorIndex);
+        TypeBinaryNames = ClassInfoPtr->ExtractTypeBinaryNames(Descriptor);
+
+        if (Identifier != "static") {
+            auto AccessFlags = MethodInfoPtr->AccessFlags;
+            std::vector<std::string> Qualifiers;
+            if (AccessFlags & ACC_PUBLIC) {
+                Qualifiers.push_back("public");
+            } else if(AccessFlags & ACC_PRIVATE) {
+                Qualifiers.push_back("private");
+            } else if(AccessFlags & ACC_PROTECTED) {
+                Qualifiers.push_back("protected");
+            }
+
+            if (AccessFlags & ACC_STATIC) {
+                Qualifiers.push_back("static");
+            }
+
+            if (AccessFlags & ACC_FINAL) {
+                Qualifiers.push_back("final");
+            }
+            QualifierString = JoinStr(Qualifiers.begin(), Qualifiers.end(), ' ');
+        }
+    }
+
+    void xMethod::Decode_Round_1()
+    {
+
+    }
+
+    std::string xMethod::GetQualifiedName()
+    {
+        return QualifierString + ' ' + GetUnqualifiedName();
+    }
+
+    std::string xMethod::GetUnqualifiedName()
+    {
+        size_t ParamNumber = GetParamNumber();
+
+        std::ostringstream ss;
+        ss << GetReturnTypeBinaryName() << ' ' << Identifier << '(' ;
+        if (ParamNumber) {
+            for (size_t i = 0 ; i < ParamNumber - 1; ++i) {
+                ss << GetParamTypeBinaryName(i) << ", ";
+            }
+            ss << GetReturnTypeBinaryName();
+        }
+        ss << ')';
+        return ss.str();
+    }
 
 }

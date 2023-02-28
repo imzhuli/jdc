@@ -175,28 +175,28 @@ namespace jdc
         return ss.str();
     }
 
-    const std::string & xClassInfo::GetConstantUtf8(size_t Index)
+    const std::string & xClassInfo::GetConstantUtf8(size_t Index) const
     {
         auto & Item = ConstantPool[Index];
         assert(Item.Tag == eConstantTag::Utf8);
         return *Item.Info.Utf8.DataPtr;
     }
 
-    const std::string & xClassInfo::GetConstantString(size_t Index)
+    const std::string & xClassInfo::GetConstantString(size_t Index) const
     {
         auto & Item = ConstantPool[Index];
         assert(Item.Tag == eConstantTag::String);
         return GetConstantUtf8(Item.Info.String.StringIndex);
     }
 
-    const std::string & xClassInfo::GetConstantClassBinaryName(size_t Index)
+    const std::string & xClassInfo::GetConstantClassBinaryName(size_t Index) const
     {
         auto & Item = ConstantPool[Index];
         assert(Item.Tag == eConstantTag::Class);
         return GetConstantUtf8(Item.Info.Class.BinaryNameIndex);
     }
 
-    std::string xClassInfo::GetConstantValueString(size_t Index)
+    std::string xClassInfo::GetConstantValueString(size_t Index) const
     {
         auto & Item = ConstantPool[Index];
         switch (Item.Tag) {
@@ -254,7 +254,7 @@ namespace jdc
         return nullptr;
     }
 
-    std::vector<std::string> xClassInfo::ExtractTypeBinaryNames(const std::string & Descriptor)
+    std::vector<std::string> xClassInfo::ExtractTypeBinaryNames(const std::string & Descriptor) const
     {
         X_DEBUG_PRINTF("xClassInfo::ExtractTypeBinaryNames: %s\n", Descriptor.c_str());
         size_t Index = 0;

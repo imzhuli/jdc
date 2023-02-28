@@ -41,6 +41,15 @@ namespace jdc
         return BinaryName.substr(Index + 1);
     }
 
+    std::string GetInnermostClassCodeName(const std::string & AnyTypeOfClassName)
+    {
+        auto Index = AnyTypeOfClassName.find_last_of("/$.");
+        if (Index == AnyTypeOfClassName.npos) {
+            return AnyTypeOfClassName;
+        }
+        return AnyTypeOfClassName.substr(Index + 1);
+    }
+
     std::unique_ptr<xJavaSpace> LoadJavaSpace(const std::string & RootDirectoryName)
     {
         auto RootDirectory = std::filesystem::path(RootDirectoryName);
@@ -85,6 +94,7 @@ namespace jdc
                 JavaClass.SimpleBinaryName = GetSimpleClassBinaryName(ClassBinaryName);
                 JavaClass.CodeName = ConvertBinaryNameToCodeName(JavaClass.BinaryName);
                 JavaClass.SimpleCodeName = ConvertBinaryNameToCodeName(JavaClass.SimpleBinaryName);
+                JavaClass.InnermostCodeName = GetInnermostClassCodeName(JavaClass.SimpleCodeName);
 
                 auto & ClassInfo = JavaClass.ClassInfo;
                 ClassInfo = std::move(LoadResult.Data);
@@ -115,7 +125,7 @@ namespace jdc
 
     void xJavaClass::DoExtend()
     {
-        X_DEBUG_PRINTF("xJavaClass::DoExtend %s\n", BinaryName.c_str());
+        X_DEBUG_PRINTF("xJavaClass::DoExtend %s --> %s --> %s\n", BinaryName.c_str(), SimpleBinaryName.c_str(), InnermostCodeName.c_str());
         for (auto & Attribute : ClassInfo.Attributes) {
             auto & AttributeName = ClassInfo.GetConstantUtf8(Attribute.NameIndex);
             auto Reader = xStreamReader(Attribute.Binary.data());

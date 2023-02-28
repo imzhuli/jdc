@@ -48,6 +48,7 @@ namespace jdc
         std::string SimpleBinaryName;
         std::string CodeName;
         std::string SimpleCodeName;
+        std::string InnermostCodeName;
         xClassInfo  ClassInfo;
 
         struct {
@@ -79,6 +80,7 @@ namespace jdc
     X_GAME_API std::string ConvertPathNameToBinaryName(const std::string & PathName);
     X_GAME_API std::string ConvertBinaryNameToCodeName(const std::string & BinaryName);
     X_GAME_API std::string GetSimpleClassBinaryName(const std::string & BinaryName);
+    X_GAME_API std::string GetInnermostClassCodeName(const std::string & AnyTypeOfClassName);
     X_GAME_API std::unique_ptr<xJavaSpace> LoadJavaSpace(const std::string & RootDirectory);
 
 }
