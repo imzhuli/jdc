@@ -45,7 +45,7 @@ namespace jdc
 
         // decode:
         Method.Decode();
-        X_DEBUG_PRINTF("DecodedMethod: %s\n", Method.GetQualifiedName().c_str());
+        X_DEBUG_PRINTF("DecodedMethod: %s  flags=%u\n", Method.GetQualifiedName().c_str(), (uint)Method.MethodInfoPtr->AccessFlags);
 
         return Method;
     }
