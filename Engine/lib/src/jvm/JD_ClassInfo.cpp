@@ -196,7 +196,17 @@ namespace jdc
         return GetConstantUtf8(Item.Info.Class.BinaryNameIndex);
     }
 
-    std::string xClassInfo::GetConstantValueString(size_t Index) const
+    const std::string xClassInfo::GetOuterClassBinaryName() const
+    {
+        auto & ThisBinaryName = GetConstantClassBinaryName(ThisClass);
+        auto Index = ThisBinaryName.find_last_of('$');
+        if (Index == ThisBinaryName.npos) {
+            return {};
+        }
+        return ThisBinaryName.substr(0, Index);
+    }
+
+    const std::string xClassInfo::GetConstantValueString(size_t Index) const
     {
         auto & Item = ConstantPool[Index];
         switch (Item.Tag) {
@@ -254,7 +264,7 @@ namespace jdc
         return nullptr;
     }
 
-    std::vector<std::string> xClassInfo::ExtractTypeBinaryNames(const std::string & Descriptor) const
+    const std::vector<std::string> xClassInfo::ExtractTypeBinaryNames(const std::string & Descriptor) const
     {
         X_DEBUG_PRINTF("xClassInfo::ExtractTypeBinaryNames: %s\n", Descriptor.c_str());
         size_t Index = 0;

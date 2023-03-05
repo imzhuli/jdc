@@ -7,6 +7,7 @@
 #include <jdc/jvm/JD_ClassInfo.hpp>
 #include <jdc/decompiler/JD_JavaSpace.hpp>
 #include <jdc/decompiler/JD_Instructions.hpp>
+#include <jdc/decompiler/JD_CodeGenerator.hpp>
 
 #ifdef X_SYSTEM_WINDOWS
 #include <windows.h>
@@ -37,6 +38,16 @@ int main(int argc, char *argv[])
 
     if (Cmd["decompile"]()) {
         auto JavaSpaceUPtr = LoadJavaSpace(InputDir);
+        auto & ClassMap = JavaSpaceUPtr->ClassMap;
+
+        for (const auto & Entry : ClassMap) {
+            auto & ClassUPtr = Entry.second;
+            ResetClassSource(OutputDir, JavaSpaceUPtr.get(), ClassUPtr.get());
+        }
+        for (const auto & Entry : ClassMap) {
+            auto & ClassUPtr = Entry.second;
+            BuildClassSource(OutputDir, JavaSpaceUPtr.get(), ClassUPtr.get());
+        }
 
         (void)JavaSpaceUPtr;
     }

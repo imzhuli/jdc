@@ -89,7 +89,8 @@ namespace jdc
                 }
                 auto & JavaClass = *Iter->second;
                 JavaClass.PackageBinaryName = PackageBinaryName;
-                JavaClass.PathName = RelativePathString;
+                JavaClass.PackageCodeName = ConvertBinaryNameToCodeName(PackageBinaryName);
+                JavaClass.FilePathName = RelativePathString;
                 JavaClass.BinaryName = ClassBinaryName;
                 JavaClass.SimpleBinaryName = GetSimpleClassBinaryName(ClassBinaryName);
                 JavaClass.CodeName = ConvertBinaryNameToCodeName(JavaClass.BinaryName);

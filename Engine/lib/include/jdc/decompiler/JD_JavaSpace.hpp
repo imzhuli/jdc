@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 #include <string>
-#include <unordered_map>
+#include <map>
 
 namespace jdc
 {
@@ -43,7 +43,8 @@ namespace jdc
         xJavaPackage * PackagePtr = nullptr;
 
         std::string PackageBinaryName;
-        std::string PathName;
+        std::string PackageCodeName;
+        std::string FilePathName;
         std::string BinaryName;
         std::string SimpleBinaryName;
         std::string CodeName;
@@ -62,13 +63,14 @@ namespace jdc
         X_INLINE const std::string & GetPackageBinaryName() const { return PackagePtr->BinaryName; }
         X_INLINE const std::string & GetPackagePathName() const { return PackagePtr->PathName; }
         X_INLINE const std::string & GetPackageCodeName() const { return PackagePtr->CodeName; }
+        X_INLINE bool IsInnerClass() const { return SimpleCodeName.length() != InnermostCodeName.length(); }
 
         X_GAME_API_MEMBER void DoExtend();
         X_GAME_API_MEMBER xMethod ExtractMethod(size_t Index);
     };
 
-    using xPackageMap = std::unordered_map<std::string, std::unique_ptr<xJavaPackage>>;
-    using xClassMap = std::unordered_map<std::string, std::unique_ptr<xJavaClass>>;
+    using xPackageMap = std::map<std::string, std::unique_ptr<xJavaPackage>>;
+    using xClassMap = std::map<std::string, std::unique_ptr<xJavaClass>>;
 
     class xJavaSpace
     {

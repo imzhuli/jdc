@@ -215,7 +215,6 @@ namespace jdc
         X_STRINGIFY(OP_breakpoint),
     };
 
-    #define CASE_OP_NAME(x) case x: return #x
     const char * GetOpName(xOpCode OpCode)
     {
         auto NamePtr = OpNameTable[OpCode];
