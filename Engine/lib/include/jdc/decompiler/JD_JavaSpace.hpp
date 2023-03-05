@@ -1,7 +1,7 @@
 #pragma once
 #include "../base/JD_Base.hpp"
-#include "../jvm/JD_ClassInfo.hpp"
-#include "./JD_Instructions.hpp"
+#include "../base/JD_Instructions.hpp"
+#include "../class_file/JD_ClassInfo.hpp"
 #include "./JD_Operand.hpp"
 #include <memory>
 #include <vector>
@@ -31,10 +31,6 @@ namespace jdc
         std::vector<xJavaClass*> Classes;
     };
 
-    struct xJavaElementValue
-    {
-    };
-
     struct xJavaAnnotation
     {
         std::string BinaryName;
@@ -59,7 +55,7 @@ namespace jdc
             std::string             SourceFilename;
             bool                    Synthetic = false;
             bool                    Deprecated = false;
-            std::vector<xMethod>    Methods;
+            std::vector<xJavaMethod>    Methods;
         } Extend;
 
         X_INLINE const std::string & GetFixedPackageBinaryName() const { return PackagePtr->FixedBinaryName; }
@@ -67,11 +63,11 @@ namespace jdc
         X_INLINE const std::string & GetFixedPackageCodeName() const { return PackagePtr->FixedCodeName; }
         X_INLINE bool IsInnerClass() const { return SimpleCodeName.length() != InnermostCodeName.length(); }
 
-        X_GAME_API_MEMBER const std::string GetFixedClassBinaryName(const std::string& OriginalClassBinaryName) const;
-        X_GAME_API_MEMBER const std::string GetFixedClassCodeName(const std::string& OriginalClassBinaryName) const;
+        X_GAME_API_MEMBER std::string GetFixedClassBinaryName(const std::string& OriginalClassBinaryName) const;
+        X_GAME_API_MEMBER std::string GetFixedClassCodeName(const std::string& OriginalClassBinaryName) const;
         X_GAME_API_MEMBER const std::string & GetFixedOutermostClassBinaryName() const;
         X_GAME_API_MEMBER void DoExtend();
-        X_GAME_API_MEMBER xMethod ExtractMethod(size_t Index);
+        X_GAME_API_MEMBER xJavaMethod ExtractMethod(size_t Index);
 
     };
 
@@ -85,12 +81,12 @@ namespace jdc
         xClassMap   ClassMap;
     };
 
-    X_GAME_API const std::string ConvertBinaryNameToPathName(const std::string & BinaryName);
-    X_GAME_API const std::string ConvertPathNameToBinaryName(const std::string & PathName);
-    X_GAME_API const std::string ConvertBinaryNameToCodeName(const std::string & BinaryName);
-    X_GAME_API const std::string GetSimpleClassBinaryName(const std::string & BinaryName);
-    X_GAME_API const std::string GetInnermostClassCodeName(const std::string & AnyTypeOfClassName);
-    X_GAME_API const std::string GetOutermostClassCodeName(const std::string & AnyTypeOfClassName);
+    X_GAME_API std::string ConvertBinaryNameToPathName(const std::string & BinaryName);
+    X_GAME_API std::string ConvertPathNameToBinaryName(const std::string & PathName);
+    X_GAME_API std::string ConvertBinaryNameToCodeName(const std::string & BinaryName);
+    X_GAME_API std::string GetSimpleClassBinaryName(const std::string & BinaryName);
+    X_GAME_API std::string GetInnermostClassCodeName(const std::string & AnyTypeOfClassName);
+    X_GAME_API std::string GetOutermostClassCodeName(const std::string & AnyTypeOfClassName);
     X_GAME_API std::unique_ptr<xJavaSpace> LoadJavaSpace(const std::string & RootDirectory);
 
 }

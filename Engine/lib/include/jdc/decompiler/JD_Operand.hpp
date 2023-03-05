@@ -1,7 +1,7 @@
 #pragma once
 #include "../base/JD_Base.hpp"
-#include "../jvm/JD_ClassInfo.hpp"
-#include "./JD_Instructions.hpp"
+#include "../base/JD_Instructions.hpp"
+#include "../class_file/JD_ClassInfo.hpp"
 #include <xel/View.hpp>
 #include <string>
 #include <vector>
@@ -39,7 +39,7 @@ namespace jdc
         bool     IsFlowControl = false;
     };
 
-    struct xMethod
+    struct xJavaMethod
     {
         const xClassInfo *    ClassInfoPtr;
         const xMethodInfo *   MethodInfoPtr;

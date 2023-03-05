@@ -1,4 +1,4 @@
-#include <jdc/jvm/JD_ClassInfo.hpp>
+#include <jdc/class_file/JD_ClassInfo.hpp>
 #include <xel/String.hpp>
 #include <xel/Byte.hpp>
 #include <sstream>
@@ -108,7 +108,7 @@ namespace jdc
         return GetConstantUtf8(Item.Info.Class.BinaryNameIndex);
     }
 
-    const std::string xClassInfo::GetOutermostClassBinaryName() const
+    std::string xClassInfo::GetOutermostClassBinaryName() const
     {
         auto & ThisBinaryName = GetConstantClassBinaryName(ThisClass);
         auto Index = ThisBinaryName.find_last_of('$');
@@ -118,7 +118,7 @@ namespace jdc
         return ThisBinaryName.substr(0, Index);
     }
 
-    const std::string xClassInfo::GetConstantValueString(size_t Index) const
+    std::string xClassInfo::GetConstantValueString(size_t Index) const
     {
         auto & Item = ConstantPool[Index];
         switch (Item.Tag) {
@@ -176,7 +176,7 @@ namespace jdc
         return nullptr;
     }
 
-    const std::vector<std::string> xClassInfo::ExtractTypeBinaryNames(const std::string & Descriptor) const
+    std::vector<std::string> xClassInfo::ExtractTypeBinaryNames(const std::string & Descriptor) const
     {
         X_DEBUG_PRINTF("xClassInfo::ExtractTypeBinaryNames: %s\n", Descriptor.c_str());
         size_t Index = 0;
@@ -486,7 +486,7 @@ namespace jdc
         return true;
     }
 
-    bool ExtractInnerClassAttribute(const std::vector<xel::ubyte> & Binary, std::vector<xInnerClassAttribute> & Output)
+    bool ExtractInnerClassAttribute(const std::vector<xel::ubyte> & Binary, std::vector<xInnerClassAttributeInfo> & Output)
     {
         Output.clear();
 
@@ -500,7 +500,7 @@ namespace jdc
             return false;
         }
         for (size_t i = 0 ; i < Total; ++i) {
-            xInnerClassAttribute ICA;
+            xInnerClassAttributeInfo ICA;
             ICA.InnerClassInfoIndex = Reader.R2();
             ICA.OuterClassInfoIndex = Reader.R2();
             ICA.InnerNameIndex = Reader.R2();
@@ -510,9 +510,9 @@ namespace jdc
         return true;
     }
 
-    bool ExtractCodeAttribute(const std::vector<xel::ubyte> & Binary, xCodeAttribute & Output)
+    bool ExtractCodeAttribute(const std::vector<xel::ubyte> & Binary, xCodeAttributeInfo & Output)
     {
-        auto CA = xCodeAttribute();
+        auto CA = xCodeAttributeInfo();
         auto Reader = xStreamReader(Binary.data());
         ssize_t RemainSize = Binary.size();
         if ((RemainSize -= 8) < 0) {
@@ -533,7 +533,7 @@ namespace jdc
             return false;
         }
         for (size_t i = 0 ; i < ExceptionTableLength; ++i) {
-            xExceptionTableItem Item;
+            xExceptionTableItemInfo Item;
             Item.StartPC = Reader.R2();
             Item.EndPC = Reader.R2();
             Item.HandlerPC = Reader.R2();

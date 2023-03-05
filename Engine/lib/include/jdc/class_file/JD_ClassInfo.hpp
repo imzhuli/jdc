@@ -168,15 +168,19 @@ namespace jdc
 
         X_INLINE bool IsEnum() const { return AccessFlags & ACC_ENUM; }
         X_INLINE bool IsAnnotaion() const { return AccessFlags & ACC_ANNOTATION; }
+        X_INLINE bool IsInterface() const { return AccessFlags & ACC_INTERFACE; }
+        X_INLINE bool IsModule() const { return AccessFlags & ACC_MODULE; }
+        X_INLINE bool IsStatic() const { return AccessFlags & ACC_STATIC; }
+
         X_GAME_API_MEMBER const std::string & GetConstantUtf8(size_t Index) const;
         X_GAME_API_MEMBER const std::string & GetConstantString(size_t Index) const;
         X_GAME_API_MEMBER const std::string & GetConstantClassBinaryName(size_t Index) const;
-        X_GAME_API_MEMBER const std::string GetOutermostClassBinaryName() const;
-        X_GAME_API_MEMBER const std::string GetConstantValueString(size_t Index) const;
-        X_GAME_API_MEMBER const std::vector<std::string> ExtractTypeBinaryNames(const std::string & Descriptor) const;
+        X_GAME_API_MEMBER std::string GetOutermostClassBinaryName() const;
+        X_GAME_API_MEMBER std::string GetConstantValueString(size_t Index) const;
+        X_GAME_API_MEMBER std::vector<std::string> ExtractTypeBinaryNames(const std::string & Descriptor) const;
     };
 
-    struct xExceptionTableItem
+    struct xExceptionTableItemInfo
     {
         uint16_t StartPC;
         uint16_t EndPC;
@@ -184,7 +188,7 @@ namespace jdc
         uint16_t CatchType;
     };
 
-    struct xInnerClassAttribute
+    struct xInnerClassAttributeInfo
     {
         uint16_t InnerClassInfoIndex;
         uint16_t OuterClassInfoIndex;
@@ -192,14 +196,14 @@ namespace jdc
         uint16_t InnerAccessFlags;
     };
 
-    struct xCodeAttribute
+    struct xCodeAttributeInfo
     {
-        bool                                Enabled = false;
-        uint16_t                            MaxStack;
-        uint16_t                            MaxLocals;
-        std::vector<xel::ubyte>             Binary;
-        std::vector<xExceptionTableItem>    ExceptionTable;
-        std::vector<xAttributeInfo>         Attributes;
+        bool                                    Enabled = false;
+        uint16_t                                MaxStack;
+        uint16_t                                MaxLocals;
+        std::vector<xel::ubyte>                 Binary;
+        std::vector<xExceptionTableItemInfo>    ExceptionTable;
+        std::vector<xAttributeInfo>             Attributes;
     };
 
     X_GAME_API std::string EscapeString(const std::string & S);
@@ -207,8 +211,8 @@ namespace jdc
 
     X_GAME_API bool ExtractAttributeInfo(xel::xStreamReader & Reader, ssize_t & RemainSize, xAttributeInfo & AttributeInfo);
     X_GAME_API bool ExtractFieldInfo(xel::xStreamReader & Reader, ssize_t & RemainSize, xFieldInfo & FieldInfo);
-    X_GAME_API bool ExtractInnerClassAttribute(const std::vector<xel::ubyte> & Binary, std::vector<xInnerClassAttribute> & Output);
-    X_GAME_API bool ExtractCodeAttribute(const std::vector<xel::ubyte> & Binary, xCodeAttribute & Output);
+    X_GAME_API bool ExtractInnerClassAttribute(const std::vector<xel::ubyte> & Binary, std::vector<xInnerClassAttributeInfo> & Output);
+    X_GAME_API bool ExtractCodeAttribute(const std::vector<xel::ubyte> & Binary, xCodeAttributeInfo & Output);
 
     X_INLINE std::string MakeArgumentName(size_t Index) { return "__arg_" + std::to_string(Index); }
     X_INLINE std::string MakeVariableName(size_t Index) { return "__var_" + std::to_string(Index); }

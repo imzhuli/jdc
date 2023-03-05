@@ -1,4 +1,4 @@
-#include <jdc/decompiler/JD_Instructions.hpp>
+#include <jdc/base/JD_Instructions.hpp>
 #include <xel/String.hpp>
 #include <sstream>
 #include <iostream>

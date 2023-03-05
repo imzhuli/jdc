@@ -4,9 +4,8 @@
 #include <xel_ext/Util/FileSystem.hpp>
 #include <iostream>
 
-#include <jdc/jvm/JD_ClassInfo.hpp>
+#include <jdc/class_file/JD_ClassInfo.hpp>
 #include <jdc/decompiler/JD_JavaSpace.hpp>
-#include <jdc/decompiler/JD_Instructions.hpp>
 #include <jdc/decompiler/JD_CodeGenerator.hpp>
 
 #ifdef X_SYSTEM_WINDOWS

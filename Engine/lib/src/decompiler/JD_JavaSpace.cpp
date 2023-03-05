@@ -9,7 +9,7 @@ using namespace xel;
 namespace jdc
 {
 
-    const std::string ConvertBinaryNameToPathName(const std::string & BinaryName)
+    std::string ConvertBinaryNameToPathName(const std::string & BinaryName)
     {
         auto Copy = BinaryName;
         #ifdef X_SYSTEM_WINDOWS
@@ -22,7 +22,7 @@ namespace jdc
         return Copy;
     }
 
-    const std::string ConvertPathNameToBinaryName(const std::string & PathName)
+    std::string ConvertPathNameToBinaryName(const std::string & PathName)
     {
         auto Copy = PathName;
         #ifdef X_SYSTEM_WINDOWS
@@ -35,7 +35,7 @@ namespace jdc
         return Copy;
     }
 
-    const std::string ConvertBinaryNameToCodeName(const std::string & BinaryName)
+    std::string ConvertBinaryNameToCodeName(const std::string & BinaryName)
     {
         auto Copy = BinaryName;
         for (auto & C : Copy) {
@@ -46,7 +46,7 @@ namespace jdc
         return Copy;
     }
 
-    const std::string GetSimpleClassBinaryName(const std::string & BinaryName)
+    std::string GetSimpleClassBinaryName(const std::string & BinaryName)
     {
         auto Index = BinaryName.find_last_of('/');
         if (Index == BinaryName.npos) {
@@ -55,7 +55,7 @@ namespace jdc
         return BinaryName.substr(Index + 1);
     }
 
-    const std::string GetInnermostClassCodeName(const std::string & AnyTypeOfClassName)
+    std::string GetInnermostClassCodeName(const std::string & AnyTypeOfClassName)
     {
         auto Index = AnyTypeOfClassName.find_last_of("/$.");
         if (Index == AnyTypeOfClassName.npos) {
@@ -64,7 +64,7 @@ namespace jdc
         return AnyTypeOfClassName.substr(Index + 1);
     }
 
-    const std::string GetOutermostClassCodeName(const std::string & AnyTypeOfClassName)
+    std::string GetOutermostClassCodeName(const std::string & AnyTypeOfClassName)
     {
         auto IndexStart = AnyTypeOfClassName.find_last_of('/');
         IndexStart = (IndexStart == AnyTypeOfClassName.npos ? 0 : IndexStart);
@@ -198,7 +198,7 @@ namespace jdc
         return JavaSpaceUPtr;
     }
 
-    const std::string xJavaClass::GetFixedClassBinaryName(const std::string& OriginalClassBinaryName) const
+    std::string xJavaClass::GetFixedClassBinaryName(const std::string& OriginalClassBinaryName) const
     {
         auto & ClassMap = JavaSpacePtr->ClassMap;
         auto Iter = ClassMap.find(OriginalClassBinaryName);
@@ -208,10 +208,9 @@ namespace jdc
         return Iter->second->FixedBinaryName;
     }
 
-    const std::string xJavaClass::GetFixedClassCodeName(const std::string& OriginalClassBinaryName) const
+    std::string xJavaClass::GetFixedClassCodeName(const std::string& OriginalClassBinaryName) const
     {
-        auto & Fixed = ConvertBinaryNameToCodeName(GetFixedClassBinaryName(OriginalClassBinaryName));
-        return Fixed;
+        return ConvertBinaryNameToCodeName(GetFixedClassBinaryName(OriginalClassBinaryName));
     }
 
     const std::string & xJavaClass::GetFixedOutermostClassBinaryName() const

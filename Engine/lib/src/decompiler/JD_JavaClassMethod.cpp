@@ -1,4 +1,4 @@
-#include <jdc/decompiler/JD_Instructions.hpp>
+#include <jdc/base/JD_Instructions.hpp>
 #include <jdc/decompiler/JD_CodeGenerator.hpp>
 #include <xel/String.hpp>
 #include <sstream>
@@ -10,11 +10,11 @@ using namespace std;
 namespace jdc
 {
 
-    xMethod xJavaClass::ExtractMethod(size_t Index)
+    xJavaMethod xJavaClass::ExtractMethod(size_t Index)
     {
         auto & MethodInfo = ClassInfo.Methods[Index];
         auto MethodName = ClassInfo.GetConstantUtf8(MethodInfo.NameIndex);
-        xMethod Method;
+        xJavaMethod Method;
         Method.ClassInfoPtr = &ClassInfo;
         Method.MethodInfoPtr = &MethodInfo;
         Method.OriginalNameView = MethodName;
@@ -50,13 +50,13 @@ namespace jdc
         return Method;
     }
 
-    void xMethod::Decode()
+    void xJavaMethod::Decode()
     {
         DecodeNameStrings();
         Decode_Round_1();
     }
 
-    void xMethod::DecodeNameStrings()
+    void xJavaMethod::DecodeNameStrings()
     {
         // typenames
         auto & Descriptor = ClassInfoPtr->GetConstantUtf8(MethodInfoPtr->DescriptorIndex);
@@ -84,17 +84,17 @@ namespace jdc
         }
     }
 
-    void xMethod::Decode_Round_1()
+    void xJavaMethod::Decode_Round_1()
     {
 
     }
 
-    std::string xMethod::GetQualifiedName()
+    std::string xJavaMethod::GetQualifiedName()
     {
         return QualifierString + ' ' + GetUnqualifiedName();
     }
 
-    std::string xMethod::GetUnqualifiedName()
+    std::string xJavaMethod::GetUnqualifiedName()
     {
         size_t ParamNumber = GetParamNumber();
 

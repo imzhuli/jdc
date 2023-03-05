@@ -48,9 +48,11 @@ namespace jdc
 
     enum struct eElementType : uint8_t
     {
+        Unspecified   = '\0',
+
         Byte          = 'B',
         Short         = 'S',
-        Integer       = 'I',
+        Int           = 'I',
         Long          = 'J',
         Char          = 'C',
         Float         = 'F',
