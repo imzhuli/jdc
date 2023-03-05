@@ -1,4 +1,5 @@
 #include <jdc/decompiler/JD_JavaSpace.hpp>
+#include <xel/Util/Chrono.hpp>
 #include <filesystem>
 #include <iostream>
 
@@ -7,6 +8,19 @@ using namespace xel;
 
 namespace jdc
 {
+
+    std::string ConvertBinaryNameToPathName(const std::string & BinaryName)
+    {
+        auto Copy = BinaryName;
+        #ifdef X_SYSTEM_WINDOWS
+            for (auto & C : Copy) {
+                if (C == '/') {
+                    C = '\\';
+                }
+            }
+        #endif
+        return Copy;
+    }
 
     std::string ConvertPathNameToBinaryName(const std::string & PathName)
     {
@@ -50,6 +64,15 @@ namespace jdc
         return AnyTypeOfClassName.substr(Index + 1);
     }
 
+    std::string GetOutermostClassCodeName(const std::string & AnyTypeOfClassName)
+    {
+        auto IndexStart = AnyTypeOfClassName.find_last_of('/');
+        IndexStart = (IndexStart == AnyTypeOfClassName.npos ? 0 : IndexStart);
+        auto IndexEnd = AnyTypeOfClassName.find_first_of("$.", IndexStart);
+        size_t Count = (IndexEnd == AnyTypeOfClassName.npos ? IndexEnd : IndexEnd - IndexStart);
+        return AnyTypeOfClassName.substr(0, Count);
+    }
+
     std::unique_ptr<xJavaSpace> LoadJavaSpace(const std::string & RootDirectoryName)
     {
         auto RootDirectory = std::filesystem::path(RootDirectoryName);
@@ -66,8 +89,13 @@ namespace jdc
         for(auto & Entry : std::filesystem::recursive_directory_iterator(RootDirectory)) {
             auto & Path = Entry.path();
             if (std::filesystem::is_directory(Path)) {
-                auto PackageBinaryName = ConvertPathNameToBinaryName(Path.string().substr(NamePrefixLength));
-                PackageMap.insert(std::make_pair(PackageBinaryName, std::make_unique<xJavaPackage>()));
+                auto PackagePath = Path.string().substr(NamePrefixLength);
+                auto PackageBinaryName = ConvertPathNameToBinaryName(PackagePath);
+                auto [Iter, _] = PackageMap.insert(std::make_pair(PackageBinaryName, std::make_unique<xJavaPackage>()));
+                auto & PackageUPtr = Iter->second;
+                PackageUPtr->BinaryName = PackageBinaryName;
+                PackageUPtr->PathName = PackagePath;
+                PackageUPtr->CodeName = ConvertBinaryNameToCodeName(PackageBinaryName);
 
                 cout << "Package: " << PackageBinaryName << endl;
             }
@@ -88,9 +116,7 @@ namespace jdc
                     continue;
                 }
                 auto & JavaClass = *Iter->second;
-                JavaClass.PackageBinaryName = PackageBinaryName;
-                JavaClass.PackageCodeName = ConvertBinaryNameToCodeName(PackageBinaryName);
-                JavaClass.FilePathName = RelativePathString;
+                JavaClass.UnfixedPackageBinaryName = PackageBinaryName;
                 JavaClass.BinaryName = ClassBinaryName;
                 JavaClass.SimpleBinaryName = GetSimpleClassBinaryName(ClassBinaryName);
                 JavaClass.CodeName = ConvertBinaryNameToCodeName(JavaClass.BinaryName);
@@ -109,11 +135,45 @@ namespace jdc
 
         for(auto & Entry : ClassMap) {
             auto & JavaClassUPtr = Entry.second;
-            auto & PackageUPtr = PackageMap[JavaClassUPtr->PackageBinaryName];
+            auto & PackageUPtr = PackageMap[JavaClassUPtr->UnfixedPackageBinaryName];
             PackageUPtr->Classes.push_back(JavaClassUPtr.get());
 
             JavaClassUPtr->JavaSpacePtr = JavaSpaceUPtr.get();
             JavaClassUPtr->PackagePtr = PackageUPtr.get();
+        }
+
+        // FixPackagePath:
+        for(auto & Entry : PackageMap) {
+            auto & JavaPackageUPtr = Entry.second;
+            X_DEBUG_PRINTF("Trying to find name conflicts: %s, %s\n", Entry.first.c_str(), JavaPackageUPtr->BinaryName.c_str());
+
+            auto ClassIter = ClassMap.find(JavaPackageUPtr->BinaryName);
+            if (ClassIter != ClassMap.end()) {
+                X_DEBUG_PRINTF("FixPackageName: %s", JavaPackageUPtr->BinaryName.c_str());
+                uint64_t Counter = 0;
+                while(true) {
+                    auto Postfix = "_fix_" + std::to_string(Counter);
+                    auto NewPackageName = JavaPackageUPtr->BinaryName + Postfix;
+                    auto NewPackageIter = PackageMap.find(NewPackageName);
+                    if (NewPackageIter != PackageMap.end()) {
+                        ++Counter;
+                        continue;
+                    }
+                    auto NewClassIter = ClassMap.find(NewPackageName);
+                    if (NewClassIter != ClassMap.end()) {
+                        ++Counter;
+                        continue;
+                    }
+                    JavaPackageUPtr->FixedBinaryName = NewPackageName;
+                    JavaPackageUPtr->FixedPathName   = JavaPackageUPtr->PathName + Postfix;
+                    JavaPackageUPtr->FixedCodeName   = JavaPackageUPtr->CodeName + Postfix;
+                    break;
+                }
+            } else {
+                JavaPackageUPtr->FixedBinaryName = JavaPackageUPtr->BinaryName;
+                JavaPackageUPtr->FixedPathName   = JavaPackageUPtr->PathName;
+                JavaPackageUPtr->FixedCodeName   = JavaPackageUPtr->CodeName;
+            }
         }
 
         for(auto & Entry : ClassMap) {
@@ -147,6 +207,10 @@ namespace jdc
                 Extend.Deprecated = true;
                 continue;
             }
+        }
+
+        if (Extend.SourceFilename.empty()) {
+            Extend.SourceFilename = GetOutermostClassCodeName(SimpleBinaryName) + ".java";
         }
 
         for (size_t Index = 0 ; Index < ClassInfo.Methods.size() ; ++Index) {

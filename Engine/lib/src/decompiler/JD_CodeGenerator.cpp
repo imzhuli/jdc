@@ -35,7 +35,27 @@ namespace jdc
         if (AccessFlags & ACC_ENUM) {
             Qualifiers.push_back("enum");
             Qualifiers.push_back(ClassPtr->InnermostCodeName);
-        } else {
+        }
+        else if (AccessFlags & ACC_INTERFACE) {
+            if (AccessFlags & ACC_ABSTRACT) {
+                Qualifiers.push_back("abstract");
+            }
+            if (AccessFlags & ACC_FINAL) {
+                Qualifiers.push_back("final");
+            }
+            Qualifiers.push_back("interface");
+            Qualifiers.push_back(ClassPtr->InnermostCodeName);
+
+            if (ClassInfo.InterfaceIndices.size()) {
+                Qualifiers.push_back("\nextends\n");
+                std::vector<std::string> Interfaces;
+                for (auto Index : ClassInfo.InterfaceIndices) {
+                    Interfaces.push_back(ConvertBinaryNameToCodeName(ClassInfo.GetConstantClassBinaryName(Index)));
+                }
+                Qualifiers.push_back(JoinStr(Interfaces, ",\n "));
+            }
+        }
+        else { // classes
             if (AccessFlags & ACC_ABSTRACT) {
                 Qualifiers.push_back("abstract");
             }
@@ -46,16 +66,17 @@ namespace jdc
             Qualifiers.push_back(ClassPtr->InnermostCodeName);
             Qualifiers.push_back("extends");
             Qualifiers.push_back(ConvertBinaryNameToCodeName(ClassInfo.GetConstantClassBinaryName(ClassInfo.SuperClass)));
+
+            if (ClassInfo.InterfaceIndices.size()) {
+                Qualifiers.push_back("\nimplements\n");
+                std::vector<std::string> Interfaces;
+                for (auto Index : ClassInfo.InterfaceIndices) {
+                    Interfaces.push_back(ConvertBinaryNameToCodeName(ClassInfo.GetConstantClassBinaryName(Index)));
+                }
+                Qualifiers.push_back(JoinStr(Interfaces, ",\n "));
+            }
         }
 
-        if (ClassInfo.InterfaceIndices.size()) {
-            Qualifiers.push_back("\nimplements\n");
-            std::vector<std::string> Interfaces;
-            for (auto Index : ClassInfo.InterfaceIndices) {
-                Interfaces.push_back(ConvertBinaryNameToCodeName(ClassInfo.GetConstantClassBinaryName(Index)));
-            }
-            Qualifiers.push_back(JoinStr(Interfaces, ",\n "));
-        }
 
         return xel::JoinStr(Qualifiers, ' ');
     }
@@ -104,22 +125,23 @@ namespace jdc
 
     bool ResetClassSource(const std::filesystem::path & RootDir, const xJavaSpace * JavaSpacePtr, const xJavaClass * ClassPtr)
     {
-        auto Path = RootDir / ClassPtr->PackageBinaryName;
-        std::error_code Error;
+        auto Path = RootDir / ClassPtr->GetFixedPackagePathName();
         auto Filename = Path / ClassPtr->Extend.SourceFilename;
+
+        std::error_code Error;
         std::filesystem::create_directories(Path, Error);
         if (Error) {
             X_DEBUG_PRINTF("BuildClassSource error: %s\n", Error.message().c_str());
             return false;
         }
         auto Output = std::ofstream(Filename, std::ios_base::binary | std::ios_base::trunc);
-        BuildPakcageClassSource(Output, ClassPtr->PackageCodeName);
+        BuildPakcageClassSource(Output, ClassPtr->GetFixedPackageCodeName());
         return true;
     }
 
     bool BuildClassSource(const std::filesystem::path & RootDir, const xJavaSpace * JavaSpacePtr,  const xJavaClass * ClassPtr)
     {
-        auto Path = RootDir / ClassPtr->PackageBinaryName;
+        auto Path = RootDir / ClassPtr->GetFixedPackagePathName();
         auto Filename = Path / ClassPtr->Extend.SourceFilename;
         if (!ClassPtr->IsInnerClass()) {
             auto Output = std::ofstream(Filename, std::ios_base::binary | std::ios_base::app);
