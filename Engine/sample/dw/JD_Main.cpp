@@ -37,22 +37,8 @@ int main(int argc, char *argv[])
     std::string OutputDir = OptOutputDir() ? OptOutputDir->c_str() : "./logs";
 
     if (Cmd["decompile"]()) {
-        auto JavaSpaceUPtr = LoadJavaSpace(InputDir);
-        auto & ClassMap = JavaSpaceUPtr->ClassMap;
-
-        for (const auto & Entry : ClassMap) {
-            auto & ClassUPtr = Entry.second;
-            ResetClassSource(OutputDir, JavaSpaceUPtr.get(), ClassUPtr.get());
-        }
-        for (const auto & Entry : ClassMap) {
-            auto & ClassUPtr = Entry.second;
-            BuildClassSource(OutputDir, JavaSpaceUPtr.get(), ClassUPtr.get());
-        }
-
-        (void)JavaSpaceUPtr;
+        BuildSource(OutputDir, InputDir);
     }
 
-    (void)InputDir;
-    (void)OutputDir;
     return 0;
 }

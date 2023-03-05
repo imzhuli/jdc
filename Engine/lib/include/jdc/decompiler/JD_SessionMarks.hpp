@@ -4,7 +4,7 @@
 namespace jdc
 {
 
-    #define JDC_MAKE_SM(x)  SM_##x = ("//__XEL_JDC_SM_" X_STRINGIFY(x))
+    #define JDC_MAKE_SM(x)  SM_##x = ("//[XEL_JDC_SM]" X_STRINGIFY(x))
 
     constexpr const char * JDC_MAKE_SM(PACKAGE);
 

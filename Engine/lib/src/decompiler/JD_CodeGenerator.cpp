@@ -159,4 +159,26 @@ namespace jdc
         return true;
     }
 
+    bool BuildSource(const std::string & OutputDir, const std::string & InputDir)
+    {
+        auto JavaSpaceUPtr = LoadJavaSpace(InputDir);
+        auto & ClassMap = JavaSpaceUPtr->ClassMap;
+
+        for (const auto & Entry : ClassMap) {
+            auto & ClassUPtr = Entry.second;
+            if (!ResetClassSource(OutputDir, JavaSpaceUPtr.get(), ClassUPtr.get())) {
+                return false;
+            }
+        }
+        for (const auto & Entry : ClassMap) {
+            auto & ClassUPtr = Entry.second;
+            if (!BuildClassSource(OutputDir, JavaSpaceUPtr.get(), ClassUPtr.get())) {
+                return false;
+            }
+        }
+
+        (void)JavaSpaceUPtr;
+        return true;
+    }
+
 }
