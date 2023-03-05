@@ -5,7 +5,6 @@
 #include <string>
 #include <fstream>
 #include <filesystem>
-#include <cctype>
 
 using namespace xel;
 using namespace std;
@@ -38,22 +37,34 @@ namespace jdc
             Qualifiers.push_back(ClassPtr->InnermostCodeName);
         }
         else if (AccessFlags & ACC_INTERFACE) {
-            if (AccessFlags & ACC_ABSTRACT) {
-                Qualifiers.push_back("abstract");
-            }
+            // if (AccessFlags & ACC_ABSTRACT) {
+            //     Qualifiers.push_back("abstract");
+            // }
             if (AccessFlags & ACC_FINAL) {
                 Qualifiers.push_back("final");
             }
-            Qualifiers.push_back("interface");
-            Qualifiers.push_back(ClassPtr->InnermostCodeName);
+
+            if  (AccessFlags & ACC_ANNOTATION) {
+                Qualifiers.push_back("@interface");
+                Qualifiers.push_back(ClassPtr->InnermostCodeName);
+            } else {
+                Qualifiers.push_back("interface");
+                Qualifiers.push_back(ClassPtr->InnermostCodeName);
+            }
 
             if (ClassInfo.InterfaceIndices.size()) {
-                Qualifiers.push_back("\nextends\n");
                 std::vector<std::string> Interfaces;
                 for (auto Index : ClassInfo.InterfaceIndices) {
-                    Interfaces.push_back(ClassPtr->GetFixedClassCodeName(ClassInfo.GetConstantClassBinaryName(Index)));
+                    const auto & SuperInterfaceName = ClassPtr->GetFixedClassCodeName(ClassInfo.GetConstantClassBinaryName(Index));
+                    if (SuperInterfaceName == "java.lang.annotation.Annotation") {
+                        continue;
+                    }
+                    Interfaces.push_back(SuperInterfaceName);
                 }
-                Qualifiers.push_back(JoinStr(Interfaces, ",\n "));
+                if (Interfaces.size()) {
+                    Qualifiers.push_back("\nextends\n");
+                    Qualifiers.push_back(JoinStr(Interfaces, ",\n "));
+                }
             }
         }
         else { // classes
@@ -64,15 +75,14 @@ namespace jdc
                 Qualifiers.push_back("final");
             }
 
-            if (isdigit(ClassPtr->InnermostCodeName[0])) {
-                X_DEBUG_PRINTF("RuntimeClassFound: Name=%s, AccessFlag=%x\n", ClassPtr->FixedBinaryName.c_str(), (unsigned int)AccessFlags);
-                Qualifiers.push_back("<delete_me>");
-            }
-
             Qualifiers.push_back("class");
             Qualifiers.push_back(ClassPtr->InnermostCodeName);
-            Qualifiers.push_back("extends");
-            Qualifiers.push_back(ClassPtr->GetFixedClassCodeName(ClassInfo.GetConstantClassBinaryName(ClassInfo.SuperClass)));
+
+            const auto & FixedSuperClassName = ClassPtr->GetFixedClassCodeName(ClassInfo.GetConstantClassBinaryName(ClassInfo.SuperClass));
+            if (FixedSuperClassName != "java.lang.Object") {
+                Qualifiers.push_back("extends");
+                Qualifiers.push_back(FixedSuperClassName);
+            }
 
             if (ClassInfo.InterfaceIndices.size()) {
                 Qualifiers.push_back("\nimplements\n");
@@ -199,6 +209,9 @@ namespace jdc
         }
         for (const auto & Entry : ClassMap) {
             auto & ClassUPtr = Entry.second;
+            if (ClassUPtr->IsSynthetic()) {
+                continue;
+            }
             if (!BuildClassSource(OutputDir, ClassUPtr.get())) {
                 return false;
             }

@@ -224,6 +224,7 @@ namespace jdc
     void xJavaClass::DoExtend()
     {
         X_DEBUG_PRINTF("xJavaClass::DoExtend %s --> %s --> %s\n", FixedBinaryName.c_str(), SimpleBinaryName.c_str(), InnermostCodeName.c_str());
+
         for (auto & Attribute : ClassInfo.Attributes) {
             auto & AttributeName = ClassInfo.GetConstantUtf8(Attribute.NameIndex);
             auto Reader = xStreamReader(Attribute.Binary.data());
@@ -242,6 +243,32 @@ namespace jdc
             if (AttributeName == "Deprecated") {
                 X_DEBUG_PRINTF("Deprecated: yes\n");
                 Extend.Deprecated = true;
+                continue;
+            }
+            if (AttributeName == "InnerClasses") {
+                // Oracle's Java Virtual Machine implementation DOES NOT check the consistency of an InnerClasses attribute
+                // against a class file representing a class or interface referenced by the attribute.
+                // so, just ignore this attribute
+                size_t Total = Reader.R2();
+                for (size_t Index = 0 ; Index < Total; ++Index) {
+                #ifndef NDEBUG
+                    uint16_t InnerClassInfoIndex = Reader.R2();
+                    uint16_t OuterClassInfoIndex = Reader.R2();
+                    uint16_t InnerBinaryNameIndex = Reader.R2();
+                    uint16_t InnerAccessFlags = Reader.R2();
+
+                    auto & InnerClassName = InnerClassInfoIndex ? ClassInfo.GetConstantClassBinaryName(InnerClassInfoIndex) : std::string();
+                    auto & OuterClassName = OuterClassInfoIndex ? ClassInfo.GetConstantClassBinaryName(OuterClassInfoIndex) : std::string();
+                    auto & InnerBinaryName = InnerBinaryNameIndex ? ClassInfo.GetConstantUtf8(InnerBinaryNameIndex) : std::string();
+
+                    X_DEBUG_PRINTF("InnerClasses: %s -> %s -> %s\n", InnerClassName.c_str(), OuterClassName.c_str(), InnerBinaryName.c_str());
+
+                    (void)InnerClassInfoIndex;
+                    (void)OuterClassInfoIndex;
+                    (void)InnerBinaryNameIndex;
+                    (void)InnerAccessFlags;
+                #endif
+                }
                 continue;
             }
         }

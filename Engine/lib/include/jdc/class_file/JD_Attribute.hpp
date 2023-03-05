@@ -13,15 +13,4 @@ namespace jdc
         virtual const std::any GetValue() const = 0;
     };
 
-    class xAttribute_SourceFile
-    : xAttribute
-    {
-    public:
-        bool Parse(xel::xStreamReader & Reader, size_t RemainSize) override;
-        const char * GetName() const override { return "SourceFile"; }
-        const std::any GetValue() const { return _Filename; }
-    public:
-        std::string _Filename;
-    };
-
 }
