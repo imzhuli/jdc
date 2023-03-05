@@ -139,9 +139,5 @@ namespace jdc
         X_INLINE bool IsOk() const { return ResultCode == JDR_OK; }
     };
 
-    X_GAME_API bool IsLoadableConstantTag(const eConstantTag Tag);
-
     X_GAME_API const char * GetClassVersionString(uint16_t MajorVersion);
-    X_GAME_API const char * GetConstantTagString(const eConstantTag Tag);
-    X_GAME_API const char * GetFieldTypeString(const eFieldType Type);
 }

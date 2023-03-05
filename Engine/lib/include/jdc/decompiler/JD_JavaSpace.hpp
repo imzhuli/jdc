@@ -33,7 +33,6 @@ namespace jdc
 
     struct xJavaElementValue
     {
-
     };
 
     struct xJavaAnnotation

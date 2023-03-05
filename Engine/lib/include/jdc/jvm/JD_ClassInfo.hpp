@@ -166,6 +166,8 @@ namespace jdc
         std::vector<xMethodInfo>           Methods;
         std::vector<xAttributeInfo>        Attributes;
 
+        X_INLINE bool IsEnum() const { return AccessFlags & ACC_ENUM; }
+        X_INLINE bool IsAnnotaion() const { return AccessFlags & ACC_ANNOTATION; }
         X_GAME_API_MEMBER const std::string & GetConstantUtf8(size_t Index) const;
         X_GAME_API_MEMBER const std::string & GetConstantString(size_t Index) const;
         X_GAME_API_MEMBER const std::string & GetConstantClassBinaryName(size_t Index) const;
