@@ -5,6 +5,7 @@
 #include <string>
 #include <fstream>
 #include <filesystem>
+#include <cctype>
 
 using namespace xel;
 using namespace std;
@@ -50,7 +51,7 @@ namespace jdc
                 Qualifiers.push_back("\nextends\n");
                 std::vector<std::string> Interfaces;
                 for (auto Index : ClassInfo.InterfaceIndices) {
-                    Interfaces.push_back(ConvertBinaryNameToCodeName(ClassInfo.GetConstantClassBinaryName(Index)));
+                    Interfaces.push_back(ClassPtr->GetFixedClassCodeName(ClassInfo.GetConstantClassBinaryName(Index)));
                 }
                 Qualifiers.push_back(JoinStr(Interfaces, ",\n "));
             }
@@ -62,21 +63,26 @@ namespace jdc
             if (AccessFlags & ACC_FINAL) {
                 Qualifiers.push_back("final");
             }
+
+            if (isdigit(ClassPtr->InnermostCodeName[0])) {
+                X_DEBUG_PRINTF("RuntimeClassFound: Name=%s, AccessFlag=%x\n", ClassPtr->FixedBinaryName.c_str(), (unsigned int)AccessFlags);
+                Qualifiers.push_back("<delete_me>");
+            }
+
             Qualifiers.push_back("class");
             Qualifiers.push_back(ClassPtr->InnermostCodeName);
             Qualifiers.push_back("extends");
-            Qualifiers.push_back(ConvertBinaryNameToCodeName(ClassInfo.GetConstantClassBinaryName(ClassInfo.SuperClass)));
+            Qualifiers.push_back(ClassPtr->GetFixedClassCodeName(ClassInfo.GetConstantClassBinaryName(ClassInfo.SuperClass)));
 
             if (ClassInfo.InterfaceIndices.size()) {
                 Qualifiers.push_back("\nimplements\n");
                 std::vector<std::string> Interfaces;
                 for (auto Index : ClassInfo.InterfaceIndices) {
-                    Interfaces.push_back(ConvertBinaryNameToCodeName(ClassInfo.GetConstantClassBinaryName(Index)));
+                    Interfaces.push_back(ClassPtr->GetFixedClassCodeName(ClassInfo.GetConstantClassBinaryName(Index)));
                 }
                 Qualifiers.push_back(JoinStr(Interfaces, ",\n "));
             }
         }
-
 
         return xel::JoinStr(Qualifiers, ' ');
     }
@@ -90,14 +96,14 @@ namespace jdc
 
     bool BuildOuterClassSource(std::ofstream & Output, const xJavaClass * ClassPtr)
     {
-        Output << SM_CLASS_IDENTIFIER_ << ClassPtr->BinaryName << endl;
+        Output << SM_CLASS_IDENTIFIER_ << ClassPtr->FixedBinaryName << endl;
         Output << MakeClassIdentifier(ClassPtr) << endl;
 
         Output << "{" << endl;
-        Output << SM_CLASS_BODY_BEGIN_ << ClassPtr->BinaryName << endl;
+        Output << SM_CLASS_BODY_BEGIN_ << ClassPtr->FixedBinaryName << endl;
         Output << endl;
 
-        Output << SM_CLASS_BODY_END_ << ClassPtr->BinaryName << endl;
+        Output << SM_CLASS_BODY_END_ << ClassPtr->FixedBinaryName << endl;
         Output << "}" << endl;
         Output << endl;
 
@@ -108,14 +114,14 @@ namespace jdc
     {
         std::ostringstream Output;
 
-        Output << SM_CLASS_IDENTIFIER_ << ClassPtr->BinaryName << endl;
+        Output << SM_CLASS_IDENTIFIER_ << ClassPtr->FixedBinaryName << endl;
         Output << MakeClassIdentifier(ClassPtr) << endl;
 
         Output << "{" << endl;
-        Output << SM_CLASS_BODY_BEGIN_ << ClassPtr->BinaryName << endl;
+        Output << SM_CLASS_BODY_BEGIN_ << ClassPtr->FixedBinaryName << endl;
         Output << endl;
 
-        Output << SM_CLASS_BODY_END_ << ClassPtr->BinaryName << endl;
+        Output << SM_CLASS_BODY_END_ << ClassPtr->FixedBinaryName << endl;
         Output << "}" << endl;
         Output << endl;
 
@@ -123,7 +129,7 @@ namespace jdc
     }
 
 
-    bool ResetClassSource(const std::filesystem::path & RootDir, const xJavaSpace * JavaSpacePtr, const xJavaClass * ClassPtr)
+    bool ResetClassSource(const std::filesystem::path & RootDir, const xJavaClass * ClassPtr)
     {
         auto Path = RootDir / ClassPtr->GetFixedPackagePathName();
         auto Filename = Path / ClassPtr->Extend.SourceFilename;
@@ -139,7 +145,7 @@ namespace jdc
         return true;
     }
 
-    bool BuildClassSource(const std::filesystem::path & RootDir, const xJavaSpace * JavaSpacePtr,  const xJavaClass * ClassPtr)
+    bool BuildClassSource(const std::filesystem::path & RootDir, const xJavaClass * ClassPtr)
     {
         auto Path = RootDir / ClassPtr->GetFixedPackagePathName();
         auto Filename = Path / ClassPtr->Extend.SourceFilename;
@@ -160,8 +166,7 @@ namespace jdc
             auto Original = *Input;
 
             // body end string:
-            auto & ClassInfo = ClassPtr->ClassInfo;
-            auto & ParentClassBinaryName = ClassInfo.GetOuterClassBinaryName();
+            auto & ParentClassBinaryName = ClassPtr->GetFixedOutermostClassBinaryName();
 
             std::string ParentBodyEndString = SM_CLASS_BODY_END_ + ParentClassBinaryName + '\n';
             auto InsertIndex = Original.find(ParentBodyEndString);
@@ -188,13 +193,13 @@ namespace jdc
 
         for (const auto & Entry : ClassMap) {
             auto & ClassUPtr = Entry.second;
-            if (!ResetClassSource(OutputDir, JavaSpaceUPtr.get(), ClassUPtr.get())) {
+            if (!ResetClassSource(OutputDir, ClassUPtr.get())) {
                 return false;
             }
         }
         for (const auto & Entry : ClassMap) {
             auto & ClassUPtr = Entry.second;
-            if (!BuildClassSource(OutputDir, JavaSpaceUPtr.get(), ClassUPtr.get())) {
+            if (!BuildClassSource(OutputDir, ClassUPtr.get())) {
                 return false;
             }
         }

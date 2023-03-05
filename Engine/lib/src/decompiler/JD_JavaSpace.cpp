@@ -9,7 +9,7 @@ using namespace xel;
 namespace jdc
 {
 
-    std::string ConvertBinaryNameToPathName(const std::string & BinaryName)
+    const std::string ConvertBinaryNameToPathName(const std::string & BinaryName)
     {
         auto Copy = BinaryName;
         #ifdef X_SYSTEM_WINDOWS
@@ -22,7 +22,7 @@ namespace jdc
         return Copy;
     }
 
-    std::string ConvertPathNameToBinaryName(const std::string & PathName)
+    const std::string ConvertPathNameToBinaryName(const std::string & PathName)
     {
         auto Copy = PathName;
         #ifdef X_SYSTEM_WINDOWS
@@ -35,7 +35,7 @@ namespace jdc
         return Copy;
     }
 
-    std::string ConvertBinaryNameToCodeName(const std::string & BinaryName)
+    const std::string ConvertBinaryNameToCodeName(const std::string & BinaryName)
     {
         auto Copy = BinaryName;
         for (auto & C : Copy) {
@@ -46,7 +46,7 @@ namespace jdc
         return Copy;
     }
 
-    std::string GetSimpleClassBinaryName(const std::string & BinaryName)
+    const std::string GetSimpleClassBinaryName(const std::string & BinaryName)
     {
         auto Index = BinaryName.find_last_of('/');
         if (Index == BinaryName.npos) {
@@ -55,7 +55,7 @@ namespace jdc
         return BinaryName.substr(Index + 1);
     }
 
-    std::string GetInnermostClassCodeName(const std::string & AnyTypeOfClassName)
+    const std::string GetInnermostClassCodeName(const std::string & AnyTypeOfClassName)
     {
         auto Index = AnyTypeOfClassName.find_last_of("/$.");
         if (Index == AnyTypeOfClassName.npos) {
@@ -64,7 +64,7 @@ namespace jdc
         return AnyTypeOfClassName.substr(Index + 1);
     }
 
-    std::string GetOutermostClassCodeName(const std::string & AnyTypeOfClassName)
+    const std::string GetOutermostClassCodeName(const std::string & AnyTypeOfClassName)
     {
         auto IndexStart = AnyTypeOfClassName.find_last_of('/');
         IndexStart = (IndexStart == AnyTypeOfClassName.npos ? 0 : IndexStart);
@@ -93,11 +93,9 @@ namespace jdc
                 auto PackageBinaryName = ConvertPathNameToBinaryName(PackagePath);
                 auto [Iter, _] = PackageMap.insert(std::make_pair(PackageBinaryName, std::make_unique<xJavaPackage>()));
                 auto & PackageUPtr = Iter->second;
-                PackageUPtr->BinaryName = PackageBinaryName;
-                PackageUPtr->PathName = PackagePath;
-                PackageUPtr->CodeName = ConvertBinaryNameToCodeName(PackageBinaryName);
-
-                cout << "Package: " << PackageBinaryName << endl;
+                PackageUPtr->UnfixedBinaryName = PackageBinaryName;
+                PackageUPtr->UnfixedPathName   = PackagePath;
+                PackageUPtr->UnfixedCodeName   = ConvertBinaryNameToCodeName(PackageBinaryName);
             }
             else {
                 if (Path.extension().string() != ".class") {
@@ -117,9 +115,8 @@ namespace jdc
                 }
                 auto & JavaClass = *Iter->second;
                 JavaClass.UnfixedPackageBinaryName = PackageBinaryName;
-                JavaClass.BinaryName = ClassBinaryName;
+                JavaClass.UnfixedBinaryName = ClassBinaryName;
                 JavaClass.SimpleBinaryName = GetSimpleClassBinaryName(ClassBinaryName);
-                JavaClass.CodeName = ConvertBinaryNameToCodeName(JavaClass.BinaryName);
                 JavaClass.SimpleCodeName = ConvertBinaryNameToCodeName(JavaClass.SimpleBinaryName);
                 JavaClass.InnermostCodeName = GetInnermostClassCodeName(JavaClass.SimpleCodeName);
 
@@ -145,15 +142,14 @@ namespace jdc
         // FixPackagePath:
         for(auto & Entry : PackageMap) {
             auto & JavaPackageUPtr = Entry.second;
-            X_DEBUG_PRINTF("Trying to find name conflicts: %s, %s\n", Entry.first.c_str(), JavaPackageUPtr->BinaryName.c_str());
+            X_DEBUG_PRINTF("Trying to find name conflicts: '%s'\n", Entry.first.c_str());
 
-            auto ClassIter = ClassMap.find(JavaPackageUPtr->BinaryName);
+            auto ClassIter = ClassMap.find(JavaPackageUPtr->UnfixedBinaryName);
             if (ClassIter != ClassMap.end()) {
-                X_DEBUG_PRINTF("FixPackageName: %s", JavaPackageUPtr->BinaryName.c_str());
                 uint64_t Counter = 0;
                 while(true) {
                     auto Postfix = "_fix_" + std::to_string(Counter);
-                    auto NewPackageName = JavaPackageUPtr->BinaryName + Postfix;
+                    auto NewPackageName = JavaPackageUPtr->UnfixedBinaryName + Postfix;
                     auto NewPackageIter = PackageMap.find(NewPackageName);
                     if (NewPackageIter != PackageMap.end()) {
                         ++Counter;
@@ -165,17 +161,35 @@ namespace jdc
                         continue;
                     }
                     JavaPackageUPtr->FixedBinaryName = NewPackageName;
-                    JavaPackageUPtr->FixedPathName   = JavaPackageUPtr->PathName + Postfix;
-                    JavaPackageUPtr->FixedCodeName   = JavaPackageUPtr->CodeName + Postfix;
+                    JavaPackageUPtr->FixedPathName   = JavaPackageUPtr->UnfixedPathName + Postfix;
+                    JavaPackageUPtr->FixedCodeName   = JavaPackageUPtr->UnfixedCodeName + Postfix;
                     break;
                 }
+                X_DEBUG_PRINTF("FixPackageName: %s -> %s\n", JavaPackageUPtr->UnfixedBinaryName.c_str(), JavaPackageUPtr->FixedBinaryName.c_str());
             } else {
-                JavaPackageUPtr->FixedBinaryName = JavaPackageUPtr->BinaryName;
-                JavaPackageUPtr->FixedPathName   = JavaPackageUPtr->PathName;
-                JavaPackageUPtr->FixedCodeName   = JavaPackageUPtr->CodeName;
+                JavaPackageUPtr->FixedBinaryName = JavaPackageUPtr->UnfixedBinaryName;
+                JavaPackageUPtr->FixedPathName   = JavaPackageUPtr->UnfixedPathName;
+                JavaPackageUPtr->FixedCodeName   = JavaPackageUPtr->UnfixedCodeName;
             }
         }
 
+        // Fix class name with new package
+        for(auto & Entry : ClassMap) {
+            auto & JavaClassUPtr = Entry.second;
+            auto & PackagePtr = JavaClassUPtr->PackagePtr;
+            if (PackagePtr->FixedBinaryName.length() == PackagePtr->UnfixedBinaryName.length()) {
+                JavaClassUPtr->FixedBinaryName = JavaClassUPtr->UnfixedBinaryName;
+                JavaClassUPtr->FixedCodeName = ConvertBinaryNameToCodeName(JavaClassUPtr->FixedBinaryName);
+                continue;
+            }
+            auto NewClassBinaryName = PackagePtr->FixedBinaryName + '.' + JavaClassUPtr->SimpleBinaryName;
+            JavaClassUPtr->FixedBinaryName = NewClassBinaryName;
+            JavaClassUPtr->FixedCodeName = ConvertBinaryNameToCodeName(NewClassBinaryName);
+
+            X_DEBUG_PRINTF("FixClassName: %s -> %s\n", JavaClassUPtr->UnfixedBinaryName.c_str(), JavaClassUPtr->FixedBinaryName.c_str());
+        }
+
+        // extend class
         for(auto & Entry : ClassMap) {
             auto & JavaClassUPtr = Entry.second;
             JavaClassUPtr->DoExtend();
@@ -184,9 +198,33 @@ namespace jdc
         return JavaSpaceUPtr;
     }
 
+    const std::string xJavaClass::GetFixedClassBinaryName(const std::string& OriginalClassBinaryName) const
+    {
+        auto & ClassMap = JavaSpacePtr->ClassMap;
+        auto Iter = ClassMap.find(OriginalClassBinaryName);
+        if (Iter == ClassMap.end()) { // java native class or 3rd party class
+            return OriginalClassBinaryName;
+        }
+        return Iter->second->FixedBinaryName;
+    }
+
+    const std::string xJavaClass::GetFixedClassCodeName(const std::string& OriginalClassBinaryName) const
+    {
+        auto & Fixed = ConvertBinaryNameToCodeName(GetFixedClassBinaryName(OriginalClassBinaryName));
+        return Fixed;
+    }
+
+    const std::string & xJavaClass::GetFixedOutermostClassBinaryName() const
+    {
+        auto & ClassMap = JavaSpacePtr->ClassMap;
+        auto Iter = ClassMap.find(ClassInfo.GetOutermostClassBinaryName());
+        assert(Iter != ClassMap.end());
+        return Iter->second->FixedBinaryName;
+    }
+
     void xJavaClass::DoExtend()
     {
-        X_DEBUG_PRINTF("xJavaClass::DoExtend %s --> %s --> %s\n", BinaryName.c_str(), SimpleBinaryName.c_str(), InnermostCodeName.c_str());
+        X_DEBUG_PRINTF("xJavaClass::DoExtend %s --> %s --> %s\n", FixedBinaryName.c_str(), SimpleBinaryName.c_str(), InnermostCodeName.c_str());
         for (auto & Attribute : ClassInfo.Attributes) {
             auto & AttributeName = ClassInfo.GetConstantUtf8(Attribute.NameIndex);
             auto Reader = xStreamReader(Attribute.Binary.data());

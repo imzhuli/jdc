@@ -87,27 +87,31 @@ namespace jdc
     };
 
     using xAccessFlag = uint16_t;
-    constexpr const xAccessFlag ACC_PUBLIC       = 0x0001; // field | method
-    constexpr const xAccessFlag ACC_PRIVATE      = 0x0002; // field | method
-    constexpr const xAccessFlag ACC_PROTECTED    = 0x0004; // field | method
-    constexpr const xAccessFlag ACC_STATIC       = 0x0008; // field | method
-    constexpr const xAccessFlag ACC_FINAL        = 0x0010; // field | method
-    constexpr const xAccessFlag ACC_SYNCHRONIZED = 0x0020; // method
-    constexpr const xAccessFlag ACC_SUPER        = 0x0020; // class | interface
-    constexpr const xAccessFlag ACC_OPEN         = 0x0020; // module
-    constexpr const xAccessFlag ACC_BRIDGE       = 0x0040; // method
-    constexpr const xAccessFlag ACC_VOLATILE     = 0x0040; // field
-    constexpr const xAccessFlag ACC_VARARGS      = 0x0080; // method
-    constexpr const xAccessFlag ACC_TRANSIENT    = 0x0080; // field
-    constexpr const xAccessFlag ACC_NATIVE       = 0x0100; // method
-    constexpr const xAccessFlag ACC_INTERFACE    = 0x0200; // class
-    constexpr const xAccessFlag ACC_ABSTRACT     = 0x0400; // method
-    constexpr const xAccessFlag ACC_STRICT       = 0x0800; // method
-    constexpr const xAccessFlag ACC_SYNTHETIC    = 0x1000; // class
-    constexpr const xAccessFlag ACC_ANNOTATION   = 0x2000; // class
-    constexpr const xAccessFlag ACC_ENUM         = 0x4000; // class
-    constexpr const xAccessFlag ACC_MODULE       = 0x8000; // class
-    constexpr const xAccessFlag ACC_MANDATED     = 0x8000; // module
+
+    // Access flags for Class, Field, Method, Nested class, Module, Module Requires, Module Exports, Module Opens
+    constexpr const xAccessFlag ACC_PUBLIC       = 0x0001; // C  F  M  N  .  .  .  .
+    constexpr const xAccessFlag ACC_PRIVATE      = 0x0002; // .  F  M  N  .  .  .  .
+    constexpr const xAccessFlag ACC_PROTECTED    = 0x0004; // .  F  M  N  .  .  .  .
+    constexpr const xAccessFlag ACC_STATIC       = 0x0008; // C  F  M  N  .  .  .  .
+    constexpr const xAccessFlag ACC_FINAL        = 0x0010; // C  F  M  N  .  .  .  .
+    constexpr const xAccessFlag ACC_SYNCHRONIZED = 0x0020; // .  .  M  .  .  .  .  .
+    constexpr const xAccessFlag ACC_SUPER        = 0x0020; // C  .  .  .  .  .  .  .
+    constexpr const xAccessFlag ACC_OPEN         = 0x0020; // .  .  .  .  Mo .  .  .
+    constexpr const xAccessFlag ACC_TRANSITIVE   = 0x0020; // .  .  .  .  .  MR .  .
+    constexpr const xAccessFlag ACC_VOLATILE     = 0x0040; // .  F  .  .  .  .  .  .
+    constexpr const xAccessFlag ACC_BRIDGE       = 0x0040; // .  .  M  .  .  .  .  .
+    constexpr const xAccessFlag ACC_STATIC_PHASE = 0x0040; // .  .  .  .  .  MR .  .
+    constexpr const xAccessFlag ACC_TRANSIENT    = 0x0080; // .  F  .  .  .  .  .  .
+    constexpr const xAccessFlag ACC_VARARGS      = 0x0080; // .  .  M  .  .  .  .  .
+    constexpr const xAccessFlag ACC_NATIVE       = 0x0100; // .  .  M  .  .  .  .  .
+    constexpr const xAccessFlag ACC_INTERFACE    = 0x0200; // C  .  .  N  .  .  .  .
+    constexpr const xAccessFlag ACC_ABSTRACT     = 0x0400; // C  .  M  N  .  .  .  .
+    constexpr const xAccessFlag ACC_STRICT       = 0x0800; // .  .  M  .  .  .  .  .
+    constexpr const xAccessFlag ACC_SYNTHETIC    = 0x1000; // C  F  M  N  Mo MR ME MO
+    constexpr const xAccessFlag ACC_ANNOTATION   = 0x2000; // C  .  .  N  .  .  .  .
+    constexpr const xAccessFlag ACC_ENUM         = 0x4000; // C  F  .  N  .  .  .  .
+    constexpr const xAccessFlag ACC_MODULE       = 0x8000; // C  .  .  .  .  .  .  .
+    constexpr const xAccessFlag ACC_MANDATED     = 0x8000;
 
     enum eResultCode : uint16_t
     {

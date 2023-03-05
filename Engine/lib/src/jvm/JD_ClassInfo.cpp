@@ -196,7 +196,7 @@ namespace jdc
         return GetConstantUtf8(Item.Info.Class.BinaryNameIndex);
     }
 
-    const std::string xClassInfo::GetOuterClassBinaryName() const
+    const std::string xClassInfo::GetOutermostClassBinaryName() const
     {
         auto & ThisBinaryName = GetConstantClassBinaryName(ThisClass);
         auto Index = ThisBinaryName.find_last_of('$');
