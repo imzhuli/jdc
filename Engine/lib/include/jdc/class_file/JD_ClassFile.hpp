@@ -174,39 +174,12 @@ namespace jdc
         X_GAME_API_MEMBER std::vector<std::string> ExtractTypeBinaryNames(const std::string & Descriptor) const;
     };
 
-    struct xExceptionTableItemInfo
-    {
-        uint16_t StartPC;
-        uint16_t EndPC;
-        uint16_t HandlerPC;
-        uint16_t CatchType;
-    };
-
-    struct xInnerClassAttributeInfo
-    {
-        uint16_t InnerClassInfoIndex;
-        uint16_t OuterClassInfoIndex;
-        uint16_t InnerNameIndex;
-        uint16_t InnerAccessFlags;
-    };
-
-    struct xCodeAttributeInfo
-    {
-        bool                                    Enabled = false;
-        uint16_t                                MaxStack;
-        uint16_t                                MaxLocals;
-        std::vector<xel::ubyte>                 Binary;
-        std::vector<xExceptionTableItemInfo>    ExceptionTable;
-        std::vector<xAttributeInfo>             Attributes;
-    };
-
     X_GAME_API std::string EscapeString(const std::string & S);
     X_GAME_API std::string EscapeStringQuoted(const std::string & S);
 
     X_GAME_API bool ExtractAttributeInfo(xel::xStreamReader & Reader, ssize_t & RemainSize, xAttributeInfo & AttributeInfo);
     X_GAME_API bool ExtractFieldInfo(xel::xStreamReader & Reader, ssize_t & RemainSize, xFieldInfo & FieldInfo);
-    X_GAME_API bool ExtractInnerClassAttribute(const std::vector<xel::ubyte> & Binary, std::vector<xInnerClassAttributeInfo> & Output);
-    X_GAME_API bool ExtractCodeAttribute(const std::vector<xel::ubyte> & Binary, xCodeAttributeInfo & Output);
+    X_GAME_API bool ExtractMethodInfo(xel::xStreamReader & Reader, ssize_t & RemainSize, xMethodInfo & MethodInfo);
 
     X_INLINE std::string MakeArgumentName(size_t Index) { return "__arg_" + std::to_string(Index); }
     X_INLINE std::string MakeVariableName(size_t Index) { return "__var_" + std::to_string(Index); }

@@ -31,7 +31,6 @@ namespace jdc
             Qualifiers.push_back("static");
         }
 
-
         if (AccessFlags & ACC_ENUM) {
             Qualifiers.push_back("enum");
             Qualifiers.push_back(ClassPtr->InnermostCodeName);

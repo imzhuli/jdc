@@ -1,5 +1,6 @@
 #include <jdc/base/JD_Instructions.hpp>
 #include <jdc/decompiler/JD_CodeGenerator.hpp>
+#include <jdc/class_file/JD_Attribute.hpp>
 #include <xel/String.hpp>
 #include <sstream>
 #include <iostream>
@@ -10,48 +11,11 @@ using namespace std;
 namespace jdc
 {
 
-    xJavaMethod xJavaClass::ExtractMethod(size_t Index)
-    {
-        auto & MethodInfo = ClassInfo.Methods[Index];
-        auto MethodName = ClassInfo.GetConstantUtf8(MethodInfo.NameIndex);
-        xJavaMethod Method;
-        Method.ClassInfoPtr = &ClassInfo;
-        Method.MethodInfoPtr = &MethodInfo;
-        Method.OriginalNameView = MethodName;
-
-        // build method identifier:
-        if (MethodName == "<clinit>") {
-            Method.Identifier = "static";
-        }
-        else if (MethodName == "<init>") {
-            Method.Identifier = InnermostCodeName;
-        }
-        else {
-            Method.Identifier = MethodName;
-        }
-
-        for (auto & Attribute : MethodInfo.Attributes) {
-            auto & AttributeName = ClassInfo.GetConstantUtf8(Attribute.NameIndex);
-            if (AttributeName == "Code") {
-                Method.CodeBinaryView = { Attribute.Binary.data(), Attribute.Binary.size() };
-                continue;
-            }
-        }
-
-
-        do { // extract Param types
-
-        } while(false);
-
-        // decode:
-        Method.Decode();
-        X_DEBUG_PRINTF("DecodedMethod: %s  flags=%u\n", Method.GetQualifiedName().c_str(), (uint)Method.MethodInfoPtr->AccessFlags);
-
-        return Method;
-    }
 
     void xJavaMethod::Decode()
     {
+        // read Attribute:
+
         DecodeNameStrings();
         Decode_Round_1();
     }

@@ -1,4 +1,4 @@
-#include <jdc/class_file/JD_ClassInfo.hpp>
+#include <jdc/class_file/JD_ClassFile.hpp>
 #include <xel/String.hpp>
 #include <xel/Byte.hpp>
 #include <sstream>
@@ -486,76 +486,7 @@ namespace jdc
         return true;
     }
 
-    bool ExtractInnerClassAttribute(const std::vector<xel::ubyte> & Binary, std::vector<xInnerClassAttributeInfo> & Output)
-    {
-        Output.clear();
-
-        auto Reader = xStreamReader(Binary.data());
-        auto RemainSize = ssize_t(Binary.size());
-        if ((RemainSize -= 2) < 0) {
-            return false;
-        }
-        size_t Total = Reader.R2();
-        if ((RemainSize -= Total * 8) < 0) {
-            return false;
-        }
-        for (size_t i = 0 ; i < Total; ++i) {
-            xInnerClassAttributeInfo ICA;
-            ICA.InnerClassInfoIndex = Reader.R2();
-            ICA.OuterClassInfoIndex = Reader.R2();
-            ICA.InnerNameIndex = Reader.R2();
-            ICA.InnerAccessFlags = Reader.R2();
-            Output.push_back(ICA);
-        }
-        return true;
-    }
-
-    bool ExtractCodeAttribute(const std::vector<xel::ubyte> & Binary, xCodeAttributeInfo & Output)
-    {
-        auto CA = xCodeAttributeInfo();
-        auto Reader = xStreamReader(Binary.data());
-        ssize_t RemainSize = Binary.size();
-        if ((RemainSize -= 8) < 0) {
-            return false;
-        }
-
-        CA.MaxStack = Reader.R2();
-        CA.MaxLocals = Reader.R2();
-        size_t CodeBinarySize = Reader.R4();
-        if ((RemainSize -= (CodeBinarySize + 2)) < 0) {
-            return false;
-        }
-        CA.Binary.resize(CodeBinarySize);
-        Reader.R(CA.Binary.data(), CodeBinarySize);
-
-        size_t ExceptionTableLength = Reader.R2();
-        if ((RemainSize -= ExceptionTableLength * 8 + 2) < 0) {
-            return false;
-        }
-        for (size_t i = 0 ; i < ExceptionTableLength; ++i) {
-            xExceptionTableItemInfo Item;
-            Item.StartPC = Reader.R2();
-            Item.EndPC = Reader.R2();
-            Item.HandlerPC = Reader.R2();
-            Item.CatchType = Reader.R2();
-            CA.ExceptionTable.push_back(std::move(Item));
-        }
-
-        size_t SubAttributeCount = Reader.R2();
-        for (size_t i = 0 ; i < SubAttributeCount; ++i) {
-            xAttributeInfo AttributeInfo;
-            if (!ExtractAttributeInfo(Reader, RemainSize, AttributeInfo)) {
-                return false;
-            }
-            CA.Attributes.push_back(std::move(AttributeInfo));
-        }
-
-        Output = std::move(CA);
-        Output.Enabled = true;
-        return true;
-    }
-
-    static bool LoadMethodInfo(xStreamReader & Reader, ssize_t & RemainSize, xMethodInfo & MethodInfo)
+    bool ExtractMethodInfo(xStreamReader & Reader, ssize_t & RemainSize, xMethodInfo & MethodInfo)
     {
         if ((RemainSize -= 8) < 0) {
             return false;
@@ -654,7 +585,7 @@ namespace jdc
         }
         JavaClass.Methods.resize(Reader.R2());
         for (auto & MethodInfo : JavaClass.Methods) {
-            if (!LoadMethodInfo(Reader, RemainSize, MethodInfo)) {
+            if (!ExtractMethodInfo(Reader, RemainSize, MethodInfo)) {
                 return { JDR_DATA_SIZE_ERROR, "Read method info error @" X_STRINGIFY(__LINE__)};
             }
         }

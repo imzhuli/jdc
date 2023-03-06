@@ -1,16 +1,42 @@
 #pragma once
 #include "../base/JD_Base.hpp"
+#include "./JD_ClassFile.hpp"
 #include <xel/Byte.hpp>
-#include <any>
+#include <vector>
+
 
 namespace jdc
 {
 
-    struct xAttribute
+    using xAttributeBinary = std::vector<xel::ubyte>;
+
+    struct xCodeAttribute
     {
-        virtual bool Parse(xel::xStreamReader & Reader, size_t RemainSize) = 0;
-        virtual const char * GetName() const = 0;
-        virtual const std::any GetValue() const = 0;
+        struct xExceptionTable
+        {
+            uint16_t StartPC;
+            uint16_t EndPC;
+            uint16_t HandlePC;
+            uint16_t CatchType;
+        };
+
+        uint16_t MaxStack;
+        uint16_t MaxLocals;
+        std::vector<xel::ubyte>      CodeBinary;
+        std::vector<xExceptionTable> ExceptionTables;
+        std::vector<xAttributeInfo>  SubAttributes;
+
+        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary);
+    };
+
+    struct xInnerClassAttribute
+    {
+        uint16_t InnerClassInfoIndex;
+        uint16_t OuterClassInfoIndex;
+        uint16_t InnerNameIndex;
+        uint16_t InnerAccessFlags;
+
+        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary);
     };
 
 }
