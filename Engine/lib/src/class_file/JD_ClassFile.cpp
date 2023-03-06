@@ -232,7 +232,7 @@ namespace jdc
         return BinaryNames;
     }
 
-    static bool LoadConstantInfo(xStreamReader & Reader, ssize_t & RemainSize, xConstantItemInfo & TagInfo)
+    static bool LoadConstantInfo(xStreamReader & Reader, ssize_t & RemainSize, xConstantInfo & TagInfo)
     {
         if ((RemainSize -= 1) < 0) {
             return false;
@@ -396,7 +396,7 @@ namespace jdc
         return true;
     }
 
-    xConstantItemInfo::xConstantItemInfo(const xConstantItemInfo &Other)
+    xConstantInfo::xConstantInfo(const xConstantInfo &Other)
     {
         switch(Other.Tag) {
             case eConstantTag::Utf8: {
@@ -413,7 +413,7 @@ namespace jdc
         memcpy(&Info, &Other.Info, sizeof(Info));
     }
 
-    xConstantItemInfo::xConstantItemInfo(xConstantItemInfo && Other)
+    xConstantInfo::xConstantInfo(xConstantInfo && Other)
     {
         Tag = Other.Tag;
         memcpy(&Info, &Other.Info, sizeof(Info));
@@ -429,19 +429,19 @@ namespace jdc
         }
     }
 
-    xConstantItemInfo::~xConstantItemInfo()
+    xConstantInfo::~xConstantInfo()
     {
         Clear();
     }
 
-    void xConstantItemInfo::SetUtf8(const char * DataPtr, size_t Length)
+    void xConstantInfo::SetUtf8(const char * DataPtr, size_t Length)
     {
         Clear();
         Tag = eConstantTag::Utf8;
         Info.Utf8.DataPtr = new std::string(DataPtr, Length);
     }
 
-    void xConstantItemInfo::Clear()
+    void xConstantInfo::Clear()
     {
         switch(Tag) {
             case eConstantTag::Utf8: {

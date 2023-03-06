@@ -1,6 +1,5 @@
 #pragma once
 #include "../base/JD_Base.hpp"
-#include "./JD_ClassFile.hpp"
 #include <xel/Byte.hpp>
 #include <vector>
 
@@ -9,6 +8,12 @@ namespace jdc
 {
 
     using xAttributeBinary = std::vector<xel::ubyte>;
+
+    struct xAttributeInfo
+    {
+        uint16_t                      NameIndex;
+        std::vector<xel::ubyte>       Binary;
+    };
 
     struct xCodeAttribute
     {
