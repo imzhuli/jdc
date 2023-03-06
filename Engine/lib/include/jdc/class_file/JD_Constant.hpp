@@ -125,6 +125,7 @@ namespace jdc
         xConstantInfo(const xConstantInfo &Other);
         xConstantInfo(xConstantInfo && Other);
         X_GAME_API_MEMBER ~xConstantInfo();
+
         X_GAME_API_MEMBER void SetUtf8(const char * DataPtr, size_t Length);
         X_GAME_API_MEMBER void Clear();
     };
