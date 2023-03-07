@@ -1,5 +1,5 @@
 #pragma once
-#include "./JD_Base.hpp"
+#include "./JD_.hpp"
 #include <string>
 #include <vector>
 #include <memory>
@@ -109,6 +109,12 @@ namespace jdc
         std::string _StringValue;
         std::string _EnumMemberStringValue;
         std::vector<std::unique_ptr<xElementValue>> _ArrayElements;
+    };
+
+    struct xElementValuePair
+    {
+        std::string   Name;
+        xElementValue Value;
     };
 
 }

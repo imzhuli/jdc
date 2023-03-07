@@ -1,5 +1,5 @@
 #pragma once
-#include "../base/JD_Base.hpp"
+#include "../base/JD_.hpp"
 #include "../base/JD_Instructions.hpp"
 #include "../class_file/JD_ClassFile.hpp"
 #include "../class_file/JD_Attribute.hpp"
@@ -15,15 +15,19 @@ namespace jdc
         const xMethodInfo *   MethodInfoPtr;
 
         // basic extraction
-        std::string_view  OriginalNameView;
-        std::string       Identifier;
-        xCodeAttribute    CodeAttribute;
+        std::string_view            OriginalNameView;
+        std::string                 Identifier;
+        xAttributeCode              AttributeCode;
+        xAttributeMethodParameters  AttributeParameters;
 
         // decode
         std::string                       QualifierString;
         std::vector<std::string>          TypeBinaryNames;
+        xAttributeLocalVariableTable      SubAttributeLocalVariableTable;
+        xAttributeLocalVariableTypeTable  SubAttributeLocalVariableTypeTable;
 
         X_GAME_API_MEMBER void Decode();
+        X_GAME_API_MEMBER void DecodeCodeAttributs();
         X_GAME_API_MEMBER void DecodeNameStrings();
         X_GAME_API_MEMBER void Decode_Round_1();
 

@@ -1,8 +1,8 @@
 #include <jdc/class_file/JD_Constant.hpp>
+#include <cstring>
 
 namespace jdc
 {
-
 
     xConstantInfo::xConstantInfo(const xConstantInfo &Other)
     {

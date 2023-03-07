@@ -52,9 +52,13 @@ namespace jdc
 
         for (auto & Attribute : MethodInfo.Attributes) {
             auto & AttributeName = ClassInfo.GetConstantUtf8(Attribute.NameIndex);
+            X_DEBUG_PRINTF("MethodInfo.Attribute: %s\n", AttributeName.c_str());
             if (AttributeName == "Code") {
-                Method.CodeAttribute.Extract(Attribute.Binary);
+                Method.AttributeCode.Extract(Attribute.Binary);
                 continue;
+            }
+            if (AttributeName == "MethodParameters") {
+                Method.AttributeParameters.Extract(Attribute.Binary, &ClassInfo);
             }
         }
 
@@ -76,54 +80,29 @@ namespace jdc
 
         for (auto & Attribute : ClassInfo.Attributes) {
             auto & AttributeName = ClassInfo.GetConstantUtf8(Attribute.NameIndex);
-            auto Reader = xStreamReader(Attribute.Binary.data());
-            if (AttributeName == "SourceFile") {
-                uint16_t SourceFilenameIndex = Reader.R2();
-                auto & SourceFilename = ClassInfo.GetConstantUtf8(SourceFilenameIndex);
-                X_DEBUG_PRINTF("SourceFilename: %s\n", SourceFilename.c_str());
-                Extend.SourceFilename = SourceFilename;
+            auto & AttributeBinary = Attribute.Binary;
+            if (AttributeName == "Deprecated") {
+                X_DEBUG_PRINTF("Deprecated: yes\n");
+                Extend.AttributeDeprecated.Extract(AttributeBinary);
                 continue;
             }
             if (AttributeName == "Synthetic") {
                 X_DEBUG_PRINTF("Synthetic: yes\n");
-                Extend.Synthetic = true;
-                continue;
-            }
-            if (AttributeName == "Deprecated") {
-                X_DEBUG_PRINTF("Deprecated: yes\n");
-                Extend.Deprecated = true;
+                Extend.AttributeSynthetic.Extract(AttributeBinary);
                 continue;
             }
             if (AttributeName == "InnerClasses") {
-                // Oracle's Java Virtual Machine implementation DOES NOT check the consistency of an InnerClasses attribute
-                // against a class file representing a class or interface referenced by the attribute.
-                // so, just ignore this attribute
-                size_t Total = Reader.R2();
-                for (size_t Index = 0 ; Index < Total; ++Index) {
-                #ifndef NDEBUG
-                    uint16_t InnerClassInfoIndex = Reader.R2();
-                    uint16_t OuterClassInfoIndex = Reader.R2();
-                    uint16_t InnerBinaryNameIndex = Reader.R2();
-                    uint16_t InnerAccessFlags = Reader.R2();
-
-                    auto & InnerClassName = InnerClassInfoIndex ? ClassInfo.GetConstantClassBinaryName(InnerClassInfoIndex) : std::string();
-                    auto & OuterClassName = OuterClassInfoIndex ? ClassInfo.GetConstantClassBinaryName(OuterClassInfoIndex) : std::string();
-                    auto & InnerBinaryName = InnerBinaryNameIndex ? ClassInfo.GetConstantUtf8(InnerBinaryNameIndex) : std::string();
-
-                    X_DEBUG_PRINTF("InnerClasses: %s -> %s -> %s\n", InnerClassName.c_str(), OuterClassName.c_str(), InnerBinaryName.c_str());
-
-                    (void)InnerClassInfoIndex;
-                    (void)OuterClassInfoIndex;
-                    (void)InnerBinaryNameIndex;
-                    (void)InnerAccessFlags;
-                #endif
-                }
+                Extend.AttributeInnerClasses.Extract(AttributeBinary);
+                continue;
+            }
+            if (AttributeName == "SourceFile") {
+                Extend.AttributeSourceFile.Extract(AttributeBinary, &ClassInfo);
                 continue;
             }
         }
 
-        if (Extend.SourceFilename.empty()) {
-            Extend.SourceFilename = GetOutermostClassCodeName(SimpleBinaryName) + ".java";
+        if (Extend.AttributeSourceFile.SourceFile.empty()) {
+            Extend.AttributeSourceFile.SourceFile = GetOutermostClassCodeName(SimpleBinaryName) + ".java";
         }
 
         for (size_t Index = 0 ; Index < ClassInfo.Methods.size() ; ++Index) {

@@ -141,7 +141,7 @@ namespace jdc
     bool ResetClassSource(const std::filesystem::path & RootDir, const xJavaClass * ClassPtr)
     {
         auto Path = RootDir / ClassPtr->GetFixedPackagePathName();
-        auto Filename = Path / ClassPtr->Extend.SourceFilename;
+        auto Filename = Path / ClassPtr->Extend.AttributeSourceFile.SourceFile;
 
         std::error_code Error;
         std::filesystem::create_directories(Path, Error);
@@ -157,7 +157,7 @@ namespace jdc
     bool BuildClassSource(const std::filesystem::path & RootDir, const xJavaClass * ClassPtr)
     {
         auto Path = RootDir / ClassPtr->GetFixedPackagePathName();
-        auto Filename = Path / ClassPtr->Extend.SourceFilename;
+        auto Filename = Path / ClassPtr->Extend.AttributeSourceFile.SourceFile;
         if (!ClassPtr->IsInnerClass()) {
             auto Output = std::ofstream(Filename, std::ios_base::binary | std::ios_base::app);
             if (!Output) {

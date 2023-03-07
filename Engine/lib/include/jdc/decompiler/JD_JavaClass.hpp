@@ -1,6 +1,7 @@
 #pragma once
-#include "../base/JD_Base.hpp"
+#include "../base/JD_.hpp"
 #include "../base/JD_Instructions.hpp"
+#include "../class_file/JD_Attribute.hpp"
 #include "../class_file/JD_ClassFile.hpp"
 #include "./JD_JavaPackage.hpp"
 #include "./JD_JavaMethod.hpp"
@@ -31,10 +32,11 @@ namespace jdc
         xClassInfo  ClassInfo;
 
         struct {
-            std::string                           SourceFilename;
-            bool                                  Synthetic = false;
-            bool                                  Deprecated = false;
-            std::vector<xJavaMethod>              Methods;
+            xAttributeDeprecated          AttributeDeprecated;
+            xAttributeSynthetic           AttributeSynthetic;
+            xAttributeInnerClasses        AttributeInnerClasses;
+            xAttributeSourceFile          AttributeSourceFile;
+            std::vector<xJavaMethod>      Methods;
         } Extend;
 
         X_INLINE const std::string & GetFixedPackageBinaryName() const { return PackagePtr->FixedBinaryName; }

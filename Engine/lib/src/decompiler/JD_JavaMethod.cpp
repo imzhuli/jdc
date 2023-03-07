@@ -15,8 +15,8 @@ namespace jdc
     void xJavaMethod::Decode()
     {
         // read Attribute:
-
         DecodeNameStrings();
+        DecodeCodeAttributs();
         Decode_Round_1();
     }
 
@@ -46,6 +46,22 @@ namespace jdc
             }
             QualifierString = JoinStr(Qualifiers.begin(), Qualifiers.end(), ' ');
         }
+    }
+
+    void xJavaMethod::DecodeCodeAttributs()
+    {
+        for (auto & SubAttribute : AttributeCode.SubAttributes) {
+            auto & AttributeName = ClassInfoPtr->GetConstantUtf8(SubAttribute.NameIndex);
+            if (AttributeName == "LocalVariableTable") {
+                SubAttributeLocalVariableTable.Extract(SubAttribute.Binary, ClassInfoPtr);
+                continue;
+            }
+            if (AttributeName == "LocalVariableTypeTable") {
+                SubAttributeLocalVariableTypeTable.Extract(SubAttribute.Binary, ClassInfoPtr);
+                continue;
+            }
+        }
+
     }
 
     void xJavaMethod::Decode_Round_1()

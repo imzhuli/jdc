@@ -1,5 +1,5 @@
 #pragma once
-#include "../base/JD_Base.hpp"
+#include "../base/JD_.hpp"
 #include "./JD_Attribute.hpp"
 #include "./JD_Constant.hpp"
 #include "./JD_Field.hpp"
@@ -16,7 +16,7 @@ namespace jdc
         uint32_t                           Magic;
         uint16_t                           MinorVersion;
         uint16_t                           MajorVersion;
-        std::vector<xConstantInfo>     ConstantPool;
+        std::vector<xConstantInfo>         ConstantPool;
         uint16_t                           AccessFlags;
         uint16_t                           ThisClass;
         uint16_t                           SuperClass;
