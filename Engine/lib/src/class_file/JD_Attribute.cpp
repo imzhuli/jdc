@@ -6,6 +6,22 @@ using namespace xel;
 
 namespace jdc
 {
+    bool xAttributeBootstrapMethods::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
+    {
+        auto Reader = xStreamReader(AttributeBinary.data());
+
+        BootstrapMethods.resize(Reader.R2());
+        for (auto & BootstrapMethod : BootstrapMethods) {
+            BootstrapMethod.ReferenceIndex = Reader.R2();
+            BootstrapMethod.ArgumentIndices.resize(Reader.R2());
+            for (auto & Index : BootstrapMethod.ArgumentIndices) {
+                Index = Reader.R2();
+            }
+
+            X_DEBUG_PRINTF("BootstrapMethod: Index=%u\n", (unsigned int)BootstrapMethod.ReferenceIndex);
+        }
+        return true;
+    }
 
     bool xAttributeCode::Extract(const xAttributeBinary & AttributeBinary)
     {

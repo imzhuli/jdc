@@ -1,6 +1,6 @@
 #pragma once
-#include "../base/JD_.hpp"
-#include "../base/JD_ElementValue.hpp"
+#include "./JD_.hpp"
+#include "./JD_ElementValue.hpp"
 #include <string>
 #include <vector>
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "../base/JD_.hpp"
+#include "../base/JD_Bytecode.hpp"
 #include <string>
 #include <vector>
 
@@ -67,8 +68,8 @@ namespace jdc
 
     struct xConstantMethodHandleInfo
     {
-        uint16_t ReferenceKind;
-        uint16_t ReferenceIndex;
+        eReferenceKind  ReferenceKind;
+        uint16_t        ReferenceIndex;
     };
 
     struct xConstantMethodTypeInfo

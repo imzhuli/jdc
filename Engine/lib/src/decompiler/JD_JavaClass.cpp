@@ -99,6 +99,10 @@ namespace jdc
                 Extend.AttributeSourceFile.Extract(AttributeBinary, &ClassInfo);
                 continue;
             }
+            if (AttributeName == "BootstrapMethods") {
+                Extend.AttributeBootstrapMethods.Extract(AttributeBinary, &ClassInfo);
+                continue;
+            }
         }
 
         if (Extend.AttributeSourceFile.SourceFile.empty()) {

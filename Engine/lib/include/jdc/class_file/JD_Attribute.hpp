@@ -1,6 +1,6 @@
 #pragma once
 #include "../base/JD_.hpp"
-#include "./JD_Annotation.hpp"
+#include "../base/JD_Annotation.hpp"
 #include <xel/Byte.hpp>
 #include <vector>
 #include <string>
@@ -15,6 +15,19 @@ namespace jdc
     {
         uint16_t                      NameIndex;
         std::vector<xel::ubyte>       Binary;
+    };
+
+    struct xAttributeBootstrapMethods
+    {
+        struct xBootstrapMethod
+        {
+            uint16_t                 ReferenceIndex;
+            std::vector<uint16_t>    ArgumentIndices;
+        };
+
+        std::vector<xBootstrapMethod> BootstrapMethods;
+
+        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
 
     struct xAttributeCode

@@ -36,6 +36,7 @@ namespace jdc
             xAttributeSynthetic           AttributeSynthetic;
             xAttributeInnerClasses        AttributeInnerClasses;
             xAttributeSourceFile          AttributeSourceFile;
+            xAttributeBootstrapMethods    AttributeBootstrapMethods;
             std::vector<xJavaMethod>      Methods;
         } Extend;
 

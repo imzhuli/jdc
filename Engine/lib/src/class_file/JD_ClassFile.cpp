@@ -340,7 +340,7 @@ namespace jdc
                 if ((RemainSize -= 3) < 0) {
                     return false;
                 }
-                Info.ReferenceKind = Reader.R1();
+                Info.ReferenceKind = eReferenceKind(Reader.R1());
                 Info.ReferenceIndex = Reader.R2();
                 break;
             }
