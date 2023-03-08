@@ -1,4 +1,4 @@
-#include <jdc/class_file/JD_ClassFile.hpp>
+#include <jdc/class_file/JD_ClassInfo.hpp>
 #include <xel/String.hpp>
 #include <xel/Byte.hpp>
 #include <sstream>

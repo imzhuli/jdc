@@ -1,5 +1,5 @@
 #include <jdc/class_file/JD_Attribute.hpp>
-#include <jdc/class_file/JD_ClassFile.hpp>
+#include <jdc/class_file/JD_ClassInfo.hpp>
 #include <xel/Byte.hpp>
 
 using namespace xel;

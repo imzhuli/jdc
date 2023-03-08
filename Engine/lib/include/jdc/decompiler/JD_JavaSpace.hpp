@@ -1,7 +1,7 @@
 #pragma once
 #include "../base/JD_.hpp"
 #include "../base/JD_Instructions.hpp"
-#include "../class_file/JD_ClassFile.hpp"
+#include "../class_file/JD_ClassInfo.hpp"
 #include "./JD_JavaMethod.hpp"
 #include "./JD_JavaClass.hpp"
 #include "./JD_JavaPackage.hpp"

@@ -1,7 +1,7 @@
 #pragma once
 #include "../base/JD_.hpp"
 #include "../base/JD_Instructions.hpp"
-#include "../class_file/JD_ClassFile.hpp"
+#include "../class_file/JD_ClassInfo.hpp"
 #include "../class_file/JD_Attribute.hpp"
 #include <xel/View.hpp>
 #include <string>

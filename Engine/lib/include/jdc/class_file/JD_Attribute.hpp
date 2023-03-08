@@ -1,6 +1,6 @@
 #pragma once
 #include "../base/JD_.hpp"
-#include "../base/JD_Annotation.hpp"
+#include "./JD_Annotation.hpp"
 #include <xel/Byte.hpp>
 #include <vector>
 #include <string>

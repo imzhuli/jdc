@@ -2,7 +2,7 @@
 #include "../base/JD_.hpp"
 #include "../base/JD_Instructions.hpp"
 #include "../class_file/JD_Attribute.hpp"
-#include "../class_file/JD_ClassFile.hpp"
+#include "../class_file/JD_ClassInfo.hpp"
 #include "./JD_JavaPackage.hpp"
 #include "./JD_JavaMethod.hpp"
 #include <string>

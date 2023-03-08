@@ -1,4 +1,4 @@
-#include <jdc/base/JD_ByteCode.hpp>
+#include <jdc/base/JD_Bytecode.hpp>
 
 namespace jdc
 {
