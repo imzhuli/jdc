@@ -18,11 +18,15 @@ namespace jdc
     class xJavaSpace
     {
     private:
-        xPackageMap PackageMap;
-        xClassMap   ClassMap;
+        xPackageMap _PackageMap;
+        xClassMap   _ClassMap;
 
     public:
-        X_PRIVATE_MEMBER std::string GetFixedClassBinaryName(const std::string& OriginalClassBinaryName) const;
+        X_INLINE const xPackageMap &   GetPackageMap() const { return _PackageMap; }
+        X_INLINE const xClassMap &     GetClassMap() const { return _ClassMap; }
+
+        X_PRIVATE_MEMBER const std::string & GetFixedPackageBinaryName(const std::string& OriginalPackageBinaryName) const;
+        X_PRIVATE_MEMBER const std::string & GetFixedClassBinaryName(const std::string& OriginalClassBinaryName) const;
 
     public:
         X_GAME_API_STATIC_MEMBER std::unique_ptr<xJavaSpace> LoadJavaSpace(const std::string & RootDirectory);

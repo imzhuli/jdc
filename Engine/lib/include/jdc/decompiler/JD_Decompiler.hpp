@@ -1,6 +1,7 @@
 #pragma once
 #include "./_.hpp"
 #include "./JD_JavaSpace.hpp"
+#include <filesystem>
 
 namespace jdc
 {
@@ -17,8 +18,13 @@ namespace jdc
         const xJdcConfig & GetConfig() const { return _Config; }
 
     private:
+        X_PRIVATE_MEMBER bool MakePackagePaths();
+        X_PRIVATE_MEMBER bool MakeClassJavaFiles();
+
+    private:
         xJdcConfig                    _Config;
-        std::unique_ptr<xJavaSpace>   _JavaSpace;
+        std::unique_ptr<xJavaSpace>   _JavaSpaceUPtr;
+        std::filesystem::path         _OutputRootDirectory;
     };
 
 }

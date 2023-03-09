@@ -4,11 +4,19 @@
 
 namespace jdc
 {
-
-    std::string xJavaSpace::GetFixedClassBinaryName(const std::string& OriginalClassBinaryName) const
+    const std::string & xJavaSpace::GetFixedPackageBinaryName(const std::string& OriginalPackageBinaryName) const
     {
-        auto Iter = ClassMap.find(OriginalClassBinaryName);
-        if (Iter == ClassMap.end()) { // java native class or 3rd party class
+        auto Iter = _PackageMap.find(OriginalPackageBinaryName);
+        if (Iter == _PackageMap.end()) { // java native class or 3rd party class
+            return OriginalPackageBinaryName;
+        }
+        return Iter->second->FixedBinaryName;
+    }
+
+    const std::string & xJavaSpace::GetFixedClassBinaryName(const std::string& OriginalClassBinaryName) const
+    {
+        auto Iter = _ClassMap.find(OriginalClassBinaryName);
+        if (Iter == _ClassMap.end()) { // java native class or 3rd party class
             return OriginalClassBinaryName;
         }
         return Iter->second->GetFixedBinaryName();
@@ -24,15 +32,15 @@ namespace jdc
         auto NamePrefixLength = RootDirectory.string().length();
 
         auto JavaSpaceUPtr = std::unique_ptr<xJavaSpace>(new xJavaSpace());
-        auto & PackageMap = JavaSpaceUPtr->PackageMap;
-        auto & ClassMap = JavaSpaceUPtr->ClassMap;
-        PackageMap.insert(std::make_pair(std::string(), std::make_unique<xJavaPackage>()));
+        auto & _PackageMap = JavaSpaceUPtr->_PackageMap;
+        auto & _ClassMap = JavaSpaceUPtr->_ClassMap;
+        _PackageMap.insert(std::make_pair(std::string(), std::make_unique<xJavaPackage>()));
         for(auto & Entry : std::filesystem::recursive_directory_iterator(RootDirectory)) {
             auto & Path = Entry.path();
             if (std::filesystem::is_directory(Path)) {
                 auto PackagePath = Path.string().substr(NamePrefixLength);
                 auto PackageBinaryName = ConvertPathNameToBinaryName(PackagePath);
-                auto [Iter, _] = PackageMap.insert(std::make_pair(PackageBinaryName, std::make_unique<xJavaPackage>()));
+                auto [Iter, _] = _PackageMap.insert(std::make_pair(PackageBinaryName, std::make_unique<xJavaPackage>()));
                 auto & PackageUPtr = Iter->second;
                 PackageUPtr->UnfixedBinaryName = PackageBinaryName;
                 PackageUPtr->UnfixedPathName   = PackagePath;
@@ -48,7 +56,7 @@ namespace jdc
                 auto RelativePathString = FilePathString.substr(NamePrefixLength);
                 auto ClassPathName = RelativePathString.substr(0, RelativePathString.length() - 6);
                 auto ClassBinaryName = ConvertPathNameToBinaryName(ClassPathName);
-                auto [Iter, _] = ClassMap.insert(std::make_pair(ClassBinaryName, std::make_unique<xJavaClass>()));
+                auto [Iter, _] = _ClassMap.insert(std::make_pair(ClassBinaryName, std::make_unique<xJavaClass>()));
 
                 auto LoadResult = LoadClassInfoFromFile(FilePathString);
                 if (!LoadResult.IsOk()) {
@@ -67,14 +75,14 @@ namespace jdc
             }
         }
 
-        for(auto & Entry : PackageMap) {
+        for(auto & Entry : _PackageMap) {
             auto & PackageUPtr = Entry.second;
             PackageUPtr->JavaSpacePtr = JavaSpaceUPtr.get();
         }
 
-        for(auto & Entry : ClassMap) {
+        for(auto & Entry : _ClassMap) {
             auto & JavaClassUPtr = Entry.second;
-            auto & PackageUPtr = PackageMap[JavaClassUPtr->_UnfixedPackageBinaryName];
+            auto & PackageUPtr = _PackageMap[JavaClassUPtr->_UnfixedPackageBinaryName];
             PackageUPtr->Classes.push_back(JavaClassUPtr.get());
 
             JavaClassUPtr->JavaSpacePtr = JavaSpaceUPtr.get();
@@ -82,21 +90,21 @@ namespace jdc
         }
 
         // FixPackagePath:
-        for(auto & Entry : PackageMap) {
+        for(auto & Entry : _PackageMap) {
             auto & JavaPackageUPtr = Entry.second;
-            auto ClassIter = ClassMap.find(JavaPackageUPtr->UnfixedBinaryName);
-            if (ClassIter != ClassMap.end()) {
+            auto ClassIter = _ClassMap.find(JavaPackageUPtr->UnfixedBinaryName);
+            if (ClassIter != _ClassMap.end()) {
                 uint64_t Counter = 0;
                 while(true) {
                     auto Postfix = "_fix_" + std::to_string(Counter);
                     auto NewPackageName = JavaPackageUPtr->UnfixedBinaryName + Postfix;
-                    auto NewPackageIter = PackageMap.find(NewPackageName);
-                    if (NewPackageIter != PackageMap.end()) {
+                    auto NewPackageIter = _PackageMap.find(NewPackageName);
+                    if (NewPackageIter != _PackageMap.end()) {
                         ++Counter;
                         continue;
                     }
-                    auto NewClassIter = ClassMap.find(NewPackageName);
-                    if (NewClassIter != ClassMap.end()) {
+                    auto NewClassIter = _ClassMap.find(NewPackageName);
+                    if (NewClassIter != _ClassMap.end()) {
                         ++Counter;
                         continue;
                     }
@@ -114,7 +122,7 @@ namespace jdc
         }
 
         // Fix class name with new package
-        for(auto & Entry : ClassMap) {
+        for(auto & Entry : _ClassMap) {
             auto & JavaClassUPtr = Entry.second;
             auto & PackagePtr = JavaClassUPtr->PackagePtr;
             if (PackagePtr->FixedBinaryName.length() == PackagePtr->UnfixedBinaryName.length()) {
@@ -130,7 +138,7 @@ namespace jdc
         }
 
         // extend class
-        for(auto & Entry : ClassMap) {
+        for(auto & Entry : _ClassMap) {
             auto & JavaClassUPtr = Entry.second;
             JavaClassUPtr->DoExtend();
         }

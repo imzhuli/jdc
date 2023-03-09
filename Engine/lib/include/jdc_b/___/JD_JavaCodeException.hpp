@@ -15,7 +15,6 @@ namespace jdc
         uint32_t EndPC;
         uint32_t HandlerPC;
         uint32_t CatchType;
-
     };
 
 }
