@@ -4,23 +4,6 @@
 
 namespace jdc
 {
-    const std::string & xJavaSpace::GetFixedPackageBinaryName(const std::string& OriginalPackageBinaryName) const
-    {
-        auto Iter = _PackageMap.find(OriginalPackageBinaryName);
-        if (Iter == _PackageMap.end()) { // java native class or 3rd party class
-            return OriginalPackageBinaryName;
-        }
-        return Iter->second->FixedBinaryName;
-    }
-
-    const std::string & xJavaSpace::GetFixedClassBinaryName(const std::string& OriginalClassBinaryName) const
-    {
-        auto Iter = _ClassMap.find(OriginalClassBinaryName);
-        if (Iter == _ClassMap.end()) { // java native class or 3rd party class
-            return OriginalClassBinaryName;
-        }
-        return Iter->second->GetFixedBinaryName();
-    }
 
     std::unique_ptr<xJavaSpace> xJavaSpace::LoadJavaSpace(const std::string & RootDirectoryName)
     {

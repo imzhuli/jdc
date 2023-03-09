@@ -20,6 +20,7 @@ namespace jdc
     : public iJavaType
     {
         friend class xJavaSpace;
+
     public:
         const xJavaSpace *   JavaSpacePtr = nullptr;
         const xJavaPackage * PackagePtr = nullptr;
@@ -34,12 +35,17 @@ namespace jdc
             std::vector<xJavaMethod>      Methods;
         } Extend;
 
-        X_INLINE const std::string & GetFixedPackageBinaryName() const { return PackagePtr->FixedBinaryName; }
-        X_INLINE const std::string & GetFixedPackagePathName() const { return PackagePtr->FixedPathName; }
-        X_INLINE const std::string & GetFixedPackageCodeName() const { return PackagePtr->FixedCodeName; }
+        X_INLINE const std::string & GetUnfixedSuperClassBinaryName() const { return ClassInfo.GetConstantClassBinaryName(ClassInfo.SuperClass); }
+        X_INLINE std::vector<std::string> GetUnfixedInterfaceBinaryNames() const {
+            auto NameCollection = std::vector<std::string>();
+            for (auto & Index : ClassInfo.InterfaceIndices) {
+                NameCollection.push_back(ClassInfo.GetConstantClassBinaryName(Index));
+            }
+            return NameCollection;
+        }
 
         X_INLINE bool IsEnum() const { return ClassInfo.AccessFlags & ACC_ENUM; }
-        X_INLINE bool IsAnnotaion() const { return ClassInfo.AccessFlags & ACC_ANNOTATION; }
+        X_INLINE bool IsAnnotation() const { return ClassInfo.AccessFlags & ACC_ANNOTATION; }
         X_INLINE bool IsInterface() const { return ClassInfo.AccessFlags & ACC_INTERFACE; }
         X_INLINE bool IsModule() const { return ClassInfo.AccessFlags & ACC_MODULE; }
         X_INLINE bool IsStatic() const { return ClassInfo.AccessFlags & ACC_STATIC; }
@@ -47,6 +53,7 @@ namespace jdc
         X_INLINE bool IsFinal() const { return ClassInfo.AccessFlags & ACC_FINAL; }
         X_INLINE bool IsSynthetic() const { return (ClassInfo.AccessFlags & ACC_SYNTHETIC) || isdigit(_InnermostCodeName[0]); }
         X_INLINE bool IsInnerClass() const { return _SimpleCodeName.length() != _InnermostCodeName.length(); }
+        X_INLINE bool IsMainClass() const { return !IsInnerClass() && (_SourceFilename.empty() ? true : (_SourceFilename == _SimpleCodeName)); }
 
         X_PRIVATE_MEMBER std::string GetUnfixedOutermostClassBinaryName() const;
         X_PRIVATE_MEMBER xJavaMethod ExtractMethod(size_t Index);

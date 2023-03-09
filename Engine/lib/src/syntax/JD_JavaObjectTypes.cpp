@@ -3,6 +3,7 @@
 namespace jdc
 {
     static std::map<std::string, xJavaObjectType> JavaObjectTypeMap;
+    static std::string DefaultBaseClassBinaryName = "java/lang/Object";
 
     void AddJavaObjectType(const char * BinaryName)
     {
@@ -56,5 +57,29 @@ namespace jdc
     {
         return JavaObjectTypeMap;
     }
+
+    bool xJavaObjectType::IsDefaultAnnotationBase(iJavaType * JavaTypePtr)
+    {
+        auto & BinaryName = JavaTypePtr->GetUnfixedBinaryName();
+        return BinaryName == DefaultBaseClassBinaryName;
+    }
+
+    bool xJavaObjectType::IsDefaultAnnotationBase(const std::string & BinaryName)
+    {
+        return BinaryName == DefaultBaseClassBinaryName;
+    }
+
+    bool xJavaObjectType::IsDefaultClassBase(iJavaType * JavaTypePtr)
+    {
+        auto & BinaryName = JavaTypePtr->GetUnfixedBinaryName();
+        return BinaryName == DefaultBaseClassBinaryName;
+    }
+
+    bool xJavaObjectType::IsDefaultClassBase(const std::string & BinaryName)
+    {
+        return BinaryName == DefaultBaseClassBinaryName;
+    }
+
+
 
 }

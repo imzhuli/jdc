@@ -68,6 +68,7 @@ namespace jdc
         for (auto & Attribute : ClassInfo.Attributes) {
             auto & AttributeName = ClassInfo.GetConstantUtf8(Attribute.NameIndex);
             auto & AttributeBinary = Attribute.Binary;
+
             if (AttributeName == "Deprecated") {
                 X_DEBUG_PRINTF("Deprecated: yes\n");
                 Extend.AttributeDeprecated.Extract(AttributeBinary);
@@ -84,6 +85,9 @@ namespace jdc
             }
             if (AttributeName == "SourceFile") {
                 Extend.AttributeSourceFile.Extract(AttributeBinary, &ClassInfo);
+                auto ExtensionIndex = Extend.AttributeSourceFile.SourceFile.rfind(".java");
+                assert(ExtensionIndex != std::string::npos);
+                _SourceFilename = Extend.AttributeSourceFile.SourceFile.substr(0, ExtensionIndex);
                 continue;
             }
             if (AttributeName == "BootstrapMethods") {

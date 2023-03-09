@@ -25,8 +25,14 @@ namespace jdc
         X_INLINE const xPackageMap &   GetPackageMap() const { return _PackageMap; }
         X_INLINE const xClassMap &     GetClassMap() const { return _ClassMap; }
 
-        X_PRIVATE_MEMBER const std::string & GetFixedPackageBinaryName(const std::string& OriginalPackageBinaryName) const;
-        X_PRIVATE_MEMBER const std::string & GetFixedClassBinaryName(const std::string& OriginalClassBinaryName) const;
+        X_INLINE const xJavaPackage * GetPackage(const std::string & UnfixedPackageBinaryName) const {
+            auto Iter = _PackageMap.find(UnfixedPackageBinaryName);
+            return (Iter == _PackageMap.end()) ? nullptr : Iter->second.get();
+        }
+        X_INLINE const xJavaClass * GetClass(const std::string & UnfixedClassBinaryName) const {
+            auto Iter = _ClassMap.find(UnfixedClassBinaryName);
+            return (Iter == _ClassMap.end()) ? nullptr : Iter->second.get();
+        }
 
     public:
         X_GAME_API_STATIC_MEMBER std::unique_ptr<xJavaSpace> LoadJavaSpace(const std::string & RootDirectory);
