@@ -1,77 +1,9 @@
 #include <jdc/decompiler/JD_JavaSpace.hpp>
-#include <xel/Util/Chrono.hpp>
+#include <jdc/syntax/_.hpp>
 #include <filesystem>
-#include <iostream>
-
-using namespace std;
-using namespace xel;
 
 namespace jdc
 {
-
-    std::string ConvertBinaryNameToPathName(const std::string & BinaryName)
-    {
-        auto Copy = BinaryName;
-        #ifdef X_SYSTEM_WINDOWS
-            for (auto & C : Copy) {
-                if (C == '/') {
-                    C = '\\';
-                }
-            }
-        #endif
-        return Copy;
-    }
-
-    std::string ConvertPathNameToBinaryName(const std::string & PathName)
-    {
-        auto Copy = PathName;
-        #ifdef X_SYSTEM_WINDOWS
-            for (auto & C : Copy) {
-                if (C == '\\') {
-                    C = '/';
-                }
-            }
-        #endif
-        return Copy;
-    }
-
-    std::string ConvertBinaryNameToCodeName(const std::string & BinaryName)
-    {
-        auto Copy = BinaryName;
-        for (auto & C : Copy) {
-            if (C == '/' || C == '$') {
-                C = '.';
-            }
-        }
-        return Copy;
-    }
-
-    std::string GetSimpleClassBinaryName(const std::string & BinaryName)
-    {
-        auto Index = BinaryName.find_last_of('/');
-        if (Index == BinaryName.npos) {
-            return BinaryName;
-        }
-        return BinaryName.substr(Index + 1);
-    }
-
-    std::string GetInnermostClassCodeName(const std::string & AnyTypeOfClassName)
-    {
-        auto Index = AnyTypeOfClassName.find_last_of("/$.");
-        if (Index == AnyTypeOfClassName.npos) {
-            return AnyTypeOfClassName;
-        }
-        return AnyTypeOfClassName.substr(Index + 1);
-    }
-
-    std::string GetOutermostClassCodeName(const std::string & AnyTypeOfClassName)
-    {
-        auto IndexStart = AnyTypeOfClassName.find_last_of('/');
-        IndexStart = (IndexStart == AnyTypeOfClassName.npos ? 0 : IndexStart);
-        auto IndexEnd = AnyTypeOfClassName.find_first_of("$.", IndexStart);
-        size_t Count = (IndexEnd == AnyTypeOfClassName.npos ? IndexEnd : IndexEnd - IndexStart);
-        return AnyTypeOfClassName.substr(0, Count);
-    }
 
     std::unique_ptr<xJavaSpace> LoadJavaSpace(const std::string & RootDirectoryName)
     {
@@ -99,6 +31,7 @@ namespace jdc
             }
             else {
                 if (Path.extension().string() != ".class") {
+                    X_DEBUG_PRINTF("Ignore non-class file: %s\n", Path.string().c_str());
                     continue;
                 }
                 auto FilePathString = Path.string();
@@ -110,7 +43,7 @@ namespace jdc
 
                 auto LoadResult = LoadClassInfoFromFile(FilePathString);
                 if (!LoadResult.IsOk()) {
-                    cerr << "Failed to load class: " << ClassPathName << endl;
+                    X_DEBUG_PRINTF("Failed to load class: %s\n", ClassPathName.c_str());
                     continue;
                 }
                 auto & JavaClass = *Iter->second;

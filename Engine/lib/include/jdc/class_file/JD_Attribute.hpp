@@ -1,6 +1,6 @@
 #pragma once
-#include "../base/JD_.hpp"
-#include "./JD_Annotation.hpp"
+#include "../base/_.hpp"
+#include "./JD_ElementValue.hpp"
 #include <xel/Byte.hpp>
 #include <vector>
 #include <string>
@@ -185,6 +185,11 @@ namespace jdc
 
     struct xAttributeParameterAnnotations
     {
+        struct xAnnotation
+        {
+            std::string                       Descriptor;
+            std::vector<xElementValuePair>    ElementValuePairs;
+        };
         std::vector<xAnnotation> Annotations;
 
         X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);

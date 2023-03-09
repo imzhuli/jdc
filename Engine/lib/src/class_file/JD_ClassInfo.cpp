@@ -521,6 +521,7 @@ namespace jdc
         }
 
         // methods:
+        /*
         if ((RemainSize -= 2) < 0) {
             return { JDR_DATA_SIZE_ERROR, "Read method info error @" X_STRINGIFY(__LINE__)};
         }
@@ -541,6 +542,7 @@ namespace jdc
                 return { JDR_DATA_SIZE_ERROR, "Read attribute info error @" X_STRINGIFY(__LINE__)};
             }
         }
+        */
 
         return { std::move(JavaClass) };
     }

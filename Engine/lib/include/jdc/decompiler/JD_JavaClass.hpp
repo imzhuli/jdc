@@ -1,7 +1,6 @@
 #pragma once
-#include "../base/JD_.hpp"
+#include "../base/_.hpp"
 #include "../base/JD_Instructions.hpp"
-#include "../class_file/JD_Attribute.hpp"
 #include "../class_file/JD_ClassInfo.hpp"
 #include "./JD_JavaPackage.hpp"
 #include "./JD_JavaMethod.hpp"
@@ -19,8 +18,8 @@ namespace jdc
     class xJavaClass
     {
     public:
-        xJavaSpace * JavaSpacePtr = nullptr;
-        xJavaPackage * PackagePtr = nullptr;
+        const xJavaSpace *   JavaSpacePtr = nullptr;
+        const xJavaPackage * PackagePtr = nullptr;
 
         std::string UnfixedPackageBinaryName;
         std::string UnfixedBinaryName;

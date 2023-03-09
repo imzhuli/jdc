@@ -35,6 +35,7 @@ aux_source_directory(./src/                X_GAME_SOURCE)
 aux_source_directory(./src/base            X_GAME_SOURCE)
 aux_source_directory(./src/decompiler      X_GAME_SOURCE)
 aux_source_directory(./src/class_file      X_GAME_SOURCE)
+aux_source_directory(./src/syntax          X_GAME_SOURCE)
 
 if (X_GAME_OPTION_STATIC)
 #static lib:

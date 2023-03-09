@@ -74,18 +74,18 @@ namespace jdc
         Float              = 4,
         Long               = 5,
         Double             = 6,
-        Class              = 7,
+        Class              = 7,      // Class
         String             = 8,
-        FieldRef           = 9,
-        MethodRef          = 10,
+        FieldRef           = 9,      // MemberRef
+        MethodRef          = 10,     // MemberRef
         InterfaceMethodRef = 11,
         NameAndType        = 12,
         MethodHandle       = 15,
         MethodType         = 16,
-        Dynamic            = 17,
-        InvokeDynamic      = 18,
-        Module             = 19,
-        Package            = 20,
+        Dynamic            = 17,     // MemberRef
+        InvokeDynamic      = 18,     // MemberRef
+        Module             = 19,     // Class
+        Package            = 20,     // Class
     };
 
     using xAccessFlag = uint16_t;

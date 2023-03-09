@@ -1,5 +1,8 @@
 #include <jdc/decompiler/JD_JavaClass.hpp>
+#include <jdc/decompiler/JD_JavaPackage.hpp>
 #include <jdc/decompiler/JD_JavaSpace.hpp>
+#include <jdc/syntax/_.hpp>
+#include <jdc/syntax/JD_JavaType.hpp>
 #include <xel/Byte.hpp>
 
 using namespace xel;
@@ -32,9 +35,10 @@ namespace jdc
 
     xJavaMethod xJavaClass::ExtractMethod(size_t Index)
     {
+        auto Method = xJavaMethod();
+        /*
         auto & MethodInfo = ClassInfo.Methods[Index];
         auto MethodName = ClassInfo.GetConstantUtf8(MethodInfo.NameIndex);
-        xJavaMethod Method;
         Method.ClassInfoPtr = &ClassInfo;
         Method.MethodInfoPtr = &MethodInfo;
         Method.OriginalNameView = MethodName;
@@ -70,6 +74,7 @@ namespace jdc
         Method.Decode();
         X_DEBUG_PRINTF("DecodedMethod: %s  flags=%u\n", Method.GetQualifiedName().c_str(), (uint)Method.MethodInfoPtr->AccessFlags);
 
+        */
         return Method;
     }
 

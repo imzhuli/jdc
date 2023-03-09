@@ -4,9 +4,7 @@
 #include <xel_ext/Util/FileSystem.hpp>
 #include <iostream>
 
-#include <jdc/class_file/JD_ClassInfo.hpp>
-#include <jdc/decompiler/JD_JavaSpace.hpp>
-#include <jdc/decompiler/JD_CodeGenerator.hpp>
+#include <jdc/jdc.hpp>
 
 #ifdef X_SYSTEM_WINDOWS
 #include <windows.h>
@@ -36,7 +34,21 @@ int main(int argc, char *argv[])
     std::string OutputDir = OptOutputDir() ? OptOutputDir->c_str() : "./logs";
 
     if (Cmd["decompile"]()) {
-        BuildSource(OutputDir, InputDir);
+        auto JdcConfig = xJdcConfig{
+            InputDir,
+            OutputDir,
+        };
+        auto Handle = InitJdc(JdcConfig);
+        if (!Handle) {
+            cerr << "Failed to init jdc" << endl;
+            return -1;
+        }
+        if (!ExecuteJdc(Handle)) {
+            cerr << "Failed to exec jdc" << endl;
+            return -1;
+        }
+        CleanJdc(Handle);
+        return 0;
     }
 
     return 0;
