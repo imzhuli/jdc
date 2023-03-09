@@ -10,27 +10,9 @@ using namespace xel;
 namespace jdc
 {
 
-    std::string xJavaClass::GetFixedClassBinaryName(const std::string& OriginalClassBinaryName) const
+    std::string xJavaClass::GetUnfixedOutermostClassBinaryName() const
     {
-        auto & ClassMap = JavaSpacePtr->ClassMap;
-        auto Iter = ClassMap.find(OriginalClassBinaryName);
-        if (Iter == ClassMap.end()) { // java native class or 3rd party class
-            return OriginalClassBinaryName;
-        }
-        return Iter->second->FixedBinaryName;
-    }
-
-    std::string xJavaClass::GetFixedClassCodeName(const std::string& OriginalClassBinaryName) const
-    {
-        return ConvertBinaryNameToCodeName(GetFixedClassBinaryName(OriginalClassBinaryName));
-    }
-
-    const std::string & xJavaClass::GetFixedOutermostClassBinaryName() const
-    {
-        auto & ClassMap = JavaSpacePtr->ClassMap;
-        auto Iter = ClassMap.find(ClassInfo.GetOutermostClassBinaryName());
-        assert(Iter != ClassMap.end());
-        return Iter->second->FixedBinaryName;
+        return ClassInfo.GetOutermostClassBinaryName();
     }
 
     xJavaMethod xJavaClass::ExtractMethod(size_t Index)
@@ -81,7 +63,7 @@ namespace jdc
 
     void xJavaClass::DoExtend()
     {
-        X_DEBUG_PRINTF("xJavaClass::DoExtend %s --> %s --> %s\n", FixedBinaryName.c_str(), SimpleBinaryName.c_str(), InnermostCodeName.c_str());
+        X_DEBUG_PRINTF("xJavaClass::DoExtend %s --> %s --> %s\n", _FixedBinaryName.c_str(), _SimpleBinaryName.c_str(), _InnermostCodeName.c_str());
 
         for (auto & Attribute : ClassInfo.Attributes) {
             auto & AttributeName = ClassInfo.GetConstantUtf8(Attribute.NameIndex);
@@ -111,12 +93,12 @@ namespace jdc
         }
 
         if (Extend.AttributeSourceFile.SourceFile.empty()) {
-            Extend.AttributeSourceFile.SourceFile = GetOutermostClassCodeName(SimpleBinaryName) + ".java";
+            Extend.AttributeSourceFile.SourceFile = GetOutermostClassCodeName(_SimpleBinaryName) + ".java";
         }
 
-        for (size_t Index = 0 ; Index < ClassInfo.Methods.size() ; ++Index) {
-            Extend.Methods.push_back(ExtractMethod(Index));
-        }
+        // for (size_t Index = 0 ; Index < ClassInfo.Methods.size() ; ++Index) {
+        //     Extend.Methods.push_back(ExtractMethod(Index));
+        // }
     }
 
 

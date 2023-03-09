@@ -5,7 +5,16 @@
 namespace jdc
 {
 
-    std::unique_ptr<xJavaSpace> LoadJavaSpace(const std::string & RootDirectoryName)
+    std::string xJavaSpace::GetFixedClassBinaryName(const std::string& OriginalClassBinaryName) const
+    {
+        auto Iter = ClassMap.find(OriginalClassBinaryName);
+        if (Iter == ClassMap.end()) { // java native class or 3rd party class
+            return OriginalClassBinaryName;
+        }
+        return Iter->second->GetFixedBinaryName();
+    }
+
+    std::unique_ptr<xJavaSpace> xJavaSpace::LoadJavaSpace(const std::string & RootDirectoryName)
     {
         auto RootDirectory = std::filesystem::path(RootDirectoryName);
         if (!std::filesystem::is_directory(RootDirectory)) {
@@ -47,11 +56,11 @@ namespace jdc
                     continue;
                 }
                 auto & JavaClass = *Iter->second;
-                JavaClass.UnfixedPackageBinaryName = PackageBinaryName;
-                JavaClass.UnfixedBinaryName = ClassBinaryName;
-                JavaClass.SimpleBinaryName = GetSimpleClassBinaryName(ClassBinaryName);
-                JavaClass.SimpleCodeName = ConvertBinaryNameToCodeName(JavaClass.SimpleBinaryName);
-                JavaClass.InnermostCodeName = GetInnermostClassCodeName(JavaClass.SimpleCodeName);
+                JavaClass._UnfixedPackageBinaryName = PackageBinaryName;
+                JavaClass._UnfixedBinaryName = ClassBinaryName;
+                JavaClass._SimpleBinaryName = GetSimpleClassBinaryName(ClassBinaryName);
+                JavaClass._SimpleCodeName = ConvertBinaryNameToCodeName(JavaClass._SimpleBinaryName);
+                JavaClass._InnermostCodeName = GetInnermostClassCodeName(JavaClass._SimpleCodeName);
 
                 auto & ClassInfo = JavaClass.ClassInfo;
                 ClassInfo = std::move(LoadResult.Data);
@@ -65,7 +74,7 @@ namespace jdc
 
         for(auto & Entry : ClassMap) {
             auto & JavaClassUPtr = Entry.second;
-            auto & PackageUPtr = PackageMap[JavaClassUPtr->UnfixedPackageBinaryName];
+            auto & PackageUPtr = PackageMap[JavaClassUPtr->_UnfixedPackageBinaryName];
             PackageUPtr->Classes.push_back(JavaClassUPtr.get());
 
             JavaClassUPtr->JavaSpacePtr = JavaSpaceUPtr.get();
@@ -75,8 +84,6 @@ namespace jdc
         // FixPackagePath:
         for(auto & Entry : PackageMap) {
             auto & JavaPackageUPtr = Entry.second;
-            X_DEBUG_PRINTF("Trying to find name conflicts: '%s'\n", Entry.first.c_str());
-
             auto ClassIter = ClassMap.find(JavaPackageUPtr->UnfixedBinaryName);
             if (ClassIter != ClassMap.end()) {
                 uint64_t Counter = 0;
@@ -111,15 +118,15 @@ namespace jdc
             auto & JavaClassUPtr = Entry.second;
             auto & PackagePtr = JavaClassUPtr->PackagePtr;
             if (PackagePtr->FixedBinaryName.length() == PackagePtr->UnfixedBinaryName.length()) {
-                JavaClassUPtr->FixedBinaryName = JavaClassUPtr->UnfixedBinaryName;
-                JavaClassUPtr->FixedCodeName = ConvertBinaryNameToCodeName(JavaClassUPtr->FixedBinaryName);
+                JavaClassUPtr->_FixedBinaryName = JavaClassUPtr->_UnfixedBinaryName;
+                JavaClassUPtr->_FixedCodeName = ConvertBinaryNameToCodeName(JavaClassUPtr->_FixedBinaryName);
                 continue;
             }
-            auto NewClassBinaryName = PackagePtr->FixedBinaryName + '.' + JavaClassUPtr->SimpleBinaryName;
-            JavaClassUPtr->FixedBinaryName = NewClassBinaryName;
-            JavaClassUPtr->FixedCodeName = ConvertBinaryNameToCodeName(NewClassBinaryName);
+            auto NewClassBinaryName = PackagePtr->FixedBinaryName + '.' + JavaClassUPtr->_SimpleBinaryName;
+            JavaClassUPtr->_FixedBinaryName = NewClassBinaryName;
+            JavaClassUPtr->_FixedCodeName = ConvertBinaryNameToCodeName(NewClassBinaryName);
 
-            X_DEBUG_PRINTF("FixClassName: %s -> %s\n", JavaClassUPtr->UnfixedBinaryName.c_str(), JavaClassUPtr->FixedBinaryName.c_str());
+            X_DEBUG_PRINTF("FixClassName: %s -> %s\n", JavaClassUPtr->_UnfixedBinaryName.c_str(), JavaClassUPtr->_FixedBinaryName.c_str());
         }
 
         // extend class

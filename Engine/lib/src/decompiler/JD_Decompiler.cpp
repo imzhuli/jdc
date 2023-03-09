@@ -22,7 +22,7 @@ namespace jdc
 
     bool xJdc::Execute()
     {
-        _JavaSpace = LoadJavaSpace(_Config.InputDirectory);
+        _JavaSpace = xJavaSpace::LoadJavaSpace(_Config.InputDirectory);
         if (!_JavaSpace) {
             return false;
         }

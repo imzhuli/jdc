@@ -2,6 +2,7 @@
 #include "../base/_.hpp"
 #include "../base/JD_Instructions.hpp"
 #include "../class_file/JD_ClassInfo.hpp"
+#include "../syntax/JD_JavaType.hpp"
 #include "./JD_JavaPackage.hpp"
 #include "./JD_JavaMethod.hpp"
 #include <string>
@@ -16,18 +17,12 @@ namespace jdc
     class xJavaSpace;
 
     class xJavaClass
+    : public iJavaType
     {
+        friend class xJavaSpace;
     public:
         const xJavaSpace *   JavaSpacePtr = nullptr;
         const xJavaPackage * PackagePtr = nullptr;
-
-        std::string UnfixedPackageBinaryName;
-        std::string UnfixedBinaryName;
-        std::string FixedBinaryName;
-        std::string FixedCodeName;
-        std::string SimpleBinaryName;
-        std::string SimpleCodeName;
-        std::string InnermostCodeName;
         xClassInfo  ClassInfo;
 
         struct {
@@ -50,15 +45,12 @@ namespace jdc
         X_INLINE bool IsStatic() const { return ClassInfo.AccessFlags & ACC_STATIC; }
         X_INLINE bool IsAbstract() const { return ClassInfo.AccessFlags & ACC_ABSTRACT; }
         X_INLINE bool IsFinal() const { return ClassInfo.AccessFlags & ACC_FINAL; }
-        X_INLINE bool IsSynthetic() const { return (ClassInfo.AccessFlags & ACC_SYNTHETIC) || isdigit(InnermostCodeName[0]); }
-        X_INLINE bool IsInnerClass() const { return SimpleCodeName.length() != InnermostCodeName.length(); }
+        X_INLINE bool IsSynthetic() const { return (ClassInfo.AccessFlags & ACC_SYNTHETIC) || isdigit(_InnermostCodeName[0]); }
+        X_INLINE bool IsInnerClass() const { return _SimpleCodeName.length() != _InnermostCodeName.length(); }
 
-        X_GAME_API_MEMBER std::string           GetFixedClassBinaryName(const std::string& OriginalClassBinaryName) const;
-        X_GAME_API_MEMBER std::string           GetFixedClassCodeName(const std::string& OriginalClassBinaryName) const;
-        X_GAME_API_MEMBER const std::string &   GetFixedOutermostClassBinaryName() const;
-
-        X_GAME_API_MEMBER xJavaMethod ExtractMethod(size_t Index);
-        X_GAME_API_MEMBER void DoExtend();
+        X_PRIVATE_MEMBER std::string GetUnfixedOutermostClassBinaryName() const;
+        X_PRIVATE_MEMBER xJavaMethod ExtractMethod(size_t Index);
+        X_PRIVATE_MEMBER void DoExtend();
 
     };
 
