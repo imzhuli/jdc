@@ -23,7 +23,14 @@ namespace jdc
         return true;
     }
 
-    bool xAttributeCode::Extract(const xAttributeBinary & AttributeBinary)
+    bool xAttributeConstantValue::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
+    {
+        auto Reader = xStreamReader(AttributeBinary.data());
+        ValueIndex = Reader.R2();
+        return true;
+    }
+
+    bool xAttributeCode::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
     {
         auto Reader = xStreamReader(AttributeBinary.data());
 
@@ -54,13 +61,13 @@ namespace jdc
         return true;
     }
 
-    bool xAttributeDeprecated::Extract(const xAttributeBinary & AttributeBinary)
+    bool xAttributeDeprecated::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
     {
         Deprecated = true;
         return true;
     }
 
-    bool xAttributeExceptions::Extract(const xAttributeBinary & AttributeBinary)
+    bool xAttributeExceptions::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
     {
         auto Reader = xStreamReader(AttributeBinary.data());
         ExceptionIndexTable.resize(Reader.R2());
@@ -70,7 +77,7 @@ namespace jdc
         return true;
     }
 
-    bool xAttributeInnerClasses::Extract(const xAttributeBinary & AttributeBinary)
+    bool xAttributeInnerClasses::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
     {
         auto Reader = xStreamReader(AttributeBinary.data());
         InnerClassInfoIndex = Reader.R2();
@@ -80,7 +87,7 @@ namespace jdc
         return true;
     }
 
-    bool xAttributeLineNumberTable::Extract(const xAttributeBinary & AttributeBinary)
+    bool xAttributeLineNumberTable::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
     {
         auto Reader = xStreamReader(AttributeBinary.data());
         LineNumberTable.resize(Reader.R2());
@@ -125,6 +132,30 @@ namespace jdc
         return true;
     }
 
+    bool xAttributeRuntimeAnnotations::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
+    {
+        auto Reader = xStreamReader(AttributeBinary.data());
+        Annotations.resize(Reader.R2());
+        for (auto & Annotation : Annotations) {
+            Annotation = LoadAnnotation(Reader);
+        }
+        return true;
+    }
+
+    bool xAttributeRuntimeParameterAnnotations::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
+    {
+        auto Reader = xStreamReader(AttributeBinary.data());
+        ParameterAnnotations.resize(Reader.R1());
+        for (auto & Annotations : ParameterAnnotations) {
+            Annotations.resize(Reader.R2());
+            for (auto & Annotation : Annotations) {
+                Annotation = LoadAnnotation(Reader);
+                X_DEBUG_PRINTF("LoadAnnotation: TypeName:%s\n", ClassInfoPtr->GetConstantUtf8(Annotation->TypeNameIndex).c_str());
+            }
+        }
+        return true;
+    }
+
     bool xAttributeMethodParameters::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
     {
         auto Reader = xStreamReader(AttributeBinary.data());
@@ -139,6 +170,14 @@ namespace jdc
         return true;
     }
 
+    bool xAttributeSignature::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
+    {
+        auto Reader = xStreamReader(AttributeBinary.data());
+        uint16_t SignatureIndex = Reader.R2();
+        Signature = ClassInfoPtr->GetConstantUtf8(SignatureIndex);
+        return true;
+    }
+
     bool xAttributeSourceFile::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
     {
         auto Reader = xStreamReader(AttributeBinary.data());
@@ -147,10 +186,214 @@ namespace jdc
         return true;
     }
 
-    bool xAttributeSynthetic::Extract(const xAttributeBinary & AttributeBinary)
+    bool xAttributeSynthetic::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
     {
         Synthetic = true;
         return true;
+    }
+
+    /////////////////////////
+    std::unique_ptr<xElementValue> LoadElementValue(xel::xStreamReader & Reader)
+    {
+        auto ElementValueUPtr = std::make_unique<xElementValue>();
+        auto & ElementValue = *ElementValueUPtr.get();
+        ElementValue.Tag = static_cast<eElementValueTag>(Reader.R1());
+
+        if (ElementValue.Tag == eElementValueTag::Byte
+        ||  ElementValue.Tag == eElementValueTag::Short
+        ||  ElementValue.Tag == eElementValueTag::Int
+        ||  ElementValue.Tag == eElementValueTag::Long
+        ||  ElementValue.Tag == eElementValueTag::Char
+        ||  ElementValue.Tag == eElementValueTag::Float
+        ||  ElementValue.Tag == eElementValueTag::Double
+        ||  ElementValue.Tag == eElementValueTag::Boolean
+        ||  ElementValue.Tag == eElementValueTag::String) {
+            ElementValue.ConstantValueIndex = Reader.R2();
+            return ElementValueUPtr;
+        }
+
+        if (ElementValue.Tag == eElementValueTag::Class) {
+            ElementValue.ClassIndex = Reader.R2();
+            return ElementValueUPtr;
+        }
+
+        if (ElementValue.Tag == eElementValueTag::Enum) {
+            ElementValue.EnumConstantValue.TypeNameIndex = Reader.R2();
+            ElementValue.EnumConstantValue.NameIndex = Reader.R2();
+            return ElementValueUPtr;
+        }
+
+        if (ElementValue.Tag == eElementValueTag::Annotation) {
+            ElementValue.AnnotationUPtr = LoadAnnotation(Reader);
+            return ElementValueUPtr;
+        }
+
+        if (ElementValue.Tag == eElementValueTag::Array) {
+            uint16_t SubElementCount = Reader.R2();
+            for (uint16_t i = 0 ; i < SubElementCount; ++i) {
+                ElementValue.ArrayValues.push_back(LoadElementValue(Reader));
+            }
+            return ElementValueUPtr;
+        }
+
+        X_DEBUG_PRINTF("Invalid element value tag: %u", (unsigned int)ElementValue.Tag);
+        return nullptr;
+    }
+
+    xElementValuePair LoadElementValuePair(xel::xStreamReader & Reader)
+    {
+        xElementValuePair Pair;
+        Pair.ElementNameIndex = Reader.R2();
+        Pair.ElementValueUPtr = LoadElementValue(Reader);
+        return Pair;
+    }
+
+    std::unique_ptr<xAnnotation> LoadAnnotation(xel::xStreamReader & Reader)
+    {
+        auto AnnotationUPtr = std::make_unique<xAnnotation>();
+        auto & Annotation = *AnnotationUPtr.get();
+
+        Annotation.TypeNameIndex = Reader.R2();
+        uint16_t ElementValuePairCount = Reader.R2();
+        for (uint16_t i = 0 ; i < ElementValuePairCount ; ++i) {
+            Annotation.ElementValuePairs.push_back(LoadElementValuePair(Reader));
+        }
+        return AnnotationUPtr;
+    }
+
+    /////////////////////////
+    xAttributeMap LoadAttributeInfo(const std::vector<xAttributeInfo> & AttributeInfoList, const xClassInfo * ClassInfoPtr)
+    {
+        xAttributeMap Collection;
+        for(auto & Info : AttributeInfoList) {
+            auto & Name = ClassInfoPtr->GetConstantUtf8(Info.NameIndex);
+            auto & Binary = Info.Binary;
+
+            X_DEBUG_PRINTF("ExtractAttribute: %s\n", Name.c_str());
+
+            if (Name == xAttributeNames::AnnotationDefault) {
+                X_DEBUG_PRINTF("Unimplemented attribute reached: %s\n", Name.c_str());
+                Fatal("Not implemented");
+            }
+            else if (Name == xAttributeNames::BootstrapMethods) {
+                auto AttributeUPtr = std::make_unique<xAttributeBootstrapMethods>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else if (Name == xAttributeNames::Code) {
+                auto AttributeUPtr = std::make_unique<xAttributeCode>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else if (Name == xAttributeNames::ConstantValue) {
+                auto AttributeUPtr = std::make_unique<xAttributeConstantValue>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else if (Name == xAttributeNames::Deprecated) {
+                auto AttributeUPtr = std::make_unique<xAttributeDeprecated>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else if (Name == xAttributeNames::EnclosingMethod) {
+                X_DEBUG_PRINTF("Ignore attribute %s\n", Name.c_str());
+            }
+            else if (Name == xAttributeNames::Exceptions) {
+                auto AttributeUPtr = std::make_unique<xAttributeExceptions>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else if (Name == xAttributeNames::InnerClasses) {
+                auto AttributeUPtr = std::make_unique<xAttributeInnerClasses>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else if (Name == xAttributeNames::LocalVariableTable) {
+                auto AttributeUPtr = std::make_unique<xAttributeLocalVariableTable>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else if (Name == xAttributeNames::LocalVariableTypeTable) {
+                auto AttributeUPtr = std::make_unique<xAttributeLocalVariableTypeTable>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else if (Name == xAttributeNames::LineNumberTable) {
+                auto AttributeUPtr = std::make_unique<xAttributeLineNumberTable>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else if (Name == xAttributeNames::MethodParameters) {
+                auto AttributeUPtr = std::make_unique<xAttributeMethodParameters>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else if (Name == xAttributeNames::Module) {
+                X_DEBUG_PRINTF("Ignore attribute %s\n", Name.c_str());
+            }
+            else if (Name == xAttributeNames::ModulePackages) {
+                X_DEBUG_PRINTF("Ignore attribute %s\n", Name.c_str());
+            }
+            else if (Name == xAttributeNames::ModuleMainClass) {
+                X_DEBUG_PRINTF("Ignore attribute %s\n", Name.c_str());
+            }
+            else if (Name == xAttributeNames::RuntimeInvisibleAnnotations) {
+                auto AttributeUPtr = std::make_unique<xAttributeRuntimeAnnotations>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else if (Name == xAttributeNames::RuntimeVisibleAnnotations) {
+                auto AttributeUPtr = std::make_unique<xAttributeRuntimeAnnotations>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else if (Name == xAttributeNames::RuntimeInvisibleParameterAnnotations) {
+                auto AttributeUPtr = std::make_unique<xAttributeRuntimeParameterAnnotations>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else if (Name == xAttributeNames::RuntimeVisibleParameterAnnotations) {
+                auto AttributeUPtr = std::make_unique<xAttributeRuntimeParameterAnnotations>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else if (Name == xAttributeNames::Signature) {
+                auto AttributeUPtr = std::make_unique<xAttributeSignature>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else if (Name == xAttributeNames::SourceFile) {
+                auto AttributeUPtr = std::make_unique<xAttributeSourceFile>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else if (Name == xAttributeNames::Synthetic) {
+                auto AttributeUPtr = std::make_unique<xAttributeSynthetic>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else {
+                X_DEBUG_PRINTF("Unknonw attribute reached: %s\n", Name.c_str());
+            }
+        }
+        return Collection;
     }
 
 }

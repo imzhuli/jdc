@@ -46,7 +46,7 @@ namespace jdc
         Invalid,
     };
 
-    enum struct eElementType : uint8_t
+    enum struct eElementValueTag : uint8_t
     {
         Unspecified   = '\0',
 

@@ -8,10 +8,22 @@ namespace jdc
 {
 
 
-    struct xJavaMethod
+    class xJavaMethod
     {
+    public:
         const xClassInfo *    ClassInfoPtr;
         const xMethodInfo *   MethodInfoPtr;
+        std::string           OriginalName;
+        std::string           Identifier;
+
+        struct {
+            xAttributeMap                 AttributeMap;
+
+
+
+        } Extend;
+
+        void DoExtend();
     };
 
 }

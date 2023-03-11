@@ -27,11 +27,8 @@ namespace jdc
         xClassInfo  ClassInfo;
 
         struct {
-            xAttributeDeprecated          AttributeDeprecated;
-            xAttributeSynthetic           AttributeSynthetic;
-            xAttributeInnerClasses        AttributeInnerClasses;
-            xAttributeSourceFile          AttributeSourceFile;
-            xAttributeBootstrapMethods    AttributeBootstrapMethods;
+            xAttributeMap                 AttributeMap;
+            std::string                   SuggestedSourceFilename;
             std::vector<xJavaMethod>      Methods;
         } Extend;
 
@@ -56,7 +53,7 @@ namespace jdc
         X_INLINE bool IsMainClass() const { return !IsInnerClass() && (_SourceFilename.empty() ? true : (_SourceFilename == _SimpleCodeName)); }
 
         X_PRIVATE_MEMBER std::string GetUnfixedOutermostClassBinaryName() const;
-        X_PRIVATE_MEMBER xJavaMethod ExtractMethod(size_t Index);
+        X_PRIVATE_MEMBER xJavaMethod ExtractMethod(const xMethodInfo & MethodInfo);
         X_PRIVATE_MEMBER void DoExtend();
 
     };

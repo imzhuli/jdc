@@ -1,13 +1,45 @@
 #pragma once
 #include "../base/_.hpp"
-#include "./JD_ElementValue.hpp"
 #include <xel/Byte.hpp>
 #include <vector>
 #include <string>
+#include <unordered_map>
+#include <memory>
 
 namespace jdc
 {
     class xClassInfo;
+
+    struct xAnnotation;
+    struct xElementValue;
+    struct xElementValuePair;
+
+    struct xElementValue
+    {
+        eElementValueTag Tag;
+        union {
+            uint16_t ConstantValueIndex;
+            uint16_t ClassIndex;
+            struct {
+                uint16_t TypeNameIndex;
+                uint16_t NameIndex;
+            } EnumConstantValue;
+        };
+        std::unique_ptr<xAnnotation>                   AnnotationUPtr;
+        std::vector<std::unique_ptr<xElementValue>>    ArrayValues;
+    };
+
+    struct xElementValuePair
+    {
+        uint16_t                         ElementNameIndex;
+        std::unique_ptr<xElementValue>   ElementValueUPtr;
+    };
+
+    struct xAnnotation
+    {
+        uint16_t                         TypeNameIndex;
+        std::vector<xElementValuePair>   ElementValuePairs;
+    };
 
     using xAttributeBinary = std::vector<xel::ubyte>;
 
@@ -17,7 +49,9 @@ namespace jdc
         std::vector<xel::ubyte>       Binary;
     };
 
-    struct xAttributeBootstrapMethods
+    struct xAttributeBase : private xel::xAbstract {};
+
+    struct xAttributeBootstrapMethods : public xAttributeBase
     {
         struct xBootstrapMethod
         {
@@ -27,10 +61,17 @@ namespace jdc
 
         std::vector<xBootstrapMethod> BootstrapMethods;
 
-        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
 
-    struct xAttributeCode
+    struct xAttributeConstantValue : public xAttributeBase
+    {
+        uint16_t ValueIndex;
+
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
+    };
+
+    struct xAttributeCode : public xAttributeBase
     {
         struct xExceptionTable
         {
@@ -46,34 +87,34 @@ namespace jdc
         std::vector<xExceptionTable> ExceptionTables;
         std::vector<xAttributeInfo>  SubAttributes;
 
-        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary);
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
 
-    struct xAttributeDeprecated
+    struct xAttributeDeprecated : public xAttributeBase
     {
         bool Deprecated = false;
 
-        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary);
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
 
-    struct xAttributeExceptions
+    struct xAttributeExceptions : public xAttributeBase
     {
         std::vector<uint16_t> ExceptionIndexTable;
 
-        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary);
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
 
-    struct xAttributeInnerClasses
+    struct xAttributeInnerClasses : public xAttributeBase
     {
         uint16_t InnerClassInfoIndex;
         uint16_t OuterClassInfoIndex;
         uint16_t InnerNameIndex;
         uint16_t InnerAccessFlags;
 
-        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary);
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
 
-    struct xAttributeLineNumberTable
+    struct xAttributeLineNumberTable : public xAttributeBase
     {
         struct xLineNumber
         {
@@ -83,10 +124,10 @@ namespace jdc
 
         std::vector<xLineNumber> LineNumberTable;
 
-        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary);
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
 
-    struct xAttributeLocalVariableTable
+    struct xAttributeLocalVariableTable : public xAttributeBase
     {
         struct xLocalVariable {
             uint16_t     StartPC;
@@ -98,10 +139,10 @@ namespace jdc
 
         std::vector<xLocalVariable> LocalVariableTable;
 
-        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
 
-    struct xAttributeLocalVariableTypeTable
+    struct xAttributeLocalVariableTypeTable : public xAttributeBase
     {
         struct xLocalVariableType {
             uint16_t     StartPC;
@@ -113,10 +154,10 @@ namespace jdc
 
         std::vector<xLocalVariableType> LocalVariableTypeTable;
 
-        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
 
-    struct xAttributeMethodParameters
+    struct xAttributeMethodParameters : public xAttributeBase
     {
         struct xParameter {
             std::string Name;
@@ -125,10 +166,10 @@ namespace jdc
 
         std::vector<xParameter> Parameters;
 
-        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
 
-    struct xAttributeModule
+    struct xAttributeModule : public xAttributeBase
     {
         struct xRequires {
             uint16_t Index;
@@ -166,54 +207,96 @@ namespace jdc
         std::vector<xUses>       UsesList;
         std::vector<xProvides>   ProvidesList;
 
-        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
 
-    struct xModuleMainClass
-    {
-        std::string ClassName;
-
-        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
-    };
-
-    struct xModulePackages
+    struct xAttributeModulePackages : public xAttributeBase
     {
         std::vector<std::string> PackageNames;
 
-        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
 
-    struct xAttributeParameterAnnotations
+    struct xAttributeModuleMainClass : public xAttributeBase
     {
-        struct xAnnotation
-        {
-            std::string                       Descriptor;
-            std::vector<xElementValuePair>    ElementValuePairs;
-        };
-        std::vector<xAnnotation> Annotations;
+        std::string ClassName;
 
-        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
 
-    struct xAttributeSignature
+    struct xAttributeRuntimeAnnotations : public xAttributeBase
+    {
+        std::vector<std::unique_ptr<xAnnotation>> Annotations;
+
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
+    };
+
+    struct xAttributeRuntimeParameterAnnotations : public xAttributeBase
+    {
+        std::vector<
+            std::vector<std::unique_ptr<xAnnotation>>
+        > ParameterAnnotations;
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
+    };
+
+    struct xAttributeSignature : public xAttributeBase
     {
         std::string Signature;
 
-        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
 
-    struct xAttributeSourceFile
+    struct xAttributeSourceFile : public xAttributeBase
     {
         std::string SourceFile;
 
-        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
 
-    struct xAttributeSynthetic
+    struct xAttributeSynthetic : public xAttributeBase
     {
         bool Synthetic = false;
 
-        X_GAME_API_MEMBER bool Extract(const xAttributeBinary & AttributeBinary);
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
+
+    struct xAttributeNames{
+        static constexpr const char * AnnotationDefault                      = "AnnotationDefault";
+        static constexpr const char * BootstrapMethods                       = "BootstrapMethods";
+        static constexpr const char * Code                                   = "Code";
+        static constexpr const char * ConstantValue                          = "ConstantValue";
+        static constexpr const char * Deprecated                             = "Deprecated";
+        static constexpr const char * EnclosingMethod                        = "EnclosingMethod";
+        static constexpr const char * Exceptions                             = "Exceptions";
+        static constexpr const char * InnerClasses                           = "InnerClasses";
+        static constexpr const char * LocalVariableTable                     = "LocalVariableTable";
+        static constexpr const char * LocalVariableTypeTable                 = "LocalVariableTypeTable";
+        static constexpr const char * LineNumberTable                        = "LineNumberTable";
+        static constexpr const char * MethodParameters                       = "MethodParameters";
+        static constexpr const char * Module                                 = "Module";
+        static constexpr const char * ModulePackages                         = "ModulePackages";
+        static constexpr const char * ModuleMainClass                        = "ModuleMainClass";
+        static constexpr const char * RuntimeInvisibleAnnotations            = "RuntimeInvisibleAnnotations";
+        static constexpr const char * RuntimeVisibleAnnotations              = "RuntimeVisibleAnnotations";
+        static constexpr const char * RuntimeInvisibleParameterAnnotations   = "RuntimeInvisibleParameterAnnotations";
+        static constexpr const char * RuntimeVisibleParameterAnnotations     = "RuntimeVisibleParameterAnnotations";
+        static constexpr const char * Signature                              = "Signature";
+        static constexpr const char * SourceFile                             = "SourceFile";
+        static constexpr const char * Synthetic                              = "Synthetic";
+    };
+
+    X_PRIVATE std::unique_ptr<xElementValue> LoadElementValue(xel::xStreamReader & Reader);
+    X_PRIVATE xElementValuePair              LoadElementValuePair(xel::xStreamReader & Reader);
+    X_PRIVATE std::unique_ptr<xAnnotation>   LoadAnnotation(xel::xStreamReader & Reader);
+
+    using xAttributeMap = std::unordered_map<std::string, std::unique_ptr<xAttributeBase>>;
+    X_PRIVATE xAttributeMap LoadAttributeInfo(const std::vector<xAttributeInfo> & AttributeInfoList, const xClassInfo * ClassInfoPtr);
+    X_INLINE const xAttributeBase * GetAttribute(const xAttributeMap & Map, const char * Name) {
+        auto Iter = Map.find(Name);
+        if (Iter == Map.end()) {
+            return nullptr;
+        }
+        return Iter->second.get();
+    }
 
 }
