@@ -97,6 +97,14 @@ namespace jdc
         X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
 
+    struct xAttributeEnclosingMethod : public xAttributeBase
+    {
+        uint16_t ClassIndex;
+        uint16_t MethodIndex;
+
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
+    };
+
     struct xAttributeExceptions : public xAttributeBase
     {
         std::vector<uint16_t> ExceptionIndexTable;

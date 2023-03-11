@@ -67,6 +67,14 @@ namespace jdc
         return true;
     }
 
+    bool xAttributeEnclosingMethod::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
+    {
+        auto Reader = xStreamReader(AttributeBinary.data());
+        ClassIndex = Reader.R2();
+        MethodIndex = Reader.R2();
+        return true;
+    }
+
     bool xAttributeExceptions::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
     {
         auto Reader = xStreamReader(AttributeBinary.data());
@@ -300,7 +308,10 @@ namespace jdc
                 }
             }
             else if (Name == xAttributeNames::EnclosingMethod) {
-                X_DEBUG_PRINTF("Ignore attribute %s\n", Name.c_str());
+                auto AttributeUPtr = std::make_unique<xAttributeEnclosingMethod>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
             }
             else if (Name == xAttributeNames::Exceptions) {
                 auto AttributeUPtr = std::make_unique<xAttributeExceptions>();
