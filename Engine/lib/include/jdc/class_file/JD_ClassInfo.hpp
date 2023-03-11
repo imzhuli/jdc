@@ -2,8 +2,8 @@
 #include "../base/_.hpp"
 #include "./JD_Attribute.hpp"
 #include "./JD_Constant.hpp"
-#include "./JD_Field.hpp"
-#include "./JD_Method.hpp"
+#include "./JD_FieldInfo.hpp"
+#include "./JD_MethodInfo.hpp"
 #include <xel/Byte.hpp>
 #include <string>
 #include <vector>

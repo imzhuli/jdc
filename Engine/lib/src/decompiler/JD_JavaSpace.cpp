@@ -1,4 +1,6 @@
 #include <jdc/decompiler/JD_JavaSpace.hpp>
+#include <jdc/decompiler/JD_JavaPackage.hpp>
+#include <jdc/decompiler/JD_JavaClass.hpp>
 #include <jdc/syntax/_.hpp>
 #include <filesystem>
 
@@ -51,7 +53,7 @@ namespace jdc
                 JavaClass._UnfixedBinaryName = ClassBinaryName;
                 JavaClass._SimpleBinaryName = GetSimpleClassBinaryName(ClassBinaryName);
                 JavaClass._SimpleCodeName = ConvertBinaryNameToCodeName(JavaClass._SimpleBinaryName);
-                JavaClass._InnermostCodeName = GetInnermostClassCodeName(JavaClass._SimpleCodeName);
+                JavaClass._InnermostName = GetInnermostClassName(JavaClass._SimpleCodeName);
 
                 auto & ClassInfo = JavaClass.ClassInfo;
                 ClassInfo = std::move(LoadResult.Data);
@@ -127,6 +129,17 @@ namespace jdc
         }
 
         return JavaSpaceUPtr;
+    }
+
+    bool xJavaSpace::BuildClassSyntaxTrees()
+    {
+        for(auto & Entry : _ClassMap) {
+            auto & JavaClassUPtr = Entry.second;
+            if (!JavaClassUPtr->DoConvert()) {
+                return false;
+            }
+        }
+        return true;
     }
 
 }

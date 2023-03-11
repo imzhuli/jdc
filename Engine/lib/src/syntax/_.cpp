@@ -75,7 +75,7 @@ namespace jdc
         return BinaryName.substr(Index + 1);
     }
 
-    std::string GetInnermostClassCodeName(const std::string & AnyTypeOfClassName)
+    std::string GetInnermostClassName(const std::string & AnyTypeOfClassName)
     {
         auto Index = AnyTypeOfClassName.find_last_of("/$.");
         if (Index == AnyTypeOfClassName.npos) {

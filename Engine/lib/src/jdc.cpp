@@ -2,6 +2,8 @@
 #include <jdc/syntax/_.hpp>
 #include <jdc/decompiler/_.hpp>
 #include <jdc/decompiler/JD_Decompiler.hpp>
+#include <jdc/decompiler/JD_JavaPackage.hpp>
+#include <jdc/decompiler/JD_JavaClass.hpp>
 #include <mutex>
 
 namespace jdc

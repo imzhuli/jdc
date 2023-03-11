@@ -88,10 +88,19 @@ namespace jdc
     bool xAttributeInnerClasses::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
     {
         auto Reader = xStreamReader(AttributeBinary.data());
-        InnerClassInfoIndex = Reader.R2();
-        OuterClassInfoIndex = Reader.R2();
-        InnerNameIndex = Reader.R2();
-        InnerAccessFlags = Reader.R2();
+        InnerClasses.resize(Reader.R2());
+        for(auto & InnerClass : InnerClasses) {
+            InnerClass.InnerClassInfoIndex = Reader.R2();
+            InnerClass.OuterClassInfoIndex = Reader.R2();
+            InnerClass.InnerNameIndex = Reader.R2();
+            InnerClass.InnerAccessFlags = Reader.R2();
+            // X_DEBUG_PRINTF("xInnerClasses: from:%s, Inner:%s, Outer:%s, InnerName:%s\n",
+            //     ClassInfoPtr->GetConstantClassBinaryName(ClassInfoPtr->ThisClass).c_str(),
+            //     ClassInfoPtr->GetConstantClassBinaryName(InnerClass.InnerClassInfoIndex).c_str(),
+            //     ClassInfoPtr->GetConstantClassBinaryName(InnerClass.OuterClassInfoIndex).c_str(),
+            //     ClassInfoPtr->GetConstantUtf8(InnerClass.InnerNameIndex).c_str()
+            // );
+        }
         return true;
     }
 
@@ -136,6 +145,24 @@ namespace jdc
             LocalVariableType.Index = Reader.R2();
 
             X_DEBUG_PRINTF("LocalVariableType: @%u, %s: %s\n", (unsigned int)LocalVariableType.Index, LocalVariableType.Name.c_str(), LocalVariableType.Signature.c_str());
+        }
+        return true;
+    }
+
+    bool xAttributeNestHost::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
+    {
+        auto Reader = xStreamReader(AttributeBinary.data());
+        HostClassIndex = Reader.R2();
+        return true;
+    }
+
+    bool xAttributeNestMembers::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
+    {
+        auto Reader = xStreamReader(AttributeBinary.data());
+        NestClassIndices.resize(Reader.R2());
+
+        for (auto & NetClassIndex : NestClassIndices) {
+            NetClassIndex = Reader.R2();
         }
         return true;
     }
@@ -204,7 +231,7 @@ namespace jdc
     std::unique_ptr<xElementValue> LoadElementValue(xel::xStreamReader & Reader)
     {
         auto ElementValueUPtr = std::make_unique<xElementValue>();
-        auto & ElementValue = *ElementValueUPtr.get();
+        auto & ElementValue = *ElementValueUPtr;
         ElementValue.Tag = static_cast<eElementValueTag>(Reader.R1());
 
         if (ElementValue.Tag == eElementValueTag::Byte
@@ -259,7 +286,7 @@ namespace jdc
     std::unique_ptr<xAnnotation> LoadAnnotation(xel::xStreamReader & Reader)
     {
         auto AnnotationUPtr = std::make_unique<xAnnotation>();
-        auto & Annotation = *AnnotationUPtr.get();
+        auto & Annotation = *AnnotationUPtr;
 
         Annotation.TypeNameIndex = Reader.R2();
         uint16_t ElementValuePairCount = Reader.R2();
@@ -357,6 +384,18 @@ namespace jdc
             }
             else if (Name == xAttributeNames::ModuleMainClass) {
                 X_DEBUG_PRINTF("Ignore attribute %s\n", Name.c_str());
+            }
+            else if (Name == xAttributeNames::NestHost) {
+                auto AttributeUPtr = std::make_unique<xAttributeNestHost>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
+            }
+            else if (Name == xAttributeNames::NestMembers) {
+                auto AttributeUPtr = std::make_unique<xAttributeNestMembers>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
             }
             else if (Name == xAttributeNames::RuntimeInvisibleAnnotations) {
                 auto AttributeUPtr = std::make_unique<xAttributeRuntimeAnnotations>();

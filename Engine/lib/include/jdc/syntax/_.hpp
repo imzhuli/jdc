@@ -13,7 +13,7 @@ namespace jdc
     X_PRIVATE std::string ConvertPathNameToBinaryName(const std::string & PathName);
     X_PRIVATE std::string ConvertBinaryNameToCodeName(const std::string & BinaryName);
     X_PRIVATE std::string GetSimpleClassBinaryName(const std::string & BinaryName);
-    X_PRIVATE std::string GetInnermostClassCodeName(const std::string & AnyTypeOfClassName);
+    X_PRIVATE std::string GetInnermostClassName(const std::string & AnyTypeOfClassName);
     X_PRIVATE std::string GetOutermostClassCodeName(const std::string & AnyTypeOfClassName);
 
 }

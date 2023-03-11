@@ -11,9 +11,9 @@ namespace jdc
         Type._UnfixedBinaryName        = BinaryName;
         Type._FixedBinaryName          = Type._UnfixedBinaryName;
         Type._FixedCodeName            = ConvertBinaryNameToCodeName(BinaryName);
-        Type._SimpleBinaryName         = GetInnermostClassCodeName(BinaryName);
+        Type._SimpleBinaryName         = GetInnermostClassName(BinaryName);
         Type._SimpleCodeName           = Type._SimpleBinaryName;
-        Type._InnermostCodeName        = Type._SimpleBinaryName;
+        Type._InnermostName        = Type._SimpleBinaryName;
 
         JavaObjectTypeMap.insert(std::make_pair(BinaryName, std::move(Type)));
     }

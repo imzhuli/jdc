@@ -1,4 +1,6 @@
 #include <jdc/decompiler/JD_Decompiler.hpp>
+#include <jdc/decompiler/JD_JavaPackage.hpp>
+#include <jdc/decompiler/JD_JavaClass.hpp>
 #include <jdc/decompiler/JD_CodeMarks.hpp>
 #include <jdc/syntax/_.hpp>
 #include <jdc/syntax/JD_JavaObjectTypes.hpp>
@@ -154,6 +156,11 @@ namespace jdc
         if (!MakePackagePaths() || !MakeClassJavaFiles()) {
             return false;
         }
+
+        if (!_JavaSpaceUPtr->BuildClassSyntaxTrees()) {
+            return false;
+        }
+
         return true;
     }
 

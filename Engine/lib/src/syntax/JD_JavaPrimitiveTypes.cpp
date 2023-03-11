@@ -12,7 +12,7 @@ namespace jdc
         Type._FixedCodeName            = Name;
         Type._SimpleBinaryName         = Name;
         Type._SimpleCodeName           = Name;
-        Type._InnermostCodeName        = Name;
+        Type._InnermostName        = Name;
         Type._TypeFlag                 = TypeFlag;
 
         PrimativeJavaTypeMap.insert(std::make_pair(Name, std::move(Type)));

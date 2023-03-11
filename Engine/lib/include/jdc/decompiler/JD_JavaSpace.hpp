@@ -11,6 +11,7 @@ namespace jdc
 
     class xJavaPackage;
     class xJavaClass;
+    class xJavaSyntaxTree;
 
     using xPackageMap = std::map<std::string, std::unique_ptr<xJavaPackage>>;
     using xClassMap = std::map<std::string, std::unique_ptr<xJavaClass>>;
@@ -36,6 +37,8 @@ namespace jdc
 
     public:
         X_GAME_API_STATIC_MEMBER std::unique_ptr<xJavaSpace> LoadJavaSpace(const std::string & RootDirectory);
+
+        X_PRIVATE_MEMBER bool BuildClassSyntaxTrees();
     };
 
 

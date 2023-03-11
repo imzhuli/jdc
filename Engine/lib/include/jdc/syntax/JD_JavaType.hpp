@@ -15,8 +15,8 @@ namespace jdc
         virtual const std::string & GetFixedCodeName()              const { return _FixedCodeName; }
         virtual const std::string & GetSimpleBinaryName()           const { return _SimpleBinaryName; }
         virtual const std::string & GetSimpleCodeName()             const { return _SimpleCodeName; }
-        virtual const std::string & GetInnermostCodeName()          const { return _InnermostCodeName; }
-        virtual const std::string & GetSourceFilename()             const { return _SourceFilename.empty() ? _InnermostCodeName : _SourceFilename; }
+        virtual const std::string & GetInnermostCodeName()          const { return _InnermostName; }
+        virtual const std::string & GetSourceFilename()             const { return _SourceFilename.empty() ? _InnermostName : _SourceFilename; }
 
         virtual bool               IsPrimitiveType()       const { return false; }
         virtual bool               IsObjectType()          const { return false; }
@@ -34,7 +34,7 @@ namespace jdc
         std::string        _FixedCodeName;
         std::string        _SimpleBinaryName;
         std::string        _SimpleCodeName;
-        std::string        _InnermostCodeName;
+        std::string        _InnermostName;
         std::string        _SourceFilename;
         const iJavaType *  _OuterTypePtr = nullptr;
     };

@@ -114,10 +114,14 @@ namespace jdc
 
     struct xAttributeInnerClasses : public xAttributeBase
     {
-        uint16_t InnerClassInfoIndex;
-        uint16_t OuterClassInfoIndex;
-        uint16_t InnerNameIndex;
-        uint16_t InnerAccessFlags;
+        struct xInnerClass {
+            uint16_t InnerClassInfoIndex;
+            uint16_t OuterClassInfoIndex;
+            uint16_t InnerNameIndex;
+            uint16_t InnerAccessFlags;
+        };
+
+        std::vector<xInnerClass> InnerClasses;
 
         X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
@@ -232,6 +236,20 @@ namespace jdc
         X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
 
+    struct xAttributeNestHost : public xAttributeBase
+    {
+        uint16_t HostClassIndex;
+
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
+    };
+
+    struct xAttributeNestMembers : public xAttributeBase
+    {
+        std::vector<uint16_t> NestClassIndices;
+
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
+    };
+
     struct xAttributeRuntimeAnnotations : public xAttributeBase
     {
         std::vector<std::unique_ptr<xAnnotation>> Annotations;
@@ -284,6 +302,8 @@ namespace jdc
         static constexpr const char * Module                                 = "Module";
         static constexpr const char * ModulePackages                         = "ModulePackages";
         static constexpr const char * ModuleMainClass                        = "ModuleMainClass";
+        static constexpr const char * NestHost                               = "NestHost";
+        static constexpr const char * NestMembers                            = "NestMembers";
         static constexpr const char * RuntimeInvisibleAnnotations            = "RuntimeInvisibleAnnotations";
         static constexpr const char * RuntimeVisibleAnnotations              = "RuntimeVisibleAnnotations";
         static constexpr const char * RuntimeInvisibleParameterAnnotations   = "RuntimeInvisibleParameterAnnotations";

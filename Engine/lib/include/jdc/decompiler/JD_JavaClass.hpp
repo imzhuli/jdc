@@ -4,7 +4,9 @@
 #include "../class_file/JD_ClassInfo.hpp"
 #include "../syntax/JD_JavaType.hpp"
 #include "./JD_JavaPackage.hpp"
+#include "./JD_JavaField.hpp"
 #include "./JD_JavaMethod.hpp"
+#include "./JD_JavaDeclaration.hpp"
 #include <string>
 #include <cctype>
 #include <vector>
@@ -22,15 +24,26 @@ namespace jdc
         friend class xJavaSpace;
 
     public:
-        const xJavaSpace *   JavaSpacePtr = nullptr;
-        const xJavaPackage * PackagePtr = nullptr;
-        xClassInfo  ClassInfo;
+        const xJavaSpace *                    JavaSpacePtr = nullptr;
+        const xJavaPackage *                  PackagePtr = nullptr;
+        xClassInfo                            ClassInfo;
 
         struct {
-            xAttributeMap                 AttributeMap;
-            std::string                   SuggestedSourceFilename;
-            std::vector<xJavaMethod>      Methods;
+            xAttributeMap                     AttributeMap;
+            std::string                       SuggestedSourceFilename;
+            std::vector<xJavaField>           Fields;
+            std::vector<xJavaMethod>          Methods;
+            std::vector<const xJavaClass*>    DirectInnerClasses;
         } Extend;
+
+        struct {
+            std::string                       SourceFilename;
+            std::string                       PackageName;
+
+            xAccessFlag                       ClassAccessFlags;
+            std::string                       ClassName;
+            xAnnotationDeclarations           AnnotaionDeclarations;
+        } Converted;
 
         X_INLINE const std::string & GetUnfixedSuperClassBinaryName() const { return ClassInfo.GetConstantClassBinaryName(ClassInfo.SuperClass); }
         X_INLINE std::vector<std::string> GetUnfixedInterfaceBinaryNames() const {
@@ -48,15 +61,18 @@ namespace jdc
         X_INLINE bool IsStatic() const { return ClassInfo.AccessFlags & ACC_STATIC; }
         X_INLINE bool IsAbstract() const { return ClassInfo.AccessFlags & ACC_ABSTRACT; }
         X_INLINE bool IsFinal() const { return ClassInfo.AccessFlags & ACC_FINAL; }
-        X_INLINE bool IsSynthetic() const { return (ClassInfo.AccessFlags & ACC_SYNTHETIC) || isdigit(_InnermostCodeName[0]); }
-        X_INLINE bool IsInnerClass() const { return _SimpleCodeName.length() != _InnermostCodeName.length(); }
+        X_INLINE bool IsSynthetic() const { return (ClassInfo.AccessFlags & ACC_SYNTHETIC) || isdigit(_InnermostName[0]); }
+        X_INLINE bool IsInnerClass() const { return _SimpleCodeName.length() != _InnermostName.length(); }
         X_INLINE bool IsMainClass() const { return !IsInnerClass() && (_SourceFilename.empty() ? true : (_SourceFilename == _SimpleCodeName)); }
 
         X_PRIVATE_MEMBER std::string GetUnfixedOutermostClassBinaryName() const;
+        X_PRIVATE_MEMBER xJavaField ExtractField(const xFieldInfo & FieldInfo);
         X_PRIVATE_MEMBER xJavaMethod ExtractMethod(const xMethodInfo & MethodInfo);
+
         X_PRIVATE_MEMBER void DoExtend();
+        X_PRIVATE_MEMBER bool DoConvert();
+        X_PRIVATE_MEMBER bool DoConvertAnnotations();
 
     };
-
 
 }
