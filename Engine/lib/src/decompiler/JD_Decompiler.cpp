@@ -153,11 +153,19 @@ namespace jdc
         _OutputRootDirectory = std::filesystem::path(_Config.OutputDirectory) / "./";
         auto OutputPathCleaner = xel::xScopeGuard([this]{ xel::Renew(_OutputRootDirectory); });
 
-        if (!MakePackagePaths() || !MakeClassJavaFiles()) {
+        if (!MakePackagePaths()) {
             return false;
         }
 
-        if (!_JavaSpaceUPtr->BuildClassSyntaxTrees()) {
+        // if (!MakeClassJavaFiles()) {
+        //     return false;
+        // }
+
+        if (!_JavaSpaceUPtr->BuildClassFiles()) {
+            return false;
+        }
+
+        if (!_JavaSpaceUPtr->DumpClassFiles(_Config.OutputDirectory)) {
             return false;
         }
 

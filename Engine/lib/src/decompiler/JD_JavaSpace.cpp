@@ -131,7 +131,7 @@ namespace jdc
         return JavaSpaceUPtr;
     }
 
-    bool xJavaSpace::BuildClassSyntaxTrees()
+    bool xJavaSpace::BuildClassFiles()
     {
         for(auto & Entry : _ClassMap) {
             auto & JavaClassUPtr = Entry.second;
@@ -139,6 +139,18 @@ namespace jdc
                 return false;
             }
         }
+        return true;
+    }
+
+    bool xJavaSpace::DumpClassFiles(const std::string & OutputDirectory)
+    {
+        for(auto & Entry : _ClassMap) {
+            auto & JavaClassUPtr = Entry.second;
+            if (!JavaClassUPtr->DumpSourceToFile(OutputDirectory)) {
+                return false;
+            }
+        }
+
         return true;
     }
 

@@ -10,6 +10,7 @@
 #include <string>
 #include <cctype>
 #include <vector>
+#include <ostream>
 
 namespace jdc
 {
@@ -42,6 +43,9 @@ namespace jdc
 
             xAccessFlag                       ClassAccessFlags;
             std::string                       ClassName;
+            std::string                       SuperClassName;
+            std::vector<std::string>          InterfaceNames;
+
             xAnnotationDeclarations           AnnotaionDeclarations;
         } Converted;
 
@@ -72,7 +76,15 @@ namespace jdc
         X_PRIVATE_MEMBER void DoExtend();
         X_PRIVATE_MEMBER bool DoConvert();
         X_PRIVATE_MEMBER bool DoConvertAnnotations();
+        X_PRIVATE_MEMBER bool DumpSourceToFile(const std::string & RootDir) const;
+        X_PRIVATE_MEMBER bool DumpSource(std::ofstream & OS, size_t Level) const;
+        X_PRIVATE_MEMBER bool DumpPackageFragment(std::ostream & OS) const;
+        X_PRIVATE_MEMBER bool DumpSpacerLineFragment(std::ostream & OS) const;
+        X_PRIVATE_MEMBER bool ClassDeclarationBeginFragment(std::ostream & OS, size_t Level) const;
+        X_PRIVATE_MEMBER bool ClassDeclarationEndFragment(std::ostream & OS, size_t Level) const;
 
+        X_PRIVATE_STATIC_CONSTEXPR const char * IndentString = "    ";
+        X_INLINE void DumpInsertLineIndent(std::ostream & OS, size_t Level) const { for (size_t i = 0 ; i < Level; ++i) { OS << IndentString; } }
     };
 
 }

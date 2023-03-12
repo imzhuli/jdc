@@ -217,7 +217,7 @@ namespace jdc
     {
         auto Reader = xStreamReader(AttributeBinary.data());
         uint16_t SourceFileIndex = Reader.R2();
-        SourceFile = ClassInfoPtr->GetConstantUtf8(SourceFileIndex);
+        Filename = ClassInfoPtr->GetConstantUtf8(SourceFileIndex);
         return true;
     }
 

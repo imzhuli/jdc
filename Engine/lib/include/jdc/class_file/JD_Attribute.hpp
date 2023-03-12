@@ -274,7 +274,7 @@ namespace jdc
 
     struct xAttributeSourceFile : public xAttributeBase
     {
-        std::string SourceFile;
+        std::string Filename;
 
         X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };
