@@ -19,7 +19,7 @@ namespace jdc
     class xJavaClass;
     class xJavaSpace;
 
-    class xJavaClass
+    class xJavaClass final
     : public iJavaType
     {
         friend class xJavaSpace;
