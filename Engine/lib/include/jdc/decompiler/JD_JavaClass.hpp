@@ -21,6 +21,7 @@ namespace jdc
 
     class xJavaClass
     : public iJavaType
+    , public xel::xAbstract
     {
         friend class xJavaSpace;
 

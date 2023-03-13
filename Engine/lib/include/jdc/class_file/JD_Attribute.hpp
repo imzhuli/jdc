@@ -8,7 +8,7 @@
 
 namespace jdc
 {
-    class xClassInfo;
+    struct xClassInfo;
 
     struct xAnnotation;
     struct xElementValue;
