@@ -74,8 +74,12 @@ namespace jdc
         X_PRIVATE_MEMBER xJavaMethod ExtractMethod(const xMethodInfo & MethodInfo);
 
         X_PRIVATE_MEMBER void DoExtend();
+
         X_PRIVATE_MEMBER bool DoConvert();
+        X_PRIVATE_MEMBER bool DoConvertFields();
         X_PRIVATE_MEMBER bool DoConvertAnnotations();
+        X_PRIVATE_MEMBER bool DoConvertMethods();
+
         X_PRIVATE_MEMBER bool DumpSourceToFile(const std::string & RootDir) const;
         X_PRIVATE_MEMBER bool DumpSource(std::ofstream & OS, size_t Level) const;
         X_PRIVATE_MEMBER bool DumpPackageFragment(std::ostream & OS) const;

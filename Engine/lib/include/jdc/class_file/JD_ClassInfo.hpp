@@ -29,8 +29,6 @@ namespace jdc
         X_GAME_API_MEMBER const std::string & GetConstantString(size_t Index) const;
         X_GAME_API_MEMBER const std::string & GetConstantClassBinaryName(size_t Index) const;
         X_GAME_API_MEMBER std::string GetOutermostClassBinaryName() const;
-        X_GAME_API_MEMBER std::string GetConstantValueString(size_t Index) const;
-        X_GAME_API_MEMBER std::vector<std::string> ExtractTypeBinaryNames(const std::string & Descriptor) const;
     };
 
     X_GAME_API std::string EscapeString(const std::string & S);

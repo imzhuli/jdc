@@ -121,16 +121,48 @@ namespace jdc
             return false;
         }
 
+        if (!DoConvertFields()) {
+            return false;
+        }
+
+        if (!DoConvertMethods()) {
+            return false;
+        }
+
         RewindConvertedGuard.Dismiss();
         return true;
     }
 
     bool xJavaClass::DoConvertAnnotations()
     {
-        auto & Annotations = Converted.AnnotaionDeclarations;
+        auto VisibleAnnotationAttributes = (xAttributeRuntimeAnnotations*)Extend.AttributeMap[xAttributeNames::RuntimeVisibleAnnotations].get();
+        auto InvisibleAnnotationAttributes = (xAttributeRuntimeAnnotations*)Extend.AttributeMap[xAttributeNames::RuntimeInvisibleAnnotations].get();
 
+        if (VisibleAnnotationAttributes) {
+            for (auto & AA : VisibleAnnotationAttributes->Annotations) {
+                auto UnfixedAnnotationBinaryName = ConvertTypeDescriptorToBinaryName(ClassInfo.GetConstantUtf8(AA->TypeNameIndex));
+                X_DEBUG_PRINTF("ConvertingClassAnnotation: %s\n", UnfixedAnnotationBinaryName.c_str());
 
-        (void)Annotations;
+                auto FixedAnnotationCodeName = JavaSpacePtr->GetFixedClassCodeName(UnfixedAnnotationBinaryName);
+
+                auto AD = xAnnotationDeclaration();
+                AD.TypeName = FixedAnnotationCodeName;
+                Converted.AnnotaionDeclarations.push_back(AD);
+            }
+        }
+
+        (void)VisibleAnnotationAttributes;
+        (void)InvisibleAnnotationAttributes;
+        return true;
+    }
+
+    bool xJavaClass::DoConvertFields()
+    {
+        return true;
+    }
+
+    bool xJavaClass::DoConvertMethods()
+    {
         return true;
     }
 
@@ -189,6 +221,22 @@ namespace jdc
     bool xJavaClass::ClassDeclarationBeginFragment(std::ostream & OS, size_t Level) const
     {
         // TODO: Annotation:
+        for (auto & AD : Converted.AnnotaionDeclarations)
+        {
+            DumpInsertLineIndent(OS, Level);
+            // Annotation:
+            OS << '@' << AD.TypeName;
+
+            if (AD.ElementValuePairs.size()) {
+                std::vector<std::string> Params;
+                for (auto & EVP : AD.ElementValuePairs) {
+                    Params.push_back(EVP.ElementName + '=' + EVP.ElementValueString);
+                }
+                OS << "{ " << JoinStr(Params, ',') << " }";
+            }
+            OS << std::endl;
+            // values
+        }
 
         // class
         if (IsEnum()) {

@@ -2,6 +2,9 @@
 #include <jdc/syntax/JD_JavaType.hpp>
 #include <jdc/syntax/JD_JavaPrimitiveTypes.hpp>
 #include <jdc/syntax/JD_JavaObjectTypes.hpp>
+#include <xel/Byte.hpp>
+
+using namespace xel;
 
 namespace jdc
 {
@@ -93,6 +96,82 @@ namespace jdc
         return AnyTypeOfClassName.substr(0, Count);
     }
 
+    std::string ConvertTypeDescriptorToBinaryName(const std::string & Descriptor)
+    {
+        auto Reader = xStreamReader(Descriptor.c_str());
+        auto ArraySize = size_t();
+
+        auto C = (char)Reader.R();
+        assert(C);
+        while(C == '[') {
+            ++ArraySize;
+        }
+
+        auto BaseTypeName = std::string{};
+        switch(C) {
+            case 'B': {
+                BaseTypeName = "byte";
+                break;
+            }
+            case 'C': {
+                BaseTypeName =  "char";
+                break;
+            }
+            case 'D': {
+                BaseTypeName =  "double";
+                break;
+            }
+            case 'F': {
+                BaseTypeName =  "float";
+                break;
+            }
+            case 'I': {
+                BaseTypeName =  "int";
+                break;
+            }
+            case 'J': {
+                BaseTypeName =  "long";
+                break;
+            }
+            case 'S': {
+                BaseTypeName =  "short";
+                break;
+            }
+            case 'Z': {
+                BaseTypeName =  "boolean";
+                break;
+            }
+            case 'V': {
+                BaseTypeName =  "void";
+                break;
+            }
+            case 'L': { // class name;
+                C = (char)Reader.R();
+                while(C != ';') {
+                    BaseTypeName.push_back(C);
+                    C = (char)Reader.R();
+                }
+                break;
+            }
+            default: {
+                X_DEBUG_PRINTF("Failed to convert typename");
+                Fatal("Not supported");
+                return {};
+            }
+        }
+        while(ArraySize--) {
+            BaseTypeName.push_back('[');
+            BaseTypeName.push_back(']');
+        }
+        return BaseTypeName;
+    }
+
+    xMethodTypeNames xConvertMethodDescriptorToBinaryNames(const std::string & Descriptor)
+    {
+        auto MethodTypeName = xMethodTypeNames{};
+
+        return MethodTypeName;
+    }
 
 }
 

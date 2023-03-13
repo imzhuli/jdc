@@ -171,6 +171,7 @@ namespace jdc
     {
         auto Reader = xStreamReader(AttributeBinary.data());
         Annotations.resize(Reader.R2());
+        X_DEBUG_PRINTF("LoadingRuntimeAnnotation for class %s: size=%u\n", ClassInfoPtr->GetConstantClassBinaryName(ClassInfoPtr->ThisClass).c_str(), (unsigned int)Annotations.size());
         for (auto & Annotation : Annotations) {
             Annotation = LoadAnnotation(Reader);
         }
@@ -289,6 +290,9 @@ namespace jdc
         auto & Annotation = *AnnotationUPtr;
 
         Annotation.TypeNameIndex = Reader.R2();
+
+        X_DEBUG_PRINTF("LoadingRuntimeAnnotation: TypeNameIndex=%u\n", (unsigned int)Annotation.TypeNameIndex);
+
         uint16_t ElementValuePairCount = Reader.R2();
         for (uint16_t i = 0 ; i < ElementValuePairCount ; ++i) {
             Annotation.ElementValuePairs.push_back(LoadElementValuePair(Reader));

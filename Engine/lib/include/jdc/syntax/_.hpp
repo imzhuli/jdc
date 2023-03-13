@@ -1,8 +1,7 @@
 #pragma once
 #include "../base/_.hpp"
 #include <string>
-#include <map>
-
+#include <vector>
 namespace jdc
 {
 
@@ -15,5 +14,13 @@ namespace jdc
     X_PRIVATE std::string GetSimpleClassBinaryName(const std::string & BinaryName);
     X_PRIVATE std::string GetInnermostClassName(const std::string & AnyTypeOfClassName);
     X_PRIVATE std::string GetOutermostClassCodeName(const std::string & AnyTypeOfClassName);
+
+    struct xMethodTypeNames {
+        std::string ReturnTypeBinaryName;
+        std::vector<std::string> ParamTypeBinaryNames;
+    };
+
+    X_PRIVATE std::string ConvertTypeDescriptorToBinaryName(const std::string & Descriptor);
+    X_PRIVATE xMethodTypeNames xConvertMethodDescriptorToBinaryNames(const std::string & Descriptor);
 
 }

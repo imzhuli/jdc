@@ -39,7 +39,7 @@ namespace jdc
             if (JavaClassPtr) {
                 return JavaClassPtr->GetFixedCodeName();
             }
-            return UnfixedClassBinaryName;
+            return ConvertBinaryNameToCodeName(UnfixedClassBinaryName);
         }
 
     public:
