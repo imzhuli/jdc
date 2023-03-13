@@ -151,8 +151,19 @@ namespace jdc
             }
         }
 
-        (void)VisibleAnnotationAttributes;
-        (void)InvisibleAnnotationAttributes;
+        if (InvisibleAnnotationAttributes) {
+            for (auto & AA : InvisibleAnnotationAttributes->Annotations) {
+                auto UnfixedAnnotationBinaryName = ConvertTypeDescriptorToBinaryName(ClassInfo.GetConstantUtf8(AA->TypeNameIndex));
+                X_DEBUG_PRINTF("ConvertingClassAnnotation: %s\n", UnfixedAnnotationBinaryName.c_str());
+
+                auto FixedAnnotationCodeName = JavaSpacePtr->GetFixedClassCodeName(UnfixedAnnotationBinaryName);
+
+                auto AD = xAnnotationDeclaration();
+                AD.TypeName = FixedAnnotationCodeName;
+                Converted.AnnotaionDeclarations.push_back(AD);
+            }
+        }
+
         return true;
     }
 
