@@ -133,6 +133,11 @@ namespace jdc
         return true;
     }
 
+    std::string xJavaClass::ConvertElementValueToString(const xElementValue & ElementValue)
+    {
+
+    }
+
     bool xJavaClass::DoConvertAnnotations()
     {
         auto VisibleAnnotationAttributes = (xAttributeRuntimeAnnotations*)Extend.AttributeMap[xAttributeNames::RuntimeVisibleAnnotations].get();
@@ -141,12 +146,16 @@ namespace jdc
         if (VisibleAnnotationAttributes) {
             for (auto & AA : VisibleAnnotationAttributes->Annotations) {
                 auto UnfixedAnnotationBinaryName = ConvertTypeDescriptorToBinaryName(ClassInfo.GetConstantUtf8(AA->TypeNameIndex));
-                X_DEBUG_PRINTF("ConvertingClassAnnotation: %s\n", UnfixedAnnotationBinaryName.c_str());
-
                 auto FixedAnnotationCodeName = JavaSpacePtr->GetFixedClassCodeName(UnfixedAnnotationBinaryName);
 
                 auto AD = xAnnotationDeclaration();
                 AD.TypeName = FixedAnnotationCodeName;
+                for (auto & EVPair : AA->ElementValuePairs) {
+                    auto EVStringPair = xElementValueStringPair();
+                    EVStringPair.ElementName = ClassInfo.GetConstantUtf8(EVPair.ElementNameIndex);
+                    // TODO: convert value string
+                    AD.ElementValueStringPairs.push_back(EVStringPair);
+                }
                 Converted.AnnotaionDeclarations.push_back(AD);
             }
         }
@@ -154,8 +163,6 @@ namespace jdc
         if (InvisibleAnnotationAttributes) {
             for (auto & AA : InvisibleAnnotationAttributes->Annotations) {
                 auto UnfixedAnnotationBinaryName = ConvertTypeDescriptorToBinaryName(ClassInfo.GetConstantUtf8(AA->TypeNameIndex));
-                X_DEBUG_PRINTF("ConvertingClassAnnotation: %s\n", UnfixedAnnotationBinaryName.c_str());
-
                 auto FixedAnnotationCodeName = JavaSpacePtr->GetFixedClassCodeName(UnfixedAnnotationBinaryName);
 
                 auto AD = xAnnotationDeclaration();
@@ -238,9 +245,9 @@ namespace jdc
             // Annotation:
             OS << '@' << AD.TypeName;
 
-            if (AD.ElementValuePairs.size()) {
+            if (AD.ElementValueStringPairs.size()) {
                 std::vector<std::string> Params;
-                for (auto & EVP : AD.ElementValuePairs) {
+                for (auto & EVP : AD.ElementValueStringPairs) {
                     Params.push_back(EVP.ElementName + '=' + EVP.ElementValueString);
                 }
                 OS << "{ " << JoinStr(Params, ',') << " }";

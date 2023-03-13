@@ -5,7 +5,7 @@
 namespace jdc
 {
 
-    struct xAnnotationElementValuePair
+    struct xElementValueStringPair
     {
         std::string ElementName;
         std::string ElementValueString;
@@ -14,7 +14,7 @@ namespace jdc
     struct xAnnotationDeclaration
     {
         std::string TypeName;
-        std::vector<xAnnotationElementValuePair> ElementValuePairs;
+        std::vector<xElementValueStringPair> ElementValueStringPairs;
     };
 
     using xAnnotationDeclarations = std::vector<xAnnotationDeclaration>;
