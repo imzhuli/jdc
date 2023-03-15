@@ -1,16 +1,33 @@
 #pragma once
 #include "../base/_.hpp"
 #include "../class_file/JD_ClassInfo.hpp"
+#include "./JD_JavaDeclaration.hpp"
+#include <string>
+#include <vector>
 
 namespace jdc
 {
+    class xJavaClass;
 
     class xJavaField
     {
     public:
-        const xClassInfo *    ClassInfoPtr;
-        const xFieldInfo *    FieldInfoPtr;
+        const xJavaClass *           JavaClassPtr;
+        const xFieldInfo *           FieldInfoPtr;
+        std::string                  Name;
+        std::string                  UnfixedTypeBinaryName;
+        std::string                  FixedTypeCodeName;
 
+        struct {
+            xAttributeMap            AttributeMap;
+        } Extend;
+
+        struct {
+            xAnnotationDeclarations  AnnotationDeclarations;
+        } Converted;
+
+        X_PRIVATE_MEMBER void DoExtend();
+        X_PRIVATE_MEMBER void DoConvert();
     };
 
 }

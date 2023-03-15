@@ -30,11 +30,11 @@ namespace jdc
         xClassInfo                            ClassInfo;
 
         struct {
-            xAttributeMap                     AttributeMap;
-            std::string                       SuggestedSourceFilename;
-            std::vector<xJavaField>           Fields;
-            std::vector<xJavaMethod>          Methods;
-            std::vector<const xJavaClass*>    DirectInnerClasses;
+            xAttributeMap                               AttributeMap;
+            std::string                                 SuggestedSourceFilename;
+            std::vector<std::unique_ptr<xJavaField>>    Fields;
+            std::vector<std::unique_ptr<xJavaMethod>>   Methods;
+            std::vector<const xJavaClass*>              DirectInnerClasses;
         } Extend;
 
         struct {
@@ -46,7 +46,7 @@ namespace jdc
             std::string                       SuperClassName;
             std::vector<std::string>          InterfaceNames;
 
-            xAnnotationDeclarations           AnnotaionDeclarations;
+            xAnnotationDeclarations           AnnotationDeclarations;
         } Converted;
 
         X_INLINE const std::string & GetUnfixedSuperClassBinaryName() const { return ClassInfo.GetConstantClassBinaryName(ClassInfo.SuperClass); }
@@ -70,9 +70,11 @@ namespace jdc
         X_INLINE bool IsMainClass() const { return !IsInnerClass() && (_SourceFilename.empty() ? true : (_SourceFilename == _SimpleCodeName)); }
 
         X_PRIVATE_MEMBER std::string GetUnfixedOutermostClassBinaryName() const;
-        X_PRIVATE_MEMBER xJavaField ExtractField(const xFieldInfo & FieldInfo);
-        X_PRIVATE_MEMBER xJavaMethod ExtractMethod(const xMethodInfo & MethodInfo);
-        X_PRIVATE_MEMBER std::string ConvertElementValueToString(const xElementValue & ElementValue);
+        X_PRIVATE_MEMBER std::string ConvertElementValueToString(const xElementValue & ElementValue) const;
+
+        X_PRIVATE_MEMBER xAnnotationDeclarations      ExtractAnnotations(const xAttributeMap & AttributeMap) const;
+        X_PRIVATE_MEMBER std::unique_ptr<xJavaField>  ExtractField(const xFieldInfo & FieldInfo);
+        X_PRIVATE_MEMBER std::unique_ptr<xJavaMethod> ExtractMethod(const xMethodInfo & MethodInfo);
 
         X_PRIVATE_MEMBER void DoExtend();
 
@@ -84,12 +86,15 @@ namespace jdc
         X_PRIVATE_MEMBER bool DumpSourceToFile(const std::string & RootDir) const;
         X_PRIVATE_MEMBER bool DumpSource(std::ofstream & OS, size_t Level) const;
         X_PRIVATE_MEMBER bool DumpPackageFragment(std::ostream & OS) const;
-        X_PRIVATE_MEMBER bool DumpSpacerLineFragment(std::ostream & OS) const;
-        X_PRIVATE_MEMBER bool ClassDeclarationBeginFragment(std::ostream & OS, size_t Level) const;
-        X_PRIVATE_MEMBER bool ClassDeclarationEndFragment(std::ostream & OS, size_t Level) const;
+
+        X_PRIVATE_MEMBER std::string DumpAnnotation(const xAnnotationDeclaration & AnnotationDeclaration) const;
+        X_PRIVATE_MEMBER bool DumpClassDeclarationBeginFragment(std::ostream & OS, size_t Level) const;
+        X_PRIVATE_MEMBER bool DumpClassDeclarationEndFragment(std::ostream & OS, size_t Level) const;
+        X_PRIVATE_MEMBER bool DumpClassFieldFragmeent(std::ostream & OS, size_t Level) const;
 
         X_PRIVATE_STATIC_CONSTEXPR const char * IndentString = "    ";
-        X_INLINE void DumpInsertLineIndent(std::ostream & OS, size_t Level) const { for (size_t i = 0 ; i < Level; ++i) { OS << IndentString; } }
+        X_INLINE std::ostream & DumpInsertLineIndent(std::ostream & OS, size_t Level) const { for (size_t i = 0 ; i < Level; ++i) { OS << IndentString; } return OS; }
+        X_INLINE std::ostream & DumpSpacerLineFragment(std::ostream & OS) const { OS << std::endl;  return OS; }
     };
 
 }

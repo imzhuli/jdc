@@ -8,6 +8,7 @@
 #include <xel/String.hpp>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 
 using namespace xel;
 
@@ -19,20 +20,26 @@ namespace jdc
         return ClassInfo.GetOutermostClassBinaryName();
     }
 
-    xJavaField xJavaClass::ExtractField(const xFieldInfo & FieldInfo)
+    std::unique_ptr<xJavaField> xJavaClass::ExtractField(const xFieldInfo & FieldInfo)
     {
-        auto Field = xJavaField();
-        Field.ClassInfoPtr = &ClassInfo;
+        auto FieldUPtr = std::make_unique<xJavaField>();
+        auto & Field = *FieldUPtr;
+        Field.JavaClassPtr = this;
         Field.FieldInfoPtr = &FieldInfo;
+        Field.Name = ClassInfo.GetConstantUtf8(FieldInfo.NameIndex);
+        Field.UnfixedTypeBinaryName = ConvertTypeDescriptorToBinaryName(ClassInfo.GetConstantUtf8(FieldInfo.DescriptorIndex));
+        Field.FixedTypeCodeName = JavaSpacePtr->GetFixedClassCodeName(Field.UnfixedTypeBinaryName);
 
-        return Field;
+        Field.DoExtend();
+        return FieldUPtr;
     }
 
-    xJavaMethod xJavaClass::ExtractMethod(const xMethodInfo & MethodInfo)
+    std::unique_ptr<xJavaMethod> xJavaClass::ExtractMethod(const xMethodInfo & MethodInfo)
     {
-        auto Method = xJavaMethod();
-        auto MethodName = ClassInfo.GetConstantUtf8(MethodInfo.NameIndex);
-        Method.ClassInfoPtr = &ClassInfo;
+        auto MethodUPtr = std::make_unique<xJavaMethod>();
+        auto & Method = *MethodUPtr;
+        auto & MethodName = ClassInfo.GetConstantUtf8(MethodInfo.NameIndex);
+        Method.JavaClassPtr = this;
         Method.MethodInfoPtr = &MethodInfo;
         Method.OriginalName = MethodName;
 
@@ -48,7 +55,7 @@ namespace jdc
         }
 
         Method.DoExtend();
-        return Method;
+        return MethodUPtr;
     }
 
     void xJavaClass::DoExtend()
@@ -137,7 +144,7 @@ namespace jdc
         return true;
     }
 
-    std::string xJavaClass::ConvertElementValueToString(const xElementValue & ElementValue)
+    std::string xJavaClass::ConvertElementValueToString(const xElementValue & ElementValue) const
     {
         switch (ElementValue.Tag) {
             case eElementValueTag::Byte: {
@@ -213,10 +220,11 @@ namespace jdc
         return {};
     }
 
-    bool xJavaClass::DoConvertAnnotations()
+    xAnnotationDeclarations xJavaClass::ExtractAnnotations(const xAttributeMap & AttributeMap) const
     {
-        auto VisibleAnnotationAttributes = (xAttributeRuntimeAnnotations*)Extend.AttributeMap[xAttributeNames::RuntimeVisibleAnnotations].get();
-        auto InvisibleAnnotationAttributes = (xAttributeRuntimeAnnotations*)Extend.AttributeMap[xAttributeNames::RuntimeInvisibleAnnotations].get();
+        auto AnnotationDeclarations = xAnnotationDeclarations();
+        auto VisibleAnnotationAttributes = (xAttributeRuntimeAnnotations*)GetAttribute(AttributeMap, xAttributeNames::RuntimeVisibleAnnotations);
+        auto InvisibleAnnotationAttributes = (xAttributeRuntimeAnnotations*)GetAttribute(AttributeMap, xAttributeNames::RuntimeInvisibleAnnotations);
 
         if (VisibleAnnotationAttributes) {
             for (auto & AA : VisibleAnnotationAttributes->Annotations) {
@@ -231,7 +239,7 @@ namespace jdc
                     EVStringPair.ElementValueString = ConvertElementValueToString(*EVPair.ElementValueUPtr);
                     AD.ElementValueStringPairs.push_back(EVStringPair);
                 }
-                Converted.AnnotaionDeclarations.push_back(AD);
+                AnnotationDeclarations.push_back(AD);
             }
         }
 
@@ -242,7 +250,7 @@ namespace jdc
 
                 auto AD = xAnnotationDeclaration();
                 AD.TypeName = FixedAnnotationCodeName;
-                Converted.AnnotaionDeclarations.push_back(AD);
+                AnnotationDeclarations.push_back(AD);
                 for (auto & EVPair : AA->ElementValuePairs) {
                     auto EVStringPair = xElementValueStringPair();
                     EVStringPair.ElementName = ClassInfo.GetConstantUtf8(EVPair.ElementNameIndex);
@@ -251,7 +259,7 @@ namespace jdc
                 }
 
                 bool Replace = false;
-                for(auto & Prio : Converted.AnnotaionDeclarations) { // if runtime invisible annotation share name with runtime visible, overwrite it:
+                for(auto & Prio : AnnotationDeclarations) { // if runtime invisible annotation share name with runtime visible, overwrite it:
                     if (Prio.TypeName == AD.TypeName) {
                         Prio = std::move(AD);
                         Replace = true;
@@ -259,21 +267,32 @@ namespace jdc
                     }
                 }
                 if (!Replace) {
-                    Converted.AnnotaionDeclarations.push_back(AD);
+                    AnnotationDeclarations.push_back(AD);
                 }
             }
         }
+        return AnnotationDeclarations;
+    }
 
+    bool xJavaClass::DoConvertAnnotations()
+    {
+        Converted.AnnotationDeclarations = ExtractAnnotations(Extend.AttributeMap);
         return true;
     }
 
     bool xJavaClass::DoConvertFields()
     {
+        for (auto & FieldUPtr : Extend.Fields) {
+            FieldUPtr->DoConvert();
+        }
         return true;
     }
 
     bool xJavaClass::DoConvertMethods()
     {
+        for (auto & MethodUPtr : Extend.Methods) {
+            MethodUPtr->DoConvert();
+        }
         return true;
     }
 
@@ -306,13 +325,18 @@ namespace jdc
         }
 
         if (!IsSynthetic()) {
-            ClassDeclarationBeginFragment(OS, Level);
+            DumpClassDeclarationBeginFragment(OS, Level);
 
+            // TODO: fields:
+            DumpClassFieldFragmeent(OS, Level);
+
+
+            // Inner class iteration
             for (auto & InnerClassPtr : Extend.DirectInnerClasses) {
                 InnerClassPtr->DumpSource(OS, Level + 1);
             }
 
-            ClassDeclarationEndFragment(OS, Level);
+            DumpClassDeclarationEndFragment(OS, Level);
         }
         return true;
     }
@@ -323,30 +347,24 @@ namespace jdc
         return true;
     }
 
-    bool xJavaClass::DumpSpacerLineFragment(std::ostream & OS) const
+    std::string xJavaClass::DumpAnnotation(const xAnnotationDeclaration & AnnotationDeclaration) const
     {
-        OS << std::endl;
-        return true;
+        std::ostringstream OS;
+        OS << '@' << AnnotationDeclaration.TypeName;
+        if (AnnotationDeclaration.ElementValueStringPairs.size()) {
+            std::vector<std::string> Params;
+            for (auto & EVP : AnnotationDeclaration.ElementValueStringPairs) {
+                Params.push_back(EVP.ElementName + '=' + EVP.ElementValueString);
+            }
+            OS << "(" << JoinStr(Params, ',') << ")";
+        }
+        return OS.str();
     }
 
-    bool xJavaClass::ClassDeclarationBeginFragment(std::ostream & OS, size_t Level) const
+    bool xJavaClass::DumpClassDeclarationBeginFragment(std::ostream & OS, size_t Level) const
     {
-        // TODO: Annotation:
-        for (auto & AD : Converted.AnnotaionDeclarations)
-        {
-            DumpInsertLineIndent(OS, Level);
-            // Annotation:
-            OS << '@' << AD.TypeName;
-
-            if (AD.ElementValueStringPairs.size()) {
-                std::vector<std::string> Params;
-                for (auto & EVP : AD.ElementValueStringPairs) {
-                    Params.push_back(EVP.ElementName + '=' + EVP.ElementValueString);
-                }
-                OS << "(" << JoinStr(Params, ',') << ")";
-            }
-            OS << std::endl;
-            // values
+        for (auto & AD : Converted.AnnotationDeclarations) {
+            DumpInsertLineIndent(OS, Level) << DumpAnnotation(AD) << std::endl;
         }
 
         // class
@@ -438,23 +456,48 @@ namespace jdc
             OS << "class " << Converted.ClassName << std::endl;
 
             if (Converted.SuperClassName.size()) {
-                DumpInsertLineIndent(OS, Level + 1);
-                OS << "extends " << Converted.SuperClassName << std::endl;
+                DumpInsertLineIndent(OS, Level + 1) << "extends " << Converted.SuperClassName << std::endl;
             }
 
             if (Converted.InterfaceNames.size()) {
                 auto ImplementsString = JoinStr(Converted.InterfaceNames, ", ");
-                DumpInsertLineIndent(OS, Level + 1);
-                OS << "implements " << ImplementsString << std::endl;
+                DumpInsertLineIndent(OS, Level + 1) << "implements " << ImplementsString << std::endl;
             }
         }
 
-        DumpInsertLineIndent(OS, Level);
-        OS << '{' << std::endl;
+        DumpInsertLineIndent(OS, Level) << '{' << std::endl;
         return true;
     }
 
-    bool xJavaClass::ClassDeclarationEndFragment(std::ostream & OS, size_t Level) const
+    bool xJavaClass::DumpClassFieldFragmeent(std::ostream & OS, size_t Level) const
+    {
+        auto Indent = Level + 1;
+        for (auto & FieldUPtr : Extend.Fields) {
+            auto & Field = *FieldUPtr;
+            auto & FieldInfo = *Field.FieldInfoPtr;
+            if (FieldInfo.AccessFlags & ACC_SYNTHETIC) {
+                continue;
+            }
+
+            // TODO : annotations
+            // for (auto & AD : Converted.AnnotationDeclarations)
+            // {
+            //     DumpInsertLineIndent(OS, Level) << ;
+            // }
+
+
+
+            DumpInsertLineIndent(OS, Indent);
+            // TODO: Generate field declaration
+
+            DumpInsertLineIndent(OS, Indent);
+            DumpSpacerLineFragment(OS);
+        }
+
+        return true;
+    }
+
+    bool xJavaClass::DumpClassDeclarationEndFragment(std::ostream & OS, size_t Level) const
     {
         DumpInsertLineIndent(OS, Level);
         OS << '}' << std::endl;

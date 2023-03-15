@@ -105,6 +105,7 @@ namespace jdc
         assert(C);
         while(C == '[') {
             ++ArraySize;
+            C = (char)Reader.R();
         }
 
         auto BaseTypeName = std::string{};
@@ -160,8 +161,7 @@ namespace jdc
             }
         }
         while(ArraySize--) {
-            BaseTypeName.push_back('[');
-            BaseTypeName.push_back(']');
+            BaseTypeName.append("[]");
         }
         return BaseTypeName;
     }
