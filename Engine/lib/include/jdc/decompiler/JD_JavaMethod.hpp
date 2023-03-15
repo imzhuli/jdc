@@ -16,7 +16,7 @@ namespace jdc
         const xJavaClass *    JavaClassPtr;
         const xMethodInfo *   MethodInfoPtr;
         std::string           OriginalName;
-        std::string           Identifier;
+        std::string           FixedName;
 
         struct {
             xAttributeMap                 AttributeMap;

@@ -15,7 +15,7 @@ namespace jdc
         virtual const std::string & GetFixedCodeName()              const { return _FixedCodeName; }
         virtual const std::string & GetSimpleBinaryName()           const { return _SimpleBinaryName; }
         virtual const std::string & GetSimpleCodeName()             const { return _SimpleCodeName; }
-        virtual const std::string & GetInnermostCodeName()          const { return _InnermostName; }
+        virtual const std::string & GetInnermostName()              const { return _InnermostName; }
         virtual const std::string & GetSourceFilename()             const { return _SourceFilename.empty() ? _InnermostName : _SourceFilename; }
 
         virtual bool               IsPrimitiveType()       const { return false; }

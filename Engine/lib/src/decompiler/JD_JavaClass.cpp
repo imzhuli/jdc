@@ -45,13 +45,13 @@ namespace jdc
 
         // build method identifier:
         if (MethodName == "<clinit>") {
-            Method.Identifier = "static";
+            Method.FixedName = "static";
         }
         else if (MethodName == "<init>") {
-            Method.Identifier = _InnermostName;
+            Method.FixedName = _InnermostName;
         }
         else {
-            Method.Identifier = MethodName;
+            Method.FixedName = MethodName;
         }
 
         Method.DoExtend();
@@ -327,13 +327,16 @@ namespace jdc
         if (!IsSynthetic()) {
             DumpClassDeclarationBeginFragment(OS, Level);
 
-            // TODO: fields:
-            DumpClassFieldFragmeent(OS, Level);
+            auto SubLevel = Level + 1;
+            DumpClassFieldFragmeent(OS, SubLevel);
+            DumpSpacerLineFragment(OS);
 
+            DumpClassMethodFragmeent(OS, SubLevel);
+            DumpSpacerLineFragment(OS);
 
             // Inner class iteration
             for (auto & InnerClassPtr : Extend.DirectInnerClasses) {
-                InnerClassPtr->DumpSource(OS, Level + 1);
+                InnerClassPtr->DumpSource(OS, SubLevel);
             }
 
             DumpClassDeclarationEndFragment(OS, Level);
@@ -354,7 +357,11 @@ namespace jdc
         if (AnnotationDeclaration.ElementValueStringPairs.size()) {
             std::vector<std::string> Params;
             for (auto & EVP : AnnotationDeclaration.ElementValueStringPairs) {
-                Params.push_back(EVP.ElementName + '=' + EVP.ElementValueString);
+                if (EVP.ElementName == "value") {
+                    Params.push_back(EVP.ElementValueString);
+                } else {
+                    Params.push_back(EVP.ElementName + '=' + EVP.ElementValueString);
+                }
             }
             OS << "(" << JoinStr(Params, ',') << ")";
         }
@@ -471,7 +478,6 @@ namespace jdc
 
     bool xJavaClass::DumpClassFieldFragmeent(std::ostream & OS, size_t Level) const
     {
-        auto Indent = Level + 1;
         for (auto & FieldUPtr : Extend.Fields) {
             auto & Field = *FieldUPtr;
             auto & FieldInfo = *Field.FieldInfoPtr;
@@ -479,19 +485,93 @@ namespace jdc
                 continue;
             }
 
-            // TODO : annotations
-            // for (auto & AD : Converted.AnnotationDeclarations)
-            // {
-            //     DumpInsertLineIndent(OS, Level) << ;
-            // }
+            // annotations
+            for (auto & AD : Field.Converted.AnnotationDeclarations) {
+                DumpInsertLineIndent(OS, Level) << DumpAnnotation(AD) << std::endl;
+            }
 
-
-
-            DumpInsertLineIndent(OS, Indent);
+            auto FieldDeclaration = std::string();
             // TODO: Generate field declaration
 
-            DumpInsertLineIndent(OS, Indent);
-            DumpSpacerLineFragment(OS);
+            std::vector<std::string> Qualifiers;
+            if (FieldInfo.AccessFlags & ACC_PUBLIC) {
+                Qualifiers.push_back("public");
+            }
+            if (FieldInfo.AccessFlags & ACC_PRIVATE) {
+                Qualifiers.push_back("private");
+            }
+            if (FieldInfo.AccessFlags & ACC_PROTECTED) {
+                Qualifiers.push_back("protected");
+            }
+            if (FieldInfo.AccessFlags & ACC_STATIC) {
+                Qualifiers.push_back("static");
+            }
+
+            if (!Qualifiers.empty()) {
+                FieldDeclaration += JoinStr(Qualifiers, ' ');
+            }
+
+            // TODO initializers:
+            FieldDeclaration += " " + Field.FixedTypeCodeName + " " + Field.Name;
+
+            DumpInsertLineIndent(OS, Level) << FieldDeclaration << ';' << std::endl;
+        }
+
+        return true;
+    }
+
+    bool xJavaClass::DumpClassMethodFragmeent(std::ostream & OS, size_t Level) const
+    {
+        for (auto & MethodUPtr : Extend.Methods) {
+            auto & Method = *MethodUPtr;
+            auto & MethodInfo = *Method.MethodInfoPtr;
+            if (MethodInfo.AccessFlags & ACC_SYNTHETIC) {
+                continue;
+            }
+
+            // annotations
+            for (auto & AD : Method.Converted.AnnotationDeclarations) {
+                DumpInsertLineIndent(OS, Level) << DumpAnnotation(AD) << std::endl;
+            }
+
+            auto MethodDeclaration = std::string();
+
+            // TODO identifier:
+            std::vector<std::string> Qualifiers;
+            if (MethodInfo.AccessFlags & ACC_PUBLIC) {
+                Qualifiers.push_back("public");
+            }
+            if (MethodInfo.AccessFlags & ACC_PRIVATE) {
+                Qualifiers.push_back("private");
+            }
+            if (MethodInfo.AccessFlags & ACC_PROTECTED) {
+                Qualifiers.push_back("protected");
+            }
+            if (MethodInfo.AccessFlags & ACC_STATIC) {
+                Qualifiers.push_back("static");
+            }
+
+            if (Method.FixedName == "static") {
+                MethodDeclaration = "static";
+            } else if (Method.FixedName == _InnermostName) {
+                if (!Qualifiers.empty()) {
+                    MethodDeclaration += JoinStr(Qualifiers, ' ');
+                }
+                // TODO: Generate method declaration with param names;
+                MethodDeclaration += " " + Method.FixedName + " ()";
+            }
+            else {
+                if (!Qualifiers.empty()) {
+                    MethodDeclaration += JoinStr(Qualifiers, ' ');
+                }
+                // TODO: Generate method declaration
+                MethodDeclaration += " void " + Method.FixedName + " ()";
+            }
+
+            DumpInsertLineIndent(OS, Level) << MethodDeclaration << " {" << std::endl;
+            // TODO: method body:
+
+            DumpInsertLineIndent(OS, Level) << '}' << std::endl;
         }
 
         return true;

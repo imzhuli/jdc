@@ -91,6 +91,7 @@ namespace jdc
         X_PRIVATE_MEMBER bool DumpClassDeclarationBeginFragment(std::ostream & OS, size_t Level) const;
         X_PRIVATE_MEMBER bool DumpClassDeclarationEndFragment(std::ostream & OS, size_t Level) const;
         X_PRIVATE_MEMBER bool DumpClassFieldFragmeent(std::ostream & OS, size_t Level) const;
+        X_PRIVATE_MEMBER bool DumpClassMethodFragmeent(std::ostream & OS, size_t Level) const;
 
         X_PRIVATE_STATIC_CONSTEXPR const char * IndentString = "    ";
         X_INLINE std::ostream & DumpInsertLineIndent(std::ostream & OS, size_t Level) const { for (size_t i = 0 ; i < Level; ++i) { OS << IndentString; } return OS; }

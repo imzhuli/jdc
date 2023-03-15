@@ -42,7 +42,7 @@ namespace jdc
         AddJavaObjectType("java/lang/Throwable");
 
         for (auto & Entry : JavaObjectTypeMap) {
-            X_DEBUG_PRINTF("Init object type: %s --> %s\n", Entry.second.GetInnermostCodeName().c_str(), Entry.first.c_str());
+            X_DEBUG_PRINTF("Init object type: %s --> %s\n", Entry.second.GetInnermostName().c_str(), Entry.first.c_str());
         }
 
         return true;
