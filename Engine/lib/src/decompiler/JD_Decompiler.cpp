@@ -87,6 +87,16 @@ namespace jdc
             ClassIdentity.push_back("interface");
             ClassIdentity.push_back(JavaClassPtr->GetSimpleCodeName());
             // TODO: super interfaces
+            auto SuperInterfaceCodeNames = std::vector<std::string>();
+            auto SuperInterfaceBinaryNames = JavaClassPtr->GetUnfixedInterfaceBinaryNames();
+            for (auto & SuperInterfaceName : SuperInterfaceBinaryNames) {
+                auto SuperClassPtr = JavaClassPtr->JavaSpacePtr->GetClass(SuperInterfaceName);
+                if (SuperClassPtr) {
+                    SuperInterfaceCodeNames.push_back(SuperClassPtr->GetFixedCodeName());
+                } else { // maybe from non-jre-lang libs
+                    SuperInterfaceCodeNames.push_back(ConvertBinaryNameToCodeName(SuperInterfaceName));
+                }
+            }
         } else {
             ClassIdentity.push_back("class");
             ClassIdentity.push_back(JavaClassPtr->GetSimpleCodeName());

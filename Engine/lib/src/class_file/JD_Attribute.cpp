@@ -6,6 +6,14 @@ using namespace xel;
 
 namespace jdc
 {
+
+    bool xAttributeAnnotationDefault::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
+    {
+        auto Reader = xStreamReader(AttributeBinary.data());
+        ElementValueUPtr = LoadElementValue(Reader);
+        return true;
+    }
+
     bool xAttributeBootstrapMethods::Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr)
     {
         auto Reader = xStreamReader(AttributeBinary.data());
@@ -311,8 +319,10 @@ namespace jdc
             X_DEBUG_PRINTF("ExtractAttribute: %s\n", Name.c_str());
 
             if (Name == xAttributeNames::AnnotationDefault) {
-                X_DEBUG_PRINTF("Unimplemented attribute reached: %s\n", Name.c_str());
-                Fatal("Not implemented");
+                auto AttributeUPtr = std::make_unique<xAttributeAnnotationDefault>();
+                if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {
+                    Collection.insert_or_assign(Name, std::move(AttributeUPtr));
+                }
             }
             else if (Name == xAttributeNames::BootstrapMethods) {
                 auto AttributeUPtr = std::make_unique<xAttributeBootstrapMethods>();

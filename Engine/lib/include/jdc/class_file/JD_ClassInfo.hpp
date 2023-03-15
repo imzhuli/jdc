@@ -25,6 +25,7 @@ namespace jdc
         std::vector<xMethodInfo>           Methods;
         std::vector<xAttributeInfo>        Attributes;
 
+        X_INLINE const xConstantInfo & GetConstantInfo(size_t Index) const { return ConstantPool[Index]; }
         X_GAME_API_MEMBER const std::string & GetConstantUtf8(size_t Index) const;
         X_GAME_API_MEMBER const std::string & GetConstantString(size_t Index) const;
         X_GAME_API_MEMBER const std::string & GetConstantClassBinaryName(size_t Index) const;

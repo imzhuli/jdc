@@ -40,14 +40,14 @@ namespace jdc
         int32_t Value;
     };
 
-    struct xConstantFloatInfo
-    {
-        float Value;
-    };
-
     struct xConstantLongInfo
     {
         int64_t Value;
+    };
+
+    struct xConstantFloatInfo
+    {
+        float Value;
     };
 
     struct xConstantDoubleInfo
@@ -109,8 +109,8 @@ namespace jdc
             xConstantMethodRefInfo            MethodRef;
             xConstantInterfaceMethodRefInfo   InterfaceMethodRef;
             xConstantIntegerInfo              Integer;
-            xConstantFloatInfo                Float;
             xConstantLongInfo                 Long;
+            xConstantFloatInfo                Float;
             xConstantDoubleInfo               Double;
             xConstantNameAndTypeInfo          NameAndType;
             xConstantUtf8Info                 Utf8;
@@ -120,7 +120,7 @@ namespace jdc
             xConstantInvokeDynamicInfo        InvokeDynamic;
             xConstantModuleInfo               Module;
             xConstantPackageInfo              Package;
-        } Info;
+        } Details;
 
         xConstantInfo() = default;
         xConstantInfo(const xConstantInfo &Other);

@@ -8,7 +8,7 @@ namespace jdc
     {
         switch(Other.Tag) {
             case eConstantTag::Utf8: {
-                auto & Source = Other.Info.Utf8;
+                auto & Source = Other.Details.Utf8;
                 SetUtf8(Source.DataPtr->data(), Source.DataPtr->size());
                 Tag = Other.Tag;
                 return;
@@ -18,17 +18,17 @@ namespace jdc
             }
         }
         Tag = Other.Tag;
-        memcpy(&Info, &Other.Info, sizeof(Info));
+        memcpy(&Details, &Other.Details, sizeof(Details));
     }
 
     xConstantInfo::xConstantInfo(xConstantInfo && Other)
     {
         Tag = Other.Tag;
-        memcpy(&Info, &Other.Info, sizeof(Info));
+        memcpy(&Details, &Other.Details, sizeof(Details));
         switch(Other.Tag) {
             case eConstantTag::Utf8: {
                 Other.Tag = eConstantTag::Unspecified;
-                Other.Info.Utf8.DataPtr = nullptr;
+                Other.Details.Utf8.DataPtr = nullptr;
                 return;
             }
             default: {
@@ -46,14 +46,14 @@ namespace jdc
     {
         Clear();
         Tag = eConstantTag::Utf8;
-        Info.Utf8.DataPtr = new std::string(DataPtr, Length);
+        Details.Utf8.DataPtr = new std::string(DataPtr, Length);
     }
 
     void xConstantInfo::Clear()
     {
         switch(Tag) {
             case eConstantTag::Utf8: {
-                delete Info.Utf8.DataPtr;
+                delete Details.Utf8.DataPtr;
                 break;
             }
             default: {

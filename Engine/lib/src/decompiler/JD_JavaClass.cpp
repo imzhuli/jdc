@@ -135,7 +135,60 @@ namespace jdc
 
     std::string xJavaClass::ConvertElementValueToString(const xElementValue & ElementValue)
     {
+        switch (ElementValue.Tag) {
+            case eElementValueTag::Byte: {
+                auto & ConstValue = ClassInfo.GetConstantInfo(ElementValue.ConstantValueIndex).Details.Integer;
+                return "(byte)" + ConstValue.Value ? "true" : "false";
+            }
+            case eElementValueTag::Short: {
+                auto & ConstValue = ClassInfo.GetConstantInfo(ElementValue.ConstantValueIndex).Details.Integer;
+                return "(short)" + std::to_string(ConstValue.Value);
+            }
+            case eElementValueTag::Int: {
+                auto & ConstValue = ClassInfo.GetConstantInfo(ElementValue.ConstantValueIndex).Details.Integer;
+                return "(int)" + std::to_string(ConstValue.Value);
+            }
+            case eElementValueTag::Long: {
+                auto & ConstValue = ClassInfo.GetConstantInfo(ElementValue.ConstantValueIndex).Details.Long;
+                return "(long)" + std::to_string(ConstValue.Value);
+            }
+            case eElementValueTag::Char: {
+                auto & ConstValue = ClassInfo.GetConstantInfo(ElementValue.ConstantValueIndex).Details.Integer;
+                return "(char)" + std::to_string(ConstValue.Value);
+            }
+            case eElementValueTag::Float: {
+                auto & ConstValue = ClassInfo.GetConstantInfo(ElementValue.ConstantValueIndex).Details.Float;
+                return "(float)" + std::to_string(ConstValue.Value);
+            }
+            case eElementValueTag::Double: {
+                auto & ConstValue = ClassInfo.GetConstantInfo(ElementValue.ConstantValueIndex).Details.Double;
+                return "(double)" + std::to_string(ConstValue.Value);
+            }
+            case eElementValueTag::Boolean: {
+                auto & ConstValue = ClassInfo.GetConstantInfo(ElementValue.ConstantValueIndex).Details.Double;
+                return ConstValue.Value ? "true" : "false";
+                break;
+            }
+            case eElementValueTag::String: {
+                auto & ConstValue = ClassInfo.GetConstantUtf8(ElementValue.ConstantValueIndex);
+                return '"' + ConstValue + '"';
+            }
 
+            // special
+            case eElementValueTag::Enum: {
+                X_DEBUG_PRINTF("Converting Enum element: \n");
+                break;
+            }
+            case eElementValueTag::Array: {
+                break;
+            }
+            default: {
+                X_DEBUG_PRINTF("Non-applicable tag of element: %u:%c\n", (unsigned int)ElementValue.Tag, (char)ElementValue.Tag);
+                Fatal("Non-applicable tag of element");
+                break;
+            }
+        }
+        return {};
     }
 
     bool xJavaClass::DoConvertAnnotations()
@@ -153,7 +206,7 @@ namespace jdc
                 for (auto & EVPair : AA->ElementValuePairs) {
                     auto EVStringPair = xElementValueStringPair();
                     EVStringPair.ElementName = ClassInfo.GetConstantUtf8(EVPair.ElementNameIndex);
-                    // TODO: convert value string
+                    EVStringPair.ElementValueString = ConvertElementValueToString(*EVPair.ElementValueUPtr);
                     AD.ElementValueStringPairs.push_back(EVStringPair);
                 }
                 Converted.AnnotaionDeclarations.push_back(AD);
@@ -250,7 +303,7 @@ namespace jdc
                 for (auto & EVP : AD.ElementValueStringPairs) {
                     Params.push_back(EVP.ElementName + '=' + EVP.ElementValueString);
                 }
-                OS << "{ " << JoinStr(Params, ',') << " }";
+                OS << "(" << JoinStr(Params, ',') << ")";
             }
             OS << std::endl;
             // values
@@ -284,14 +337,37 @@ namespace jdc
                 OS << QualifierString << ' ';
             }
             OS << "enum " << Converted.ClassName << std::endl;
-        } else if (IsAnnotation()) {
-            std::vector<std::string> Qualifiers;
 
-            (void)Qualifiers;
         } else if (IsInterface()) {
             std::vector<std::string> Qualifiers;
+            if (Converted.ClassAccessFlags & ACC_PUBLIC) {
+                Qualifiers.push_back("public");
+            }
+            if (Converted.ClassAccessFlags & ACC_PRIVATE) {
+                Qualifiers.push_back("private");
+            }
+            if (Converted.ClassAccessFlags & ACC_PROTECTED) {
+                Qualifiers.push_back("protected");
+            }
+            if (Converted.ClassAccessFlags & ACC_STATIC) {
+                Qualifiers.push_back("static");
+            }
 
-            (void)Qualifiers;
+            DumpInsertLineIndent(OS, Level);
+            auto QualifierString = JoinStr(Qualifiers, ' ');
+            if (!QualifierString.empty()) {
+                OS << QualifierString << ' ';
+            }
+            if (IsAnnotation()) {
+                OS << "@interface " << Converted.ClassName << std::endl;
+            } else {
+                OS << "interface " << Converted.ClassName << std::endl;
+            }
+            if (Converted.SuperClassName.size()) {
+                DumpInsertLineIndent(OS, Level + 1);
+                OS << "extends " << Converted.SuperClassName << std::endl;
+            }
+
         } else {
             std::vector<std::string> Qualifiers;
             if (Converted.ClassAccessFlags & ACC_PUBLIC) {

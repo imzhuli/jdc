@@ -51,6 +51,13 @@ namespace jdc
 
     struct xAttributeBase : private xel::xAbstract {};
 
+    struct xAttributeAnnotationDefault : public xAttributeBase
+    {
+        std::unique_ptr<xElementValue> ElementValueUPtr;
+
+        X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
+    };
+
     struct xAttributeBootstrapMethods : public xAttributeBase
     {
         struct xBootstrapMethod

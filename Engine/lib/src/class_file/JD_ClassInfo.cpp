@@ -91,21 +91,21 @@ namespace jdc
     {
         auto & Item = ConstantPool[Index];
         assert(Item.Tag == eConstantTag::Utf8);
-        return *Item.Info.Utf8.DataPtr;
+        return *Item.Details.Utf8.DataPtr;
     }
 
     const std::string & xClassInfo::GetConstantString(size_t Index) const
     {
         auto & Item = ConstantPool[Index];
         assert(Item.Tag == eConstantTag::String);
-        return GetConstantUtf8(Item.Info.String.StringIndex);
+        return GetConstantUtf8(Item.Details.String.StringIndex);
     }
 
     const std::string & xClassInfo::GetConstantClassBinaryName(size_t Index) const
     {
         auto & Item = ConstantPool[Index];
         assert(Item.Tag == eConstantTag::Class);
-        return GetConstantUtf8(Item.Info.Class.BinaryNameIndex);
+        return GetConstantUtf8(Item.Details.Class.BinaryNameIndex);
     }
 
     std::string xClassInfo::GetOutermostClassBinaryName() const
@@ -126,7 +126,7 @@ namespace jdc
         auto Tag = eConstantTag(Reader.R1());
         switch(Tag) {
             case eConstantTag::Class: {
-                auto & Info = TagInfo.Info.Class;
+                auto & Info = TagInfo.Details.Class;
                 if ((RemainSize -= 2) < 0) {
                     return false;
                 }
@@ -134,7 +134,7 @@ namespace jdc
                 break;
             }
             case eConstantTag::FieldRef: {
-                auto & Info = TagInfo.Info.FieldRef;
+                auto & Info = TagInfo.Details.FieldRef;
                 if ((RemainSize -= 4) < 0) {
                     return false;
                 }
@@ -143,7 +143,7 @@ namespace jdc
                 break;
             }
             case eConstantTag::String: {
-                auto & Info = TagInfo.Info.String;
+                auto & Info = TagInfo.Details.String;
                 if ((RemainSize -= 2) < 0) {
                     return false;
                 }
@@ -151,7 +151,7 @@ namespace jdc
                 break;
             }
             case eConstantTag::MethodRef: {
-                auto & Info = TagInfo.Info.MethodRef;
+                auto & Info = TagInfo.Details.MethodRef;
                 if ((RemainSize -= 4) < 0) {
                     return false;
                 }
@@ -160,7 +160,7 @@ namespace jdc
                 break;
             }
             case eConstantTag::InterfaceMethodRef: {
-                auto & Info = TagInfo.Info.InterfaceMethodRef;
+                auto & Info = TagInfo.Details.InterfaceMethodRef;
                 if ((RemainSize -= 4) < 0) {
                     return false;
                 }
@@ -169,7 +169,7 @@ namespace jdc
                 break;
             }
             case eConstantTag::Integer: {
-                auto & Info = TagInfo.Info.Integer;
+                auto & Info = TagInfo.Details.Integer;
                 if ((RemainSize -= 4) < 0) {
                     return false;
                 }
@@ -177,7 +177,7 @@ namespace jdc
                 break;
             }
             case eConstantTag::Float: {
-                auto & Info = TagInfo.Info.Float;
+                auto & Info = TagInfo.Details.Float;
                 if ((RemainSize -= 4) < 0) {
                     return false;
                 }
@@ -185,7 +185,7 @@ namespace jdc
                 break;
             }
             case eConstantTag::Long: {
-                auto & Info = TagInfo.Info.Long;
+                auto & Info = TagInfo.Details.Long;
                 if ((RemainSize -= 8) < 0) {
                     return false;
                 }
@@ -193,7 +193,7 @@ namespace jdc
                 break;
             }
             case eConstantTag::Double: {
-                auto & Info = TagInfo.Info.Double;
+                auto & Info = TagInfo.Details.Double;
                 if ((RemainSize -= 8) < 0) {
                     return false;
                 }
@@ -201,7 +201,7 @@ namespace jdc
                 break;
             }
             case eConstantTag::NameAndType: {
-                auto & Info = TagInfo.Info.NameAndType;
+                auto & Info = TagInfo.Details.NameAndType;
                 if ((RemainSize -= 4) < 0) {
                     return false;
                 }
@@ -222,7 +222,7 @@ namespace jdc
                 return true;
             }
             case eConstantTag::MethodHandle: {
-                auto & Info = TagInfo.Info.MethodHandle;
+                auto & Info = TagInfo.Details.MethodHandle;
                 if ((RemainSize -= 3) < 0) {
                     return false;
                 }
@@ -231,7 +231,7 @@ namespace jdc
                 break;
             }
             case eConstantTag::MethodType: {
-                auto & Info = TagInfo.Info.MethodType;
+                auto & Info = TagInfo.Details.MethodType;
                 if ((RemainSize -= 2) < 0) {
                     return false;
                 }
@@ -239,7 +239,7 @@ namespace jdc
                 break;
             }
             case eConstantTag::Dynamic: {
-                auto & Info = TagInfo.Info.Dynamic;
+                auto & Info = TagInfo.Details.Dynamic;
                 if ((RemainSize -= 4) < 0) {
                     return false;
                 }
@@ -248,7 +248,7 @@ namespace jdc
                 break;
             }
             case eConstantTag::InvokeDynamic: {
-                auto & Info = TagInfo.Info.InvokeDynamic;
+                auto & Info = TagInfo.Details.InvokeDynamic;
                 if ((RemainSize -= 4) < 0) {
                     return false;
                 }
@@ -257,7 +257,7 @@ namespace jdc
                 break;
             }
             case eConstantTag::Module: {
-                auto & Info = TagInfo.Info.Module;
+                auto & Info = TagInfo.Details.Module;
                 if ((RemainSize -= 2) < 0) {
                     return false;
                 }
@@ -265,7 +265,7 @@ namespace jdc
                 break;
             }
             case eConstantTag::Package: {
-                auto & Info = TagInfo.Info.Package;
+                auto & Info = TagInfo.Details.Package;
                 if ((RemainSize -= 2) < 0) {
                     return false;
                 }
