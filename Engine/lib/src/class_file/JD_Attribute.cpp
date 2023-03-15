@@ -102,12 +102,6 @@ namespace jdc
             InnerClass.OuterClassInfoIndex = Reader.R2();
             InnerClass.InnerNameIndex = Reader.R2();
             InnerClass.InnerAccessFlags = Reader.R2();
-            // X_DEBUG_PRINTF("xInnerClasses: from:%s, Inner:%s, Outer:%s, InnerName:%s\n",
-            //     ClassInfoPtr->GetConstantClassBinaryName(ClassInfoPtr->ThisClass).c_str(),
-            //     ClassInfoPtr->GetConstantClassBinaryName(InnerClass.InnerClassInfoIndex).c_str(),
-            //     ClassInfoPtr->GetConstantClassBinaryName(InnerClass.OuterClassInfoIndex).c_str(),
-            //     ClassInfoPtr->GetConstantUtf8(InnerClass.InnerNameIndex).c_str()
-            // );
         }
         return true;
     }
@@ -262,8 +256,8 @@ namespace jdc
         }
 
         if (ElementValue.Tag == eElementValueTag::Enum) {
-            ElementValue.EnumConstantValue.TypeNameIndex = Reader.R2();
-            ElementValue.EnumConstantValue.NameIndex = Reader.R2();
+            ElementValue.EnumConstantValue.EnumNameIndex = Reader.R2();
+            ElementValue.EnumConstantValue.MemberNameIndex = Reader.R2();
             return ElementValueUPtr;
         }
 
@@ -298,9 +292,6 @@ namespace jdc
         auto & Annotation = *AnnotationUPtr;
 
         Annotation.TypeNameIndex = Reader.R2();
-
-        X_DEBUG_PRINTF("LoadingRuntimeAnnotation: TypeNameIndex=%u\n", (unsigned int)Annotation.TypeNameIndex);
-
         uint16_t ElementValuePairCount = Reader.R2();
         for (uint16_t i = 0 ; i < ElementValuePairCount ; ++i) {
             Annotation.ElementValuePairs.push_back(LoadElementValuePair(Reader));

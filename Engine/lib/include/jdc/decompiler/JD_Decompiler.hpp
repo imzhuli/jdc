@@ -19,7 +19,6 @@ namespace jdc
 
     private:
         X_PRIVATE_MEMBER bool MakePackagePaths();
-        X_PRIVATE_MEMBER bool MakeClassJavaFiles();
 
     private:
         xJdcConfig                    _Config;

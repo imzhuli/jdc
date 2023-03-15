@@ -75,12 +75,16 @@ namespace jdc
         auto AttributeInnerClassesPtr = (xAttributeInnerClasses*)GetAttribute(Extend.AttributeMap, xAttributeNames::InnerClasses);
         if (AttributeInnerClassesPtr) {
             for (auto & InnerClass : AttributeInnerClassesPtr->InnerClasses) {
+                auto & InnerClassBinaryName = ClassInfo.GetConstantClassBinaryName(InnerClass.InnerClassInfoIndex);
+                if (!InnerClass.OuterClassInfoIndex) {
+                    // top-level class or maybe anonymouse class
+                    continue;
+                }
+
                 auto & OuterClassBinaryName = ClassInfo.GetConstantClassBinaryName(InnerClass.OuterClassInfoIndex);
                 if (OuterClassBinaryName != _UnfixedBinaryName) {
                     continue;
                 }
-                auto & InnerClassBinaryName = ClassInfo.GetConstantClassBinaryName(InnerClass.InnerClassInfoIndex);
-                X_DEBUG_PRINTF("FoundInnerClass: %s, AccessFlags=0x%04x\n", InnerClassBinaryName.c_str(), InnerClass.InnerAccessFlags);
 
                 auto InnerClassPtr = JavaSpacePtr->GetClass(InnerClassBinaryName);
                 assert(InnerClassPtr);
@@ -177,10 +181,28 @@ namespace jdc
             // special
             case eElementValueTag::Enum: {
                 X_DEBUG_PRINTF("Converting Enum element: \n");
+                const auto & Name = ConvertTypeDescriptorToBinaryName(ClassInfo.GetConstantUtf8(ElementValue.EnumConstantValue.EnumNameIndex));
+                const auto & MemberName = ClassInfo.GetConstantUtf8(ElementValue.EnumConstantValue.MemberNameIndex);
+                return Name + '.' + MemberName;
+            }
+            case eElementValueTag::Class: {
+                X_DEBUG_PRINTF("Not implemented Converting Class element: \n");
+                Fatal("Not implemented");
+                break;
+            }
+            case eElementValueTag::Annotation: {
+                X_DEBUG_PRINTF("Not implemented Converting Annotation element: \n");
+                Fatal("Not implemented");
                 break;
             }
             case eElementValueTag::Array: {
-                break;
+                std::vector<std::string> SubObjectNames;
+                for (auto & Entry : ElementValue.ArrayValues) {
+                    auto ElementValuePtr = Entry.get();
+                    auto SubString = ConvertElementValueToString(*ElementValuePtr);
+                    SubObjectNames.push_back(SubString);
+                }
+                return '{' + JoinStr(SubObjectNames, ',') + '}';
             }
             default: {
                 X_DEBUG_PRINTF("Non-applicable tag of element: %u:%c\n", (unsigned int)ElementValue.Tag, (char)ElementValue.Tag);
@@ -221,6 +243,24 @@ namespace jdc
                 auto AD = xAnnotationDeclaration();
                 AD.TypeName = FixedAnnotationCodeName;
                 Converted.AnnotaionDeclarations.push_back(AD);
+                for (auto & EVPair : AA->ElementValuePairs) {
+                    auto EVStringPair = xElementValueStringPair();
+                    EVStringPair.ElementName = ClassInfo.GetConstantUtf8(EVPair.ElementNameIndex);
+                    EVStringPair.ElementValueString = ConvertElementValueToString(*EVPair.ElementValueUPtr);
+                    AD.ElementValueStringPairs.push_back(EVStringPair);
+                }
+
+                bool Replace = false;
+                for(auto & Prio : Converted.AnnotaionDeclarations) { // if runtime invisible annotation share name with runtime visible, overwrite it:
+                    if (Prio.TypeName == AD.TypeName) {
+                        Prio = std::move(AD);
+                        Replace = true;
+                        break;
+                    }
+                }
+                if (!Replace) {
+                    Converted.AnnotaionDeclarations.push_back(AD);
+                }
             }
         }
 
@@ -362,10 +402,11 @@ namespace jdc
                 OS << "@interface " << Converted.ClassName << std::endl;
             } else {
                 OS << "interface " << Converted.ClassName << std::endl;
-            }
-            if (Converted.SuperClassName.size()) {
-                DumpInsertLineIndent(OS, Level + 1);
-                OS << "extends " << Converted.SuperClassName << std::endl;
+                if (Converted.InterfaceNames.size()) {
+                    auto ImplementsString = JoinStr(Converted.InterfaceNames, ", ");
+                    DumpInsertLineIndent(OS, Level + 1);
+                    OS << "extends " << ImplementsString << std::endl;
+                }
             }
 
         } else {

@@ -21,8 +21,8 @@ namespace jdc
             uint16_t ConstantValueIndex;
             uint16_t ClassIndex;
             struct {
-                uint16_t TypeNameIndex;
-                uint16_t NameIndex;
+                uint16_t EnumNameIndex;
+                uint16_t MemberNameIndex;
             } EnumConstantValue;
         };
         std::unique_ptr<xAnnotation>                   AnnotationUPtr;
