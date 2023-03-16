@@ -628,24 +628,44 @@ namespace jdc
                 Qualifiers.push_back("static");
             }
 
-            if (Method.FixedName == "static") {
+            if (Method.OriginalName == "<clinit>"s) {
                 MethodDeclaration = "static";
-            } else if (Method.FixedName == _InnermostName) {
-                if (!Qualifiers.empty()) {
-                    MethodDeclaration += JoinStr(Qualifiers, ' ');
-                }
-                // TODO: Generate method declaration with param names;
-                MethodDeclaration += " " + Method.FixedName + " ()";
             }
             else {
-                if (!Qualifiers.empty()) {
-                    MethodDeclaration += JoinStr(Qualifiers, ' ');
+                if (Method.OriginalName != "<init>"s) {
+                    Qualifiers.push_back(Method.Converted.FixedReturnTypeCodeName);
                 }
-                // TODO: Generate method declaration
-                MethodDeclaration += " void " + Method.FixedName + " ()";
+                Qualifiers.push_back(Method.FixedName);
+                MethodDeclaration = JoinStr(Qualifiers, ' ');
             }
 
-            DumpInsertLineIndent(OS, Level) << MethodDeclaration << " {" << std::endl;
+            std::string ParameterString;
+            if (Method.Converted.FixedParameterTypeCodeNames.size()) {
+                if (Method.Converted.ParameterAnnotationDeclarations.size()) {
+                    size_t AnnotationIndex = 0;
+                    size_t ParameterIndex = Method.HasAnImplicitParameter() ? 1 : 0;
+                    std::vector<std::string> ParameterStrings;
+                    for (; ParameterIndex < Method.Converted.FixedParameterTypeCodeNames.size(); ++AnnotationIndex, ++ParameterIndex) {
+                        std::vector<std::string> Segments;
+                        for (auto & AD : Method.Converted.ParameterAnnotationDeclarations[AnnotationIndex]) {
+                            Segments.push_back(DumpAnnotation(AD));
+                        }
+                        Segments.push_back(Method.Converted.FixedParameterTypeCodeNames[ParameterIndex]);
+                        Segments.push_back("arg_" + std::to_string(ParameterIndex));
+                        ParameterStrings.push_back(JoinStr(Segments, ' '));
+                    }
+                    ParameterString = JoinStr(ParameterStrings, ", ");
+                } else {
+
+                    std::vector<std::string> Segments;
+                    for(size_t Index = Method.HasAnImplicitParameter() ? 1 : 0; Index < Method.Converted.FixedParameterTypeCodeNames.size(); ++Index) {
+                        Segments.push_back(Method.Converted.FixedParameterTypeCodeNames[Index] + " arg_"s + std::to_string(Index));
+                    }
+                    ParameterString = JoinStr(Segments, ", ");
+                }
+            }
+
+            DumpInsertLineIndent(OS, Level) << MethodDeclaration << '(' << ParameterString << ')' << " {" << std::endl;
             // TODO: method body:
 
             DumpInsertLineIndent(OS, Level) << '}' << std::endl;
