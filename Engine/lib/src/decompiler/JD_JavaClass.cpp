@@ -28,7 +28,6 @@ namespace jdc
         Field.FieldInfoPtr = &FieldInfo;
         Field.Name = ClassInfo.GetConstantUtf8(FieldInfo.NameIndex);
         Field.UnfixedTypeBinaryName = ConvertTypeDescriptorToBinaryName(ClassInfo.GetConstantUtf8(FieldInfo.DescriptorIndex));
-        Field.FixedTypeCodeName = JavaSpacePtr->GetFixedClassCodeName(Field.UnfixedTypeBinaryName);
         return FieldUPtr;
     }
 
@@ -585,11 +584,11 @@ namespace jdc
             }
 
             if (!Qualifiers.empty()) {
-                FieldDeclaration += JoinStr(Qualifiers, ' ');
+                FieldDeclaration += JoinStr(Qualifiers, ' ') + ' ';
             }
 
             // TODO initializers:
-            FieldDeclaration += " " + Field.FixedTypeCodeName + " " + Field.Name;
+            FieldDeclaration += Field.Converted.FixedTypeCodeName + " " + Field.Name;
 
             DumpInsertLineIndent(OS, Level) << FieldDeclaration << ';' << std::endl;
         }

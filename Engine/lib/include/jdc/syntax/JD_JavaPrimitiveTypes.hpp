@@ -1,3 +1,4 @@
+#pragma once
 #include "./JD_JavaType.hpp"
 #include <map>
 

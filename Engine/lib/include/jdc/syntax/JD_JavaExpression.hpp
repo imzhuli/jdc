@@ -1,3 +1,4 @@
+#pragma once
 #include "./_.hpp"
 #include "./JD_JavaType.hpp"
 #include <string>

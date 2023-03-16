@@ -14,6 +14,7 @@ namespace jdc
     X_PRIVATE std::string GetSimpleClassBinaryName(const std::string & BinaryName);
     X_PRIVATE std::string GetInnermostClassName(const std::string & AnyTypeOfClassName);
     X_PRIVATE std::string GetOutermostClassCodeName(const std::string & AnyTypeOfClassName);
+    X_PRIVATE const std::string & GetShorterCodeName(const std::string & FullCodeName);
 
     struct xMethodTypeNames {
         std::string              ReturnTypeBinaryName;
@@ -22,5 +23,6 @@ namespace jdc
 
     X_PRIVATE std::string ConvertTypeDescriptorToBinaryName(const std::string & Descriptor);
     X_PRIVATE xMethodTypeNames ConvertMethodDescriptorToBinaryNames(const std::string & Descriptor);
+
 
 }

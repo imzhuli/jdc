@@ -1,6 +1,8 @@
+#pragma once
 #include "./JD_JavaType.hpp"
 #include <string>
 #include <map>
+#include <memory>
 
 namespace jdc
 {
@@ -24,6 +26,7 @@ namespace jdc
 
     X_PRIVATE bool InitJavaObjectTypes();
     X_PRIVATE void CleanJavaObjectTypes();
-    X_PRIVATE const std::map<std::string, xJavaObjectType> & GetJavaObjectTypeMap();
+    X_PRIVATE const std::map<std::string, std::unique_ptr<xJavaObjectType>> & GetJavaObjectTypeMap();
+    X_PRIVATE const std::map<std::string, const xJavaObjectType *> & GetJavaObjectTypeCodeNameMap();
 
 }

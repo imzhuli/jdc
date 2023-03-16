@@ -197,5 +197,15 @@ namespace jdc
         return MethodTypeName;
     }
 
+    const std::string & GetShorterCodeName(const std::string & FullCodeName)
+    {
+        auto & Map = GetJavaObjectTypeCodeNameMap();
+        auto Iter = Map.find(FullCodeName);
+        if (Iter == Map.end()) {
+            return FullCodeName;
+        }
+        return Iter->second->GetSimpleCodeName();
+    }
+
 }
 

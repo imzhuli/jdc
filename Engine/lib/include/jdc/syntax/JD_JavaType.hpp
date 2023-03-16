@@ -37,6 +37,7 @@ namespace jdc
         std::string        _InnermostName;
         std::string        _SourceFilename;
         const iJavaType *  _OuterTypePtr = nullptr;
+
     };
 
 }

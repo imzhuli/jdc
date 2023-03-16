@@ -2,20 +2,23 @@
 
 namespace jdc
 {
-    static std::map<std::string, xJavaObjectType> JavaObjectTypeMap;
+    static std::map<std::string, std::unique_ptr<xJavaObjectType>> JavaObjectTypeMap;
+    static std::map<std::string, const xJavaObjectType *>          JavaObjectTypeCodeNameMap;
     static std::string DefaultBaseClassBinaryName = "java/lang/Object";
 
     void AddJavaObjectType(const char * BinaryName)
     {
-        auto Type = xJavaObjectType();
+        auto TypeUPtr = std::make_unique<xJavaObjectType>();
+        auto & Type = *TypeUPtr;
         Type._UnfixedBinaryName        = BinaryName;
         Type._FixedBinaryName          = Type._UnfixedBinaryName;
         Type._FixedCodeName            = ConvertBinaryNameToCodeName(BinaryName);
         Type._SimpleBinaryName         = GetInnermostClassName(BinaryName);
         Type._SimpleCodeName           = Type._SimpleBinaryName;
-        Type._InnermostName        = Type._SimpleBinaryName;
+        Type._InnermostName            = Type._SimpleBinaryName;
 
-        JavaObjectTypeMap.insert(std::make_pair(BinaryName, std::move(Type)));
+        JavaObjectTypeMap.insert(std::make_pair(BinaryName, std::move(TypeUPtr)));
+        JavaObjectTypeCodeNameMap.insert(std::make_pair(Type._FixedCodeName, &Type));
     }
 
     bool InitJavaObjectTypes()
@@ -42,7 +45,10 @@ namespace jdc
         AddJavaObjectType("java/lang/Throwable");
 
         for (auto & Entry : JavaObjectTypeMap) {
-            X_DEBUG_PRINTF("Init object type: %s --> %s\n", Entry.second.GetInnermostName().c_str(), Entry.first.c_str());
+            X_DEBUG_PRINTF("Init object type: %s --> %s\n", Entry.second->GetInnermostName().c_str(), Entry.first.c_str());
+        }
+        for (auto & Entry : JavaObjectTypeCodeNameMap) {
+            X_DEBUG_PRINTF("Init object type (code name): %s --> %s\n", Entry.second->GetSimpleCodeName().c_str(), Entry.first.c_str());
         }
 
         return true;
@@ -50,12 +56,8 @@ namespace jdc
 
     void CleanJavaObjectTypes()
     {
+        xel::Renew(JavaObjectTypeCodeNameMap);
         xel::Renew(JavaObjectTypeMap);
-    }
-
-    const std::map<std::string, xJavaObjectType> & GetJavaObjectTypeMap()
-    {
-        return JavaObjectTypeMap;
     }
 
     bool xJavaObjectType::IsDefaultAnnotationBase(iJavaType * JavaTypePtr)
@@ -80,6 +82,14 @@ namespace jdc
         return BinaryName == DefaultBaseClassBinaryName;
     }
 
+    const std::map<std::string, std::unique_ptr<xJavaObjectType>> & GetJavaObjectTypeMap()
+    {
+        return JavaObjectTypeMap;
+    }
 
+    const std::map<std::string, const xJavaObjectType *> & GetJavaObjectTypeCodeNameMap()
+    {
+        return JavaObjectTypeCodeNameMap;
+    }
 
 }

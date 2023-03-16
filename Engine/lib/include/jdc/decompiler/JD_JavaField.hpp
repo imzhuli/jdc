@@ -16,9 +16,9 @@ namespace jdc
         const xFieldInfo *           FieldInfoPtr;
         std::string                  Name;
         std::string                  UnfixedTypeBinaryName;
-        std::string                  FixedTypeCodeName;
 
         struct {
+            std::string              FixedTypeCodeName;
             xAttributeMap            AttributeMap;
             xAnnotationDeclarations  AnnotationDeclarations;
         } Converted;
