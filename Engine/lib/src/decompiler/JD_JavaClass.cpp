@@ -29,8 +29,6 @@ namespace jdc
         Field.Name = ClassInfo.GetConstantUtf8(FieldInfo.NameIndex);
         Field.UnfixedTypeBinaryName = ConvertTypeDescriptorToBinaryName(ClassInfo.GetConstantUtf8(FieldInfo.DescriptorIndex));
         Field.FixedTypeCodeName = JavaSpacePtr->GetFixedClassCodeName(Field.UnfixedTypeBinaryName);
-
-        Field.DoExtend();
         return FieldUPtr;
     }
 
@@ -53,8 +51,6 @@ namespace jdc
         else {
             Method.FixedName = MethodName;
         }
-
-        Method.DoExtend();
         return MethodUPtr;
     }
 
@@ -272,6 +268,87 @@ namespace jdc
             }
         }
         return AnnotationDeclarations;
+    }
+
+
+    std::vector<xAnnotationDeclarations> xJavaClass::ExtractParameterAnnotations(const xAttributeMap & AttributeMap) const
+    {
+        auto VisibleParameterAnnotationAttributes = (xAttributeRuntimeParameterAnnotations*)GetAttribute(AttributeMap, xAttributeNames::RuntimeVisibleParameterAnnotations);
+        auto InvisibleParameterAnnotationAttributes = (xAttributeRuntimeParameterAnnotations*)GetAttribute(AttributeMap, xAttributeNames::RuntimeInvisibleParameterAnnotations);
+
+        size_t VisibleTotal = 0;
+        if (VisibleParameterAnnotationAttributes) {
+            VisibleTotal = VisibleParameterAnnotationAttributes->ParameterAnnotations.size();
+        }
+        size_t InvisibleTotal = 0;
+        if (InvisibleParameterAnnotationAttributes) {
+            InvisibleTotal = InvisibleParameterAnnotationAttributes->ParameterAnnotations.size();
+        }
+        if (!VisibleTotal && InvisibleTotal) {
+            return {};
+        }
+        if (VisibleTotal && InvisibleTotal) {
+            assert(VisibleTotal == InvisibleTotal);
+        }
+
+        size_t Total = VisibleTotal | InvisibleTotal;
+        auto ParameterAnnotationDeclarations = std::vector<xAnnotationDeclarations>(Total);
+        if (VisibleParameterAnnotationAttributes) {
+            for (size_t Index = 0 ; Index < Total ; ++Index) {
+                auto & AnnotationDeclarations = ParameterAnnotationDeclarations[Index];
+                auto & VisibleAnnotationAttributes = VisibleParameterAnnotationAttributes->ParameterAnnotations[Index];
+
+                for (auto & AA : VisibleAnnotationAttributes) {
+                    auto UnfixedAnnotationBinaryName = ConvertTypeDescriptorToBinaryName(ClassInfo.GetConstantUtf8(AA->TypeNameIndex));
+                    auto FixedAnnotationCodeName = JavaSpacePtr->GetFixedClassCodeName(UnfixedAnnotationBinaryName);
+
+                    auto AD = xAnnotationDeclaration();
+                    AD.TypeName = FixedAnnotationCodeName;
+                    for (auto & EVPair : AA->ElementValuePairs) {
+                        auto EVStringPair = xElementValueStringPair();
+                        EVStringPair.ElementName = ClassInfo.GetConstantUtf8(EVPair.ElementNameIndex);
+                        EVStringPair.ElementValueString = ConvertElementValueToString(*EVPair.ElementValueUPtr);
+                        AD.ElementValueStringPairs.push_back(EVStringPair);
+                    }
+                    AnnotationDeclarations.push_back(AD);
+                }
+            }
+        }
+
+        if (InvisibleParameterAnnotationAttributes) {
+            for (size_t Index = 0 ; Index < Total ; ++Index) {
+                auto & AnnotationDeclarations = ParameterAnnotationDeclarations[Index];
+                auto & InvisibleAnnotationAttributes = InvisibleParameterAnnotationAttributes->ParameterAnnotations[Index];
+
+                for (auto & AA : InvisibleAnnotationAttributes) {
+                    auto UnfixedAnnotationBinaryName = ConvertTypeDescriptorToBinaryName(ClassInfo.GetConstantUtf8(AA->TypeNameIndex));
+                    auto FixedAnnotationCodeName = JavaSpacePtr->GetFixedClassCodeName(UnfixedAnnotationBinaryName);
+
+                    auto AD = xAnnotationDeclaration();
+                    AD.TypeName = FixedAnnotationCodeName;
+                    AnnotationDeclarations.push_back(AD);
+                    for (auto & EVPair : AA->ElementValuePairs) {
+                        auto EVStringPair = xElementValueStringPair();
+                        EVStringPair.ElementName = ClassInfo.GetConstantUtf8(EVPair.ElementNameIndex);
+                        EVStringPair.ElementValueString = ConvertElementValueToString(*EVPair.ElementValueUPtr);
+                        AD.ElementValueStringPairs.push_back(EVStringPair);
+                    }
+
+                    bool Replace = false;
+                    for(auto & Prio : AnnotationDeclarations) { // if runtime invisible annotation share name with runtime visible, overwrite it:
+                        if (Prio.TypeName == AD.TypeName) {
+                            Prio = std::move(AD);
+                            Replace = true;
+                            break;
+                        }
+                    }
+                    if (!Replace) {
+                        AnnotationDeclarations.push_back(AD);
+                    }
+                }
+            }
+        }
+        return ParameterAnnotationDeclarations;
     }
 
     bool xJavaClass::DoConvertAnnotations()

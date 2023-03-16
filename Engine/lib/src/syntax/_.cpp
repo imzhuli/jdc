@@ -96,9 +96,8 @@ namespace jdc
         return AnyTypeOfClassName.substr(0, Count);
     }
 
-    std::string ConvertTypeDescriptorToBinaryName(const std::string & Descriptor)
+    static std::string ExtractTypeDescriptor(xStreamReader & Reader)
     {
-        auto Reader = xStreamReader(Descriptor.c_str());
         auto ArraySize = size_t();
 
         auto C = (char)Reader.R();
@@ -166,9 +165,34 @@ namespace jdc
         return BaseTypeName;
     }
 
-    xMethodTypeNames xConvertMethodDescriptorToBinaryNames(const std::string & Descriptor)
+    std::string ConvertTypeDescriptorToBinaryName(const std::string & Descriptor)
+    {
+        auto Reader = xStreamReader(Descriptor.c_str());
+        return ExtractTypeDescriptor(Reader);
+    }
+
+    xMethodTypeNames ConvertMethodDescriptorToBinaryNames(const std::string & Descriptor)
     {
         auto MethodTypeName = xMethodTypeNames{};
+
+        assert(Descriptor.size());
+
+        auto Reader = xStreamReader(Descriptor.data());
+        auto C = Reader.R(); // the first MUST be '('
+        assert(C == '(');
+        while(true) {
+            auto TestChar = (char)*static_cast<const ubyte*>(Reader);
+            if (!TestChar) {
+                Fatal("Should never run here");
+                break;
+            }
+            if (TestChar == ')') { // parameter types finished
+                Reader.Skip(1);
+                MethodTypeName.ReturnTypeBinaryName = ExtractTypeDescriptor(Reader);
+                break;
+            }
+            MethodTypeName.ParameterTypeBinaryNames.push_back(ExtractTypeDescriptor(Reader));
+        }
 
         return MethodTypeName;
     }

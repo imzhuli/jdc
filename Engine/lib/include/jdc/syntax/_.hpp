@@ -16,11 +16,11 @@ namespace jdc
     X_PRIVATE std::string GetOutermostClassCodeName(const std::string & AnyTypeOfClassName);
 
     struct xMethodTypeNames {
-        std::string ReturnTypeBinaryName;
-        std::vector<std::string> ParamTypeBinaryNames;
+        std::string              ReturnTypeBinaryName;
+        std::vector<std::string> ParameterTypeBinaryNames;
     };
 
     X_PRIVATE std::string ConvertTypeDescriptorToBinaryName(const std::string & Descriptor);
-    X_PRIVATE xMethodTypeNames xConvertMethodDescriptorToBinaryNames(const std::string & Descriptor);
+    X_PRIVATE xMethodTypeNames ConvertMethodDescriptorToBinaryNames(const std::string & Descriptor);
 
 }

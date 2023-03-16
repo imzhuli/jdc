@@ -20,13 +20,9 @@ namespace jdc
 
         struct {
             xAttributeMap            AttributeMap;
-        } Extend;
-
-        struct {
             xAnnotationDeclarations  AnnotationDeclarations;
         } Converted;
 
-        X_PRIVATE_MEMBER void DoExtend();
         X_PRIVATE_MEMBER void DoConvert();
     };
 

@@ -72,9 +72,10 @@ namespace jdc
         X_PRIVATE_MEMBER std::string GetUnfixedOutermostClassBinaryName() const;
         X_PRIVATE_MEMBER std::string ConvertElementValueToString(const xElementValue & ElementValue) const;
 
-        X_PRIVATE_MEMBER xAnnotationDeclarations      ExtractAnnotations(const xAttributeMap & AttributeMap) const;
-        X_PRIVATE_MEMBER std::unique_ptr<xJavaField>  ExtractField(const xFieldInfo & FieldInfo);
-        X_PRIVATE_MEMBER std::unique_ptr<xJavaMethod> ExtractMethod(const xMethodInfo & MethodInfo);
+        X_PRIVATE_MEMBER xAnnotationDeclarations                ExtractAnnotations(const xAttributeMap & AttributeMap) const;
+        X_PRIVATE_MEMBER std::vector<xAnnotationDeclarations>   ExtractParameterAnnotations(const xAttributeMap & AttributeMap) const;
+        X_PRIVATE_MEMBER std::unique_ptr<xJavaField>            ExtractField(const xFieldInfo & FieldInfo);
+        X_PRIVATE_MEMBER std::unique_ptr<xJavaMethod>           ExtractMethod(const xMethodInfo & MethodInfo);
 
         X_PRIVATE_MEMBER void DoExtend();
 
