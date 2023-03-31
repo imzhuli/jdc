@@ -554,6 +554,22 @@ namespace jdc
 
     bool xJavaClass::DumpClassFieldFragmeent(std::ostream & OS, size_t Level) const
     {
+        if (Converted.ClassAccessFlags & ACC_ENUM) {
+            std::vector<std::string> EnumMembers;
+            for (auto & FieldUPtr : Extend.Fields) {
+                auto & Field = *FieldUPtr;
+                auto & FieldInfo = *Field.FieldInfoPtr;
+                if (FieldInfo.AccessFlags & ACC_SYNTHETIC) {
+                    continue;
+                }
+                EnumMembers.push_back(Field.Name);
+            }
+            if (EnumMembers.size()) {
+                DumpInsertLineIndent(OS, Level) << JoinStr(EnumMembers, ", ") << ";" << std::endl;
+            }
+            return true;
+        }
+
         for (auto & FieldUPtr : Extend.Fields) {
             auto & Field = *FieldUPtr;
             auto & FieldInfo = *Field.FieldInfoPtr;
@@ -567,7 +583,6 @@ namespace jdc
             }
 
             auto FieldDeclaration = std::string();
-            // TODO: Generate field declaration
 
             std::vector<std::string> Qualifiers;
             if (FieldInfo.AccessFlags & ACC_PUBLIC) {
@@ -598,6 +613,10 @@ namespace jdc
 
     bool xJavaClass::DumpClassMethodFragmeent(std::ostream & OS, size_t Level) const
     {
+        if (Converted.ClassAccessFlags & ACC_ENUM) {
+            return true;
+        }
+
         for (auto & MethodUPtr : Extend.Methods) {
             auto & Method = *MethodUPtr;
             auto & MethodInfo = *Method.MethodInfoPtr;
@@ -612,7 +631,6 @@ namespace jdc
 
             auto MethodDeclaration = std::string();
 
-            // TODO identifier:
             std::vector<std::string> Qualifiers;
             if (MethodInfo.AccessFlags & ACC_PUBLIC) {
                 Qualifiers.push_back("public");
