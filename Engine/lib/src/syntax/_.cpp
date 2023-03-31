@@ -159,6 +159,7 @@ namespace jdc
                 return {};
             }
         }
+        BaseTypeName = GetShorterBinaryName(BaseTypeName);
         while(ArraySize--) {
             BaseTypeName.append("[]");
         }
@@ -195,6 +196,16 @@ namespace jdc
         }
 
         return MethodTypeName;
+    }
+
+    const std::string & GetShorterBinaryName(const std::string & FullBinaryName)
+    {
+        auto & Map = GetJavaObjectTypeMap();
+        auto Iter = Map.find(FullBinaryName);
+        if (Iter == Map.end()) {
+            return FullBinaryName;
+        }
+        return Iter->second->GetSimpleBinaryName();
     }
 
     const std::string & GetShorterCodeName(const std::string & FullCodeName)

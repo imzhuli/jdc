@@ -25,7 +25,7 @@ namespace jdc
         virtual size_t             GetDimension()          const { return 0; } // non-array type return 0;
         virtual const iJavaType *  GetOutterType()         const { return _OuterTypePtr; }
 
-        virtual std::string ToString() const { return {}; }
+        virtual std::string TypeNameString() const { return {}; }
 
     protected:
         std::string        _UnfixedPackageBinaryName;

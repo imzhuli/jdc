@@ -1,5 +1,7 @@
 #pragma once
 #include "./JD_JavaType.hpp"
+#include <xel/String.hpp>
+#include <limits>
 #include <map>
 
 namespace jdc
@@ -26,16 +28,19 @@ namespace jdc
         X_INLINE bool IsObjectType()     const override { return false; }
 
         X_INLINE xFlag GetTypeFlag() const { return _TypeFlag; }
+        X_PRIVATE_MEMBER std::string TypeNameString() const override;
+
+        X_PRIVATE_STATIC_MEMBER xFlag GetLeastTypeFlagFromValue(int64_t Value);
 
     private:
-        xFlag       _TypeFlag;
+        xFlag _TypeFlag;
 
     private:
         friend void AddJavaPrimitiveType(const char * Name, xJavaPrimitiveType::xFlag TypeFlag);
     };
 
-    X_PRIVATE bool InitJavaPrimitiveTypes();
-    X_PRIVATE void CleanJavaPrimitiveTypes();
+    X_PRIVATE bool  InitJavaPrimitiveTypes();
+    X_PRIVATE void  CleanJavaPrimitiveTypes();
     X_PRIVATE const std::map<std::string, xJavaPrimitiveType> & GetJavaPrimitiveTypeMap();
 
 }

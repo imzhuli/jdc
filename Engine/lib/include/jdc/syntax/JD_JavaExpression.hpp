@@ -1,6 +1,8 @@
 #pragma once
 #include "./_.hpp"
 #include "./JD_JavaType.hpp"
+#include "./JD_JavaPrimitiveTypes.hpp"
+#include "./JD_JavaObjectTypes.hpp"
 #include <string>
 #include <map>
 
@@ -82,11 +84,31 @@ namespace jdc
         virtual bool IsTernaryOperatorExpression() { return false; }
         virtual bool IsThisExpression() { return false; }
 
-        virtual const iJavaType * GetResultType() const { return nullptr; };
-        virtual size_t GetLineNumber();
+        virtual const iJavaType * GetResultType() const { return nullptr; }
+        virtual size_t GetLineNumber() const { return _LineNumber; }
 
     protected:
         size_t _LineNumber = 0;
+    };
+
+    class xNullExpression : public iJavaExpression
+    {
+    public:
+        bool IsNullExpression() override { return true; }
+    };
+
+    class xIntegralExpression : public iJavaExpression
+    {
+    public:
+        bool IsIntegerConstantExpression() override { return true; }
+
+    private:
+        xJavaPrimitiveType  _Type;
+    };
+
+    class xReturnExpression : public xNullExpression
+    {
+
     };
 
 }

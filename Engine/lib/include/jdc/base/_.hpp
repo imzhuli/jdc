@@ -141,5 +141,6 @@ namespace jdc
         X_INLINE bool IsOk() const { return ResultCode == JDR_OK; }
     };
 
-    X_GAME_API const char * GetClassVersionString(uint16_t MajorVersion);
+    X_PRIVATE const char * GetClassVersionString(uint16_t MajorVersion);
+    X_PRIVATE std::string EscapeJavaChar(char16_t C);
 }

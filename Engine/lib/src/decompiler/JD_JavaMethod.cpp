@@ -25,10 +25,10 @@ namespace jdc
         // TODO: fix typenames;
         assert(Converted.FixedReturnTypeCodeName.empty());
         assert(Converted.FixedParameterTypeCodeNames.empty());
-        Converted.FixedReturnTypeCodeName = GetShorterCodeName(JavaSpace.GetFixedClassCodeName(UnfixedTypeBinaryNames.ReturnTypeBinaryName));
+        Converted.FixedReturnTypeCodeName = JavaSpace.GetFixedClassCodeName(UnfixedTypeBinaryNames.ReturnTypeBinaryName);
         for (auto & ParameterBinaryName : UnfixedTypeBinaryNames.ParameterTypeBinaryNames) {
             const auto FixedParameterCodeName = JavaSpace.GetFixedClassCodeName(ParameterBinaryName);
-            Converted.FixedParameterTypeCodeNames.push_back(GetShorterCodeName(FixedParameterCodeName));
+            Converted.FixedParameterTypeCodeNames.push_back(FixedParameterCodeName);
         }
 
         Converted.AttributeMap = LoadAttributeInfo(MethodInfoPtr->Attributes,  &ClassInfo);

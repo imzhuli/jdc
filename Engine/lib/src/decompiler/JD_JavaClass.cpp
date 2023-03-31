@@ -664,7 +664,12 @@ namespace jdc
                 }
             }
 
-            DumpInsertLineIndent(OS, Level) << MethodDeclaration << '(' << ParameterString << ')' << " {" << std::endl;
+            if (Method.OriginalName == "<clinit>"s) {
+                DumpInsertLineIndent(OS, Level) << MethodDeclaration << " {" << std::endl;
+            } else {
+                DumpInsertLineIndent(OS, Level) << MethodDeclaration << '(' << ParameterString << ')' << " {" << std::endl;
+            }
+
             // TODO: method body:
 
             DumpInsertLineIndent(OS, Level) << '}' << std::endl;
