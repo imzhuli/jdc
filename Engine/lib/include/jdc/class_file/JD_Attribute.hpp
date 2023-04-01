@@ -326,7 +326,7 @@ namespace jdc
 
     using xAttributeMap = std::unordered_map<std::string, std::unique_ptr<xAttributeBase>>;
     X_PRIVATE xAttributeMap LoadAttributeInfo(const std::vector<xAttributeInfo> & AttributeInfoList, const xClassInfo * ClassInfoPtr);
-    X_INLINE const xAttributeBase * GetAttribute(const xAttributeMap & Map, const char * Name) {
+    X_INLINE const xAttributeBase * GetAttributePtr(const xAttributeMap & Map, const char * Name) {
         auto Iter = Map.find(Name);
         if (Iter == Map.end()) {
             return nullptr;

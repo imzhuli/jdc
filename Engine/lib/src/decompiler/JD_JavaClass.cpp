@@ -42,13 +42,10 @@ namespace jdc
 
         // build method identifier:
         if (MethodName == "<clinit>") {
-            Method.FixedName = "static";
+            Method.IsClassInitializer = true;
         }
         else if (MethodName == "<init>") {
-            Method.FixedName = _InnermostName;
-        }
-        else {
-            Method.FixedName = MethodName;
+            Method.IsConstructor = true;
         }
         return MethodUPtr;
     }
@@ -59,7 +56,7 @@ namespace jdc
 
         Extend.AttributeMap = LoadAttributeInfo(ClassInfo.Attributes, &ClassInfo);
 
-        auto SourceFile = (const xAttributeSourceFile*)GetAttribute(Extend.AttributeMap, xAttributeNames::SourceFile);
+        auto SourceFile = (const xAttributeSourceFile*)GetAttributePtr(Extend.AttributeMap, xAttributeNames::SourceFile);
         if (SourceFile) {
             X_DEBUG_PRINTF("Found SourceFile attribute, but ignored: %s\n", SourceFile->Filename.c_str());
             // Extend.SuggestedSourceFilename = SourceFile->Filename;
@@ -74,7 +71,7 @@ namespace jdc
             Extend.Methods.push_back(ExtractMethod(Method));
         }
 
-        auto AttributeInnerClassesPtr = (xAttributeInnerClasses*)GetAttribute(Extend.AttributeMap, xAttributeNames::InnerClasses);
+        auto AttributeInnerClassesPtr = (xAttributeInnerClasses*)GetAttributePtr(Extend.AttributeMap, xAttributeNames::InnerClasses);
         if (AttributeInnerClassesPtr) {
             for (auto & InnerClass : AttributeInnerClassesPtr->InnerClasses) {
                 auto & InnerClassBinaryName = ClassInfo.GetConstantClassBinaryName(InnerClass.InnerClassInfoIndex);
@@ -218,8 +215,8 @@ namespace jdc
     xAnnotationDeclarations xJavaClass::ExtractAnnotations(const xAttributeMap & AttributeMap) const
     {
         auto AnnotationDeclarations = xAnnotationDeclarations();
-        auto VisibleAnnotationAttributes = (xAttributeRuntimeAnnotations*)GetAttribute(AttributeMap, xAttributeNames::RuntimeVisibleAnnotations);
-        auto InvisibleAnnotationAttributes = (xAttributeRuntimeAnnotations*)GetAttribute(AttributeMap, xAttributeNames::RuntimeInvisibleAnnotations);
+        auto VisibleAnnotationAttributes = (xAttributeRuntimeAnnotations*)GetAttributePtr(AttributeMap, xAttributeNames::RuntimeVisibleAnnotations);
+        auto InvisibleAnnotationAttributes = (xAttributeRuntimeAnnotations*)GetAttributePtr(AttributeMap, xAttributeNames::RuntimeInvisibleAnnotations);
 
         if (VisibleAnnotationAttributes) {
             for (auto & AA : VisibleAnnotationAttributes->Annotations) {
@@ -272,8 +269,8 @@ namespace jdc
 
     std::vector<xAnnotationDeclarations> xJavaClass::ExtractParameterAnnotations(const xAttributeMap & AttributeMap) const
     {
-        auto VisibleParameterAnnotationAttributes = (xAttributeRuntimeParameterAnnotations*)GetAttribute(AttributeMap, xAttributeNames::RuntimeVisibleParameterAnnotations);
-        auto InvisibleParameterAnnotationAttributes = (xAttributeRuntimeParameterAnnotations*)GetAttribute(AttributeMap, xAttributeNames::RuntimeInvisibleParameterAnnotations);
+        auto VisibleParameterAnnotationAttributes = (xAttributeRuntimeParameterAnnotations*)GetAttributePtr(AttributeMap, xAttributeNames::RuntimeVisibleParameterAnnotations);
+        auto InvisibleParameterAnnotationAttributes = (xAttributeRuntimeParameterAnnotations*)GetAttributePtr(AttributeMap, xAttributeNames::RuntimeInvisibleParameterAnnotations);
 
         size_t VisibleTotal = 0;
         if (VisibleParameterAnnotationAttributes) {
@@ -645,14 +642,17 @@ namespace jdc
                 Qualifiers.push_back("static");
             }
 
-            if (Method.OriginalName == "<clinit>"s) {
+            if (Method.IsClassInitializer) {
                 MethodDeclaration = "static";
             }
             else {
-                if (Method.OriginalName != "<init>"s) {
-                    Qualifiers.push_back(Method.Converted.FixedReturnTypeCodeName);
+                if (Method.IsConstructor) {
+                    Qualifiers.push_back(GetInnermostName());
                 }
-                Qualifiers.push_back(Method.FixedName);
+                else {
+                    Qualifiers.push_back(Method.Converted.FixedReturnTypeCodeName);
+                    Qualifiers.push_back(Method.OriginalName);
+                }
                 MethodDeclaration = JoinStr(Qualifiers, ' ');
             }
 
@@ -668,7 +668,7 @@ namespace jdc
                             Segments.push_back(DumpAnnotation(AD));
                         }
                         Segments.push_back(Method.Converted.FixedParameterTypeCodeNames[ParameterIndex]);
-                        Segments.push_back("arg_" + std::to_string(ParameterIndex));
+                        Segments.push_back(Method.Converted.FixedParameterNames[ParameterIndex]);
                         ParameterStrings.push_back(JoinStr(Segments, ' '));
                     }
                     ParameterString = JoinStr(ParameterStrings, ", ");

@@ -16,7 +16,8 @@ namespace jdc
         const xJavaClass *                JavaClassPtr;
         const xMethodInfo *               MethodInfoPtr;
         std::string                       OriginalName;
-        std::string                       FixedName;
+        bool                              IsClassInitializer = false;
+        bool                              IsConstructor = false;
 
         struct {
         } Extend;
@@ -24,6 +25,7 @@ namespace jdc
         struct {
             std::string                               FixedReturnTypeCodeName;
             std::vector<std::string>                  FixedParameterTypeCodeNames;
+            std::vector<std::string>                  FixedParameterNames;
             xAttributeMap                             AttributeMap;
             xAnnotationDeclarations                   AnnotationDeclarations;
             std::vector<xAnnotationDeclarations>      ParameterAnnotationDeclarations;

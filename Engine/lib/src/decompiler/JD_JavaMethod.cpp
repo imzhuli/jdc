@@ -25,9 +25,12 @@ namespace jdc
         assert(Converted.FixedReturnTypeCodeName.empty());
         assert(Converted.FixedParameterTypeCodeNames.empty());
         Converted.FixedReturnTypeCodeName = JavaSpace.GetFixedClassCodeName(UnfixedTypeBinaryNames.ReturnTypeBinaryName);
+
+        size_t ParamCounter = 0;
         for (auto & ParameterBinaryName : UnfixedTypeBinaryNames.ParameterTypeBinaryNames) {
             const auto FixedParameterCodeName = JavaSpace.GetFixedClassCodeName(ParameterBinaryName);
             Converted.FixedParameterTypeCodeNames.push_back(FixedParameterCodeName);
+            Converted.FixedParameterNames.push_back("arg_"s + std::to_string(ParamCounter++));
         }
 
         Converted.AttributeMap = LoadAttributeInfo(MethodInfoPtr->Attributes,  &ClassInfo);

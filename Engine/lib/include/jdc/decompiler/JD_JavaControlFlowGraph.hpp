@@ -8,22 +8,28 @@
 
 namespace jdc
 {
-    class xJavaClass;
+    class xJavaMethod;
 
-
-    class xLocalVariableSet
+    struct xJavaLocalVariable
     {
+        std::string TypeCodeName;
+        std::string VariableName;
+    };
+
+    struct xJavaLocalVariableSet
+    {
+        std::vector<xJavaLocalVariable> VariableList;
 
     };
 
     class xJavaControlFlowGraph
     {
     public:
-        xLocalVariableSet LocalVariableSet;
+        xJavaLocalVariableSet LocalVariableSet;
 
 
     public:
-        X_PRIVATE_STATIC_MEMBER std::unique_ptr<xJavaControlFlowGraph> ParseByteCode(const xJavaClass * JavaClassPtr, const xAttributeCode & CodeAttribute);
+        X_PRIVATE_STATIC_MEMBER std::unique_ptr<xJavaControlFlowGraph> ParseByteCode(const xJavaMethod * JavaMethodPtr);
     };
 
 }
