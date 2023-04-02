@@ -16,16 +16,10 @@ namespace jdc
         std::string VariableName;
     };
 
-    struct xJavaLocalVariableSet
-    {
-        std::vector<xJavaLocalVariable> VariableList;
-
-    };
-
     class xJavaControlFlowGraph
     {
     public:
-        xJavaLocalVariableSet LocalVariableSet;
+        std::vector<xJavaLocalVariable> LocalVariableList;
 
 
     public:

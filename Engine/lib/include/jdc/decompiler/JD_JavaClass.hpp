@@ -31,10 +31,13 @@ namespace jdc
 
         struct {
             xAttributeMap                               AttributeMap;
+
             std::string                                 SuggestedSourceFilename;
             std::vector<std::unique_ptr<xJavaField>>    Fields;
             std::vector<std::unique_ptr<xJavaMethod>>   Methods;
-            std::vector<const xJavaClass*>              DirectInnerClasses;
+
+            xJavaClass *                                OuterClassPtr = nullptr;
+            std::vector<xJavaClass*>                    DirectInnerClasses;
         } Extend;
 
         struct {

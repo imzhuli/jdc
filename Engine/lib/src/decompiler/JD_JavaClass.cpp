@@ -1,6 +1,7 @@
 #include <jdc/decompiler/JD_JavaClass.hpp>
 #include <jdc/decompiler/JD_JavaPackage.hpp>
 #include <jdc/decompiler/JD_JavaSpace.hpp>
+#include <jdc/decompiler/JD_JavaControlFlowGraph.hpp>
 #include <jdc/syntax/_.hpp>
 #include <jdc/syntax/JD_JavaType.hpp>
 #include <jdc/syntax/JD_JavaObjectTypes.hpp>
@@ -88,6 +89,13 @@ namespace jdc
                 auto InnerClassPtr = JavaSpacePtr->GetClass(InnerClassBinaryName);
                 assert(InnerClassPtr);
                 Extend.DirectInnerClasses.push_back(InnerClassPtr);
+
+                if (InnerClassPtr->Extend.OuterClassPtr) {
+                    assert(InnerClassPtr->Extend.OuterClassPtr == this);
+                } else {
+                    InnerClassPtr->Extend.OuterClassPtr = this;
+                }
+
                 // fix inner class access_flags:
                 InnerClassPtr->ClassInfo.AccessFlags |= InnerClass.InnerAccessFlags;
             }
@@ -689,6 +697,7 @@ namespace jdc
             }
 
             // TODO: method body:
+            auto JavaControlFlowGraphUPtr = xJavaControlFlowGraph::ParseByteCode(&Method);
 
             DumpInsertLineIndent(OS, Level) << '}' << std::endl;
         }

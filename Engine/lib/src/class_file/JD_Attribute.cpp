@@ -307,8 +307,6 @@ namespace jdc
             auto & Name = ClassInfoPtr->GetConstantUtf8(Info.NameIndex);
             auto & Binary = Info.Binary;
 
-            X_DEBUG_PRINTF("ExtractAttribute: %s\n", Name.c_str());
-
             if (Name == xAttributeNames::AnnotationDefault) {
                 auto AttributeUPtr = std::make_unique<xAttributeAnnotationDefault>();
                 if (AttributeUPtr->Extract(Binary, ClassInfoPtr)) {

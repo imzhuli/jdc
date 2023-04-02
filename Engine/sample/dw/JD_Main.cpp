@@ -1,5 +1,6 @@
 #include <xel/Common.hpp>
 #include <xel/String.hpp>
+#include <xel/Memory.hpp>
 #include <xel/Util/Command.hpp>
 #include <xel_ext/Util/FileSystem.hpp>
 #include <iostream>

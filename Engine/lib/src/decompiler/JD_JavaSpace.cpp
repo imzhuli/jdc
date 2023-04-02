@@ -115,17 +115,67 @@ namespace jdc
                 JavaClassUPtr->_FixedCodeName = ConvertBinaryNameToCodeName(JavaClassUPtr->_FixedBinaryName);
                 continue;
             }
-            auto NewClassBinaryName = PackagePtr->FixedBinaryName + '.' + JavaClassUPtr->_SimpleBinaryName;
+            auto NewClassBinaryName = PackagePtr->FixedBinaryName + '/' + JavaClassUPtr->_SimpleBinaryName;
             JavaClassUPtr->_FixedBinaryName = NewClassBinaryName;
             JavaClassUPtr->_FixedCodeName = ConvertBinaryNameToCodeName(NewClassBinaryName);
 
             X_DEBUG_PRINTF("FixClassName: %s -> %s\n", JavaClassUPtr->_UnfixedBinaryName.c_str(), JavaClassUPtr->_FixedBinaryName.c_str());
         }
 
-        // extend class
+        // extend class & build inner class chain
         for(auto & Entry : _ClassMap) {
-            auto & JavaClassUPtr = Entry.second;
-            JavaClassUPtr->DoExtend();
+            auto JavaClassPtr = Entry.second.get();
+            JavaClassPtr->DoExtend();
+        }
+
+        // fix inner class names:
+        std::vector<xJavaClass*> TryFixInnerClassList;
+        size_t NextTryFixInnerClassIndex = 0;
+        for(auto & Entry : _ClassMap) {
+            auto JavaClassPtr = Entry.second.get();
+            if (JavaClassPtr->IsInnerClass()) {
+                continue;
+            }
+            TryFixInnerClassList.push_back(JavaClassPtr);
+        }
+        while(NextTryFixInnerClassIndex != TryFixInnerClassList.size()) {
+            auto CurrentClassPtr = TryFixInnerClassList[NextTryFixInnerClassIndex];
+            for (auto & InnerClassPtr : CurrentClassPtr->Extend.DirectInnerClasses) {
+                TryFixInnerClassList.push_back(InnerClassPtr);
+            }
+            ++NextTryFixInnerClassIndex;
+        }
+        size_t FixCounter = 0;
+        for (auto InnerClassPtr : TryFixInnerClassList) {
+            bool NeedCheck = false;
+            std::string NewInnermostName = InnerClassPtr->_InnermostName;
+            do {
+                NeedCheck = false;
+                for(auto AncestorClassPtr = InnerClassPtr->Extend.OuterClassPtr; AncestorClassPtr; AncestorClassPtr = AncestorClassPtr->Extend.OuterClassPtr) {
+                    if (AncestorClassPtr->GetInnermostName() == NewInnermostName) {
+                        NewInnermostName = InnerClassPtr->_InnermostName + "_fix_" + std::to_string(FixCounter++);
+                        NeedCheck = true;
+                        break;
+                    }
+                }
+            } while(NeedCheck);
+            if (NewInnermostName == InnerClassPtr->_InnermostName) {
+                continue;
+            }
+
+            // auto & ParentFixedBinaryName = OuterClassPtr->GetFixedBinaryName();
+            auto OuterClassPtr = InnerClassPtr->Extend.OuterClassPtr;
+            InnerClassPtr->_FixedBinaryName  = OuterClassPtr->GetFixedBinaryName() + '$' + NewInnermostName;
+            InnerClassPtr->_FixedCodeName    = ConvertBinaryNameToCodeName(InnerClassPtr->_FixedBinaryName);
+            InnerClassPtr->_SimpleBinaryName = GetSimpleClassBinaryName(InnerClassPtr->_FixedBinaryName);
+            InnerClassPtr->_SimpleCodeName   = ConvertBinaryNameToCodeName(InnerClassPtr->_SimpleBinaryName);
+            InnerClassPtr->_InnermostName    = NewInnermostName;
+
+            X_DEBUG_PRINTF("Found inner class name that needs fix: %s, new name:%s --> %s ==> %s\n", InnerClassPtr->GetUnfixedBinaryName().c_str(),
+                InnerClassPtr->GetFixedBinaryName().c_str(),
+                InnerClassPtr->GetSimpleBinaryName().c_str(),
+                InnerClassPtr->GetSimpleCodeName().c_str()
+                );
         }
 
         return JavaSpaceUPtr;

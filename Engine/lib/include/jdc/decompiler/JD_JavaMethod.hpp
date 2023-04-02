@@ -26,9 +26,9 @@ namespace jdc
             std::string                               FixedReturnTypeCodeName;
             std::vector<std::string>                  FixedParameterTypeCodeNames;
             std::vector<std::string>                  FixedParameterNames;
-            xAttributeMap                             AttributeMap;
             xAnnotationDeclarations                   AnnotationDeclarations;
             std::vector<xAnnotationDeclarations>      ParameterAnnotationDeclarations;
+            xAttributeMap                             AttributeMap;
         } Converted;
 
         X_PRIVATE_MEMBER bool HasAnImplicitParameter() const;

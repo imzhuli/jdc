@@ -20,8 +20,6 @@ namespace jdc
         auto Descriptor = ClassInfo.GetConstantUtf8(MethodInfoPtr->DescriptorIndex);
         auto UnfixedTypeBinaryNames = ConvertMethodDescriptorToBinaryNames(Descriptor);
 
-        X_DEBUG_PRINTF("xJavaMethod::DoConvert: %s.%s : %s\n", JavaClassPtr->GetFixedBinaryName().c_str(), OriginalName.c_str(), Descriptor.c_str());
-
         assert(Converted.FixedReturnTypeCodeName.empty());
         assert(Converted.FixedParameterTypeCodeNames.empty());
         Converted.FixedReturnTypeCodeName = JavaSpace.GetFixedClassCodeName(UnfixedTypeBinaryNames.ReturnTypeBinaryName);
