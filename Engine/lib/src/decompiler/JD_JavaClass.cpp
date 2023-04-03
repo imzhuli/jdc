@@ -411,9 +411,7 @@ namespace jdc
             auto SubLevel = Level + 1;
             DumpClassFieldFragmeent(OS, SubLevel);
             DumpSpacerLineFragment(OS);
-
             DumpClassMethodFragmeent(OS, SubLevel);
-            DumpSpacerLineFragment(OS);
 
             // Inner class iteration
             for (auto & InnerClassPtr : Extend.DirectInnerClasses) {
@@ -650,6 +648,10 @@ namespace jdc
                 Qualifiers.push_back("static");
             }
 
+            if (MethodInfo.AccessFlags & ACC_ABSTRACT) {
+                Qualifiers.push_back("abstract");
+            }
+
             if (Method.IsClassInitializer) {
                 MethodDeclaration = "static";
             }
@@ -693,13 +695,19 @@ namespace jdc
             if (Method.OriginalName == "<clinit>"s) {
                 DumpInsertLineIndent(OS, Level) << MethodDeclaration << " {" << std::endl;
             } else {
-                DumpInsertLineIndent(OS, Level) << MethodDeclaration << '(' << ParameterString << ')' << " {" << std::endl;
+                DumpInsertLineIndent(OS, Level) << MethodDeclaration << '(' << ParameterString << ')';
+                if (MethodInfo.AccessFlags & ACC_ABSTRACT) {
+                    OS << ';' << std::endl;
+                    return true;
+                } else {
+                    OS << " {" << std::endl;
+                }
             }
 
             // TODO: method body:
             auto JavaControlFlowGraphUPtr = xJavaControlFlowGraph::ParseByteCode(&Method);
 
-            DumpInsertLineIndent(OS, Level) << '}' << std::endl;
+            DumpInsertLineIndent(OS, Level) << '}' << std::endl << std::endl;
         }
 
         return true;
@@ -708,7 +716,7 @@ namespace jdc
     bool xJavaClass::DumpClassDeclarationEndFragment(std::ostream & OS, size_t Level) const
     {
         DumpInsertLineIndent(OS, Level);
-        OS << '}' << std::endl;
+        OS << '}' << std::endl << std::endl;
         return true;
     }
 
