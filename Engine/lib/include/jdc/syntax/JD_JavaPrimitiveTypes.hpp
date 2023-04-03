@@ -8,7 +8,7 @@ namespace jdc
 {
 
     class xJavaPrimitiveType
-    : public iJavaType
+    : public xJavaType
     {
     public:
         using xFlag = uint16_t;

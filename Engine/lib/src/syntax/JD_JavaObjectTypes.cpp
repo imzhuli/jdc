@@ -60,7 +60,7 @@ namespace jdc
         xel::Renew(JavaObjectTypeMap);
     }
 
-    bool xJavaObjectType::IsDefaultAnnotationBase(iJavaType * JavaTypePtr)
+    bool xJavaObjectType::IsDefaultAnnotationBase(xJavaType * JavaTypePtr)
     {
         auto & BinaryName = JavaTypePtr->GetUnfixedBinaryName();
         return BinaryName == DefaultBaseClassBinaryName;
@@ -71,7 +71,7 @@ namespace jdc
         return BinaryName == DefaultBaseClassBinaryName;
     }
 
-    bool xJavaObjectType::IsDefaultClassBase(iJavaType * JavaTypePtr)
+    bool xJavaObjectType::IsDefaultClassBase(xJavaType * JavaTypePtr)
     {
         auto & BinaryName = JavaTypePtr->GetUnfixedBinaryName();
         return BinaryName == DefaultBaseClassBinaryName;

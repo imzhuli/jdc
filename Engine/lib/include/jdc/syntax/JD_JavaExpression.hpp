@@ -84,7 +84,7 @@ namespace jdc
         virtual bool IsTernaryOperatorExpression() { return false; }
         virtual bool IsThisExpression() { return false; }
 
-        virtual const iJavaType * GetResultType() const { return nullptr; }
+        virtual const xJavaType * GetResultType() const { return nullptr; }
         virtual size_t GetLineNumber() const { return _LineNumber; }
 
     protected:

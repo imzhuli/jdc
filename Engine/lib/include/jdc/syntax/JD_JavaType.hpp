@@ -6,7 +6,8 @@
 namespace jdc
 {
 
-    class iJavaType
+    class xJavaType
+    : xel::xVBase
     {
     public:
         virtual const std::string & GetUnfixedPackageBinaryName()   const { return _UnfixedPackageBinaryName; }
@@ -23,7 +24,7 @@ namespace jdc
         virtual bool               IsInnerObjectType()     const { return false; }
         virtual bool               IsDirectType()          const { return false; }
         virtual size_t             GetDimension()          const { return 0; } // non-array type return 0;
-        virtual const iJavaType *  GetOutterType()         const { return _OuterTypePtr; }
+        virtual const xJavaType *  GetOutterType()         const { return _OuterTypePtr; }
 
         virtual std::string TypeNameString() const { return {}; }
 
@@ -36,8 +37,7 @@ namespace jdc
         std::string        _SimpleCodeName;
         std::string        _InnermostName;
         std::string        _SourceFilename;
-        const iJavaType *  _OuterTypePtr = nullptr;
-
+        const xJavaType *  _OuterTypePtr = nullptr;
     };
 
 }

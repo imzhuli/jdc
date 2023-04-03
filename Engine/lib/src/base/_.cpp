@@ -42,7 +42,7 @@ namespace jdc
             return Unicode(C);
         default:
             if (C < ' ') {
-                return "\\0" + ((char)('0' + (C >> 3))) + ((char)('0' + (C & 7)));
+                return "\\0"s + ((char)('0' + (C >> 3))) + ((char)('0' + (C & 7)));
             }
             if (C < 127) {
                 return { (const char *)X2Ptr((char)C), 1 };

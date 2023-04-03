@@ -149,7 +149,7 @@ namespace jdc
         switch (ElementValue.Tag) {
             case eElementValueTag::Byte: {
                 auto & ConstValue = ClassInfo.GetConstantInfo(ElementValue.ConstantValueIndex).Details.Integer;
-                return "(byte)" + ConstValue.Value ? "true" : "false";
+                return "(byte)" + std::to_string(ConstValue.Value);
             }
             case eElementValueTag::Short: {
                 auto & ConstValue = ClassInfo.GetConstantInfo(ElementValue.ConstantValueIndex).Details.Integer;

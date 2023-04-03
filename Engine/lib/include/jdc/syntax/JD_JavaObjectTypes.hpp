@@ -8,16 +8,16 @@ namespace jdc
 {
 
     class xJavaObjectType
-    : public iJavaType
+    : public xJavaType
     {
     public:
         X_INLINE bool IsPrimitiveType()  const override { return false; }
         X_INLINE bool IsDirectType()     const override { return true; }
         X_INLINE bool IsObjectType()     const override { return true; }
 
-        X_PRIVATE_MEMBER static bool IsDefaultAnnotationBase(iJavaType * JavaTypePtr);
+        X_PRIVATE_MEMBER static bool IsDefaultAnnotationBase(xJavaType * JavaTypePtr);
         X_PRIVATE_MEMBER static bool IsDefaultAnnotationBase(const std::string & BinaryName);
-        X_PRIVATE_MEMBER static bool IsDefaultClassBase(iJavaType * JavaTypePtr);
+        X_PRIVATE_MEMBER static bool IsDefaultClassBase(xJavaType * JavaTypePtr);
         X_PRIVATE_MEMBER static bool IsDefaultClassBase(const std::string & BinaryName);
 
     private:
