@@ -11,43 +11,67 @@ namespace jdc
         auto JavaControlFlowGraphUPtr = std::make_unique<xJavaControlFlowGraph>();
         auto CFGPtr = JavaControlFlowGraphUPtr.get();
 
-        auto JavaClassPtr = JavaMethodPtr->JavaClassPtr;
-        auto CodeAttributePtr = (const xAttributeCode *)GetAttributePtr(JavaMethodPtr->Converted.AttributeMap, "Code");
-        auto & CodeBinary = CodeAttributePtr->CodeBinary;
+        if (!CFGPtr->Init(JavaMethodPtr)) {
+            return {};
+        }
+        return JavaControlFlowGraphUPtr;
+    }
 
-        size_t FirstVariableIndex = 0;
+    bool xJavaControlFlowGraph::Init(const xJavaMethod * JavaMethodPtr)
+    {
+        _JavaMethodPtr = JavaMethodPtr;
+        _JavaClassPtr = JavaMethodPtr->JavaClassPtr;
 
-        if (JavaMethodPtr->MethodInfoPtr->AccessFlags & ACC_STATIC) {
+        InitLocalVariables();
+        InitBlocks();
+
+        return true;
+    }
+
+
+    void xJavaControlFlowGraph::InitLocalVariables()
+    {
+        xel::Renew(LocalVariableList);
+        FirstVariableIndex = 0;
+
+        if (_JavaMethodPtr->MethodInfoPtr->AccessFlags & ACC_STATIC) {
             // no "this" parameter
         }
         else {
-            CFGPtr->LocalVariableList.push_back({ JavaClassPtr->GetInnermostName(), "this"s });
+            LocalVariableList.push_back({ _JavaClassPtr->GetInnermostName(), "this"s });
             ++FirstVariableIndex;
         }
 
-        if (JavaMethodPtr->IsConstructor) {
-            if (JavaClassPtr->IsEnum()) {
+        if (_JavaMethodPtr->IsConstructor) {
+            if (_JavaClassPtr->IsEnum()) {
                 // TODO: enum constructor
             }
             else {
-                if (JavaClassPtr->IsInnerClass()) {
+                if (_JavaClassPtr->IsInnerClass()) {
                     // add local variable this$0:
-                    CFGPtr->LocalVariableList.push_back({ JavaClassPtr->Extend.OuterClassPtr->GetFixedCodeName(), "this$0"s });
+                    LocalVariableList.push_back({ _JavaClassPtr->Extend.OuterClassPtr->GetFixedCodeName(), "this$0"s });
                 }
             }
         }
 
-        X_DEBUG_PRINTF("JavaMethod: %s.%s local variables:\n", JavaClassPtr->GetFixedCodeName().c_str(), JavaMethodPtr->OriginalName.c_str());
-        for (auto & Variable : CFGPtr->LocalVariableList) {
+        X_DEBUG_PRINTF("JavaMethod: %s.%s local variables:\n", _JavaClassPtr->GetFixedCodeName().c_str(), _JavaMethodPtr->OriginalName.c_str());
+        for (auto & Variable : LocalVariableList) {
             X_DEBUG_PRINTF("TypeCodeName: %s VariableName:%s\n", Variable.TypeCodeName.c_str(), Variable.VariableName.c_str());
         }
+    }
+
+    void xJavaControlFlowGraph::InitBlocks()
+    {
+        auto CodeAttributePtr = (const xAttributeCode *)GetAttributePtr(_JavaMethodPtr->Converted.AttributeMap, "Code");
+        auto & CodeBinary = CodeAttributePtr->CodeBinary;
+
+        xel::Renew(BlockList);
+        xel::Renew(_BlockPool);
+
+
 
 
         (void) CodeBinary;
-        (void) JavaClassPtr;
-        (void) CFGPtr;
-
-        return JavaControlFlowGraphUPtr;
     }
 
 }
