@@ -17,14 +17,13 @@ namespace jdc
     {
     public:
         std::vector<xJavaLocalVariable> LocalVariableList;
+        std::vector<xJavaBlock>         Blocks;
         std::vector<xJavaBlock*>        BlockList;
         size_t                          FirstVariableIndex;
 
     protected:
         const xJavaMethod *             _JavaMethodPtr;
         const xJavaClass *              _JavaClassPtr;
-
-        std::vector<xJavaBlock>         _BlockPool;
 
     protected:
         X_PRIVATE_MEMBER bool Init(const xJavaMethod * JavaMethodPtr);

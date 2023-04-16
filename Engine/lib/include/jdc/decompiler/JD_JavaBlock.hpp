@@ -63,8 +63,6 @@ namespace jdc
 
 
     public:
-        xJavaControlFlowGraph * ControlFlowGraphPtr = nullptr;
-        size_t Index = {};
         xType  Type  = TYPE_DELETED;
 
         size_t FromOffset = {};
