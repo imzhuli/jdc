@@ -99,8 +99,10 @@ namespace jdc
         auto & CodeBinary = CodeAttributePtr->CodeBinary;
 
         size_t CodeLength = CodeBinary.size();
+        Blocks.resize(CodeLength);
         BlockList.resize(CodeLength);
 
+        auto BlockTypes = std::vector<xJavaBlock::eType>(CodeLength);
         auto CodeTypes = std::vector<eCodeType>(CodeLength);
         auto NextOffsets = std::vector<size_t>(CodeLength);
         auto BranchOffsets = std::vector<size_t>(CodeLength);;
@@ -108,7 +110,7 @@ namespace jdc
         auto SwitchOffsets = std::vector<std::vector<size_t>>(CodeLength);
 
         auto MARK = xJavaBlock::TYPE_END;
-        Blocks[0].Type = MARK;
+        BlockTypes[0] = MARK;
 
         auto LastOffset = size_t(0);
         auto LastStatementOffset = size_t(-1);
@@ -145,7 +147,7 @@ namespace jdc
                     // The instruction that immediately follows a conditional or an unconditional goto/jump instruction is a leader
                     CodeTypes[Offset] = CT_RETURN;
                     if (Offset + 1 < CodeLength) {
-                        Blocks[Offset + 1].Type = MARK;
+                        BlockTypes[Offset + 1] = MARK;
                     }
                     LastStatementOffset = Offset;
                     break;
@@ -154,7 +156,7 @@ namespace jdc
                     LastStatementOffset = Offset;
                     break;
                 case OP_INVOKEVIRTUAL: case OP_INVOKESPECIAL: case OP_INVOKESTATIC: {
-                    Reader.Offset(Offset);
+                    Reader.Offset(Offset + 1);
                     Offset += 2;
                     auto & ClassInfo = _JavaClassPtr->ClassInfo;
                     auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
@@ -167,7 +169,7 @@ namespace jdc
                     break;
                 }
                 case OP_INVOKEINTERFACE: case OP_INVOKEDYNAMIC:{
-                    Reader.Offset(Offset);
+                    Reader.Offset(Offset + 1);
                     Offset += 4; // skip 2 extra bytes
                     auto & ClassInfo = _JavaClassPtr->ClassInfo;
                     auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
@@ -197,36 +199,37 @@ namespace jdc
                 case OP_GOTO: {
                     eCodeType CodeType = (Offset == LastStatementOffset + 1) ? CT_GOTO : CT_TERNARY_GOTO;
                     if (LastStatementOffset != size_t(-1)) {
-                        Blocks[LastStatementOffset + 1].Type = MARK;
+                        BlockTypes[LastStatementOffset + 1] = MARK;
                     }
                     // The target of a conditional or an unconditional goto/jump instruction is a leader
-                    Reader.Offset(Offset);
+                    Reader.Offset(Offset + 1);
+                    size_t BranchOffset = Offset + (int16_t)Reader.R2();
                     Offset += 2;
                     CodeTypes[Offset] = CodeType;
-                    size_t BranchOffset = Offset + (int16_t)Reader.R2();
-                    Blocks[BranchOffset].Type = MARK;
+                    BlockTypes[BranchOffset] = MARK;
                     BranchOffsets[Offset] = BranchOffset;
                     // The instruction that immediately follows a conditional or an unconditional goto/jump instruction is a leader
                     if (Offset + 1 < CodeLength) {
-                        Blocks[Offset + 1].Type = MARK;
+                        BlockTypes[Offset + 1] = MARK;
                     }
                     LastStatementOffset = Offset;
                     break;
                 }
                 case OP_JSR: {
                     if (LastStatementOffset != size_t(-1)) {
-                        Blocks[LastStatementOffset + 1].Type = MARK;
+                        BlockTypes[LastStatementOffset + 1] = MARK;
                     }
                     // The target of a conditional or an unconditional goto/jump instruction is a leader
-                    Reader.Offset(Offset);
+                    CodeTypes[Offset] = CT_JSR;
+                    Reader.Offset(Offset + 1);
+                    size_t BranchOffset = Offset + (int16_t)Reader.R2();
                     Offset += 2;
                     CodeTypes[Offset] = CT_JSR;
-                    size_t BranchOffset = Offset + (int16_t)Reader.R2();
-                    Blocks[BranchOffset].Type = MARK;
+                    BlockTypes[BranchOffset] = MARK;
                     BranchOffsets[Offset] = BranchOffset;
                     // The instruction that immediately follows a conditional or an unconditional goto/jump instruction is a leader
                     if (Offset + 1 < CodeLength) {
-                        Blocks[Offset + 1].Type = MARK;
+                        BlockTypes[Offset + 1] = MARK;
                     }
                     LastStatementOffset = Offset;
                     break;
@@ -235,32 +238,155 @@ namespace jdc
                 case OP_IF_ICMPEQ: case OP_IF_ICMPNE: case OP_IF_ICMPLT: case OP_IF_ICMPGE: case OP_IF_ICMPGT: case OP_IF_ICMPLE: case OP_IF_ACMPEQ: case OP_IF_ACMPNE:
                 case OP_IFNULL:    case OP_IFNONNULL: {
                     if (LastStatementOffset != size_t(-1)) {
-                        Blocks[LastStatementOffset + 1].Type = MARK;
+                        BlockTypes[LastStatementOffset + 1] = MARK;
                     }
                     // The target of a conditional or an unconditional goto/jump instruction is a leader
-                    Reader.Offset(Offset);
+                    Reader.Offset(Offset + 1);
+                    size_t BranchOffset = Offset + (int16_t)Reader.R2();
                     Offset += 2;
                     CodeTypes[Offset] = CT_CONDITIONAL;
-                    size_t BranchOffset = Offset + (int16_t)Reader.R2();
-                    Blocks[BranchOffset].Type = MARK;
+                    BlockTypes[BranchOffset] = MARK;
                     BranchOffsets[Offset] = BranchOffset;
                     // The instruction that immediately follows a conditional or an unconditional goto/jump instruction is a leader
                     if (Offset + 1 < CodeLength) {
-                        Blocks[Offset + 1].Type = MARK;
+                        BlockTypes[Offset + 1] = MARK;
                     }
                     LastStatementOffset = Offset;
                     break;
                 }
 
+                case OP_TABLESWITCH: {
+                    // skip padding:
+                    Reader.Offset((Offset + 4) & 0x00FFFC);
+                    size_t DefaultOffset = Offset + Reader.R4();
+                    BlockTypes[DefaultOffset] = MARK;
 
+                    size_t Low = Reader.R4();
+                    size_t High = Reader.R4();
+                    auto Values  = std::vector<size_t>(High - Low + 2);
+                    auto Offsets = std::vector<size_t>(High - Low + 2);
 
+                    Offsets[0] = DefaultOffset;
 
-                // TODO: other cases
-            }
+                    for (size_t I = 1, Len = High - Low + 2; I < Len; I++) {
+                        Values[I] = Low + I - 1;
+                        size_t BranchOffset = Offsets[I] = Offset + Reader.R4();
+                        BlockTypes[BranchOffset] = MARK;
+                    }
+                    Offset = Reader.Offset() - 1;
+                    CodeTypes[Offset] = CT_SWITCH;
+                    SwitchValues[Offset] = std::move(Values);
+                    SwitchOffsets[Offset] = std::move(Offsets);
+                    LastStatementOffset = Offset;
+                    break;
+                }
 
-        }
+                case OP_IRETURN: case OP_LRETURN: case OP_FRETURN: case OP_DRETURN: case OP_ARETURN:
+                    CodeTypes[Offset] = CT_RETURN_VALUE;
+                    if (Offset + 1 < CodeLength) {
+                        BlockTypes[Offset + 1] = MARK;
+                    }
+                    LastStatementOffset = Offset;
+                    break;
 
-        (void) CodeBinary;
+                case OP_RETURN:
+                    if (LastStatementOffset != (size_t)-1) {
+                        BlockTypes[LastStatementOffset + 1] = MARK;
+                    }
+                    CodeTypes[Offset] = CT_RETURN;
+                    if (Offset + 1 < CodeLength) {
+                        BlockTypes[Offset + 1] = MARK;
+                    }
+                    LastStatementOffset = Offset;
+                    break;
+
+                case OP_ATHROW:
+                    CodeTypes[Offset] = CT_THROW;
+                    if (Offset + 1 < CodeLength) {
+                        BlockTypes[Offset + 1] = MARK;
+                    }
+                    LastStatementOffset = Offset;
+                    break;
+
+                case OP_WIDE: {
+                    OpCode = CodeBinary[++Offset];
+                    switch (OpCode) {
+                        case OP_IINC: {
+                            Reader.Offset(Offset + 1);
+                            Offset += 4;
+                            if ((LastStatementOffset + 6 == Offset) && !IsILOADForIINC(CodeBinary, Offset, Reader.R2())) {
+                                // Last instruction is a 'statement' & the next instruction is not a matching ILOAD -> IINC as a statement
+                                LastStatementOffset = Offset;
+                            }
+                            break;
+                        }
+                        case OP_RET: {
+                            Offset += 2;
+                            CodeTypes[Offset] = CT_RET;
+                            if (Offset + 1 < CodeLength) {
+                                BlockTypes[Offset + 1] = MARK;
+                            }
+                            LastStatementOffset = Offset;
+                            break;
+                        }
+                        case OP_ISTORE: case OP_LSTORE: case OP_FSTORE: case OP_DSTORE: case OP_ASTORE: // ISTORE, LSTORE, FSTORE, DSTORE, ASTORE
+                            Offset += 2;
+                            LastStatementOffset = Offset;
+                            break;
+                        default:
+                            Offset += 2;
+                            break;
+                    }
+                    break;
+                }
+
+                case OP_MULTIANEWARRAY:
+                    Offset += 3;
+                    break;
+
+                case OP_GOTO_W: {
+                    eCodeType CodeType = (Offset == LastStatementOffset + 1) ? CT_GOTO : CT_TERNARY_GOTO;
+                    Reader.Offset(Offset + 1);
+                    size_t BranchOffset = Offset + Reader.R4();
+                    Offset += 4;
+
+                    BlockTypes[BranchOffset] = MARK;
+                    CodeTypes[Offset] = CodeType;
+                    BranchOffsets[Offset] = BranchOffset;
+
+                    // The instruction that immediately follows a conditional or an unconditional goto/jump instruction is a leader
+                    if (Offset + 1 < CodeLength) {
+                        BlockTypes[Offset + 1] = MARK;
+                    }
+                    LastStatementOffset = Offset;
+                    break;
+                }
+
+                case OP_JSR_W: {
+                    if (LastStatementOffset != (size_t)-1) {
+                        BlockTypes[LastStatementOffset + 1] = MARK;
+                    }
+                    Reader.Offset(Offset + 1);
+                    size_t BranchOffset = Offset + Reader.R4();
+                    Offset += 4;
+
+                    BlockTypes[BranchOffset] = MARK;
+                    CodeTypes[Offset] = CT_JSR;
+                    BranchOffsets[Offset] = BranchOffset;
+
+                    // The instruction that immediately follows a conditional or an unconditional goto/jump instruction is a leader
+                    if (Offset + 1 < CodeLength) {
+                        BlockTypes[Offset + 1] = MARK;
+                    }
+                    LastStatementOffset = Offset;
+                    break;
+                }
+            } // end of switch(opcode)
+        } // end of for
+
+        X_DEBUG_PRINTF("End of init blocks round 0: mark block types\n");
+        X_DEBUG_BREAKPOINT();
+
     }
 
 }
