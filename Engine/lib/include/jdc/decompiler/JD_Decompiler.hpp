@@ -15,7 +15,7 @@ namespace jdc
         X_PRIVATE_MEMBER bool Execute();
         X_PRIVATE_MEMBER void Clean();
 
-        const xJdcConfig & GetConfig() const { return _Config; }
+        X_PRIVATE_MEMBER const xJdcConfig & GetConfig() const { return _Config; }
 
     private:
         X_PRIVATE_MEMBER bool MakePackagePaths();

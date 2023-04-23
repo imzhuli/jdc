@@ -80,19 +80,19 @@ namespace jdc
 
     struct xAttributeCode : public xAttributeBase
     {
-        struct xExceptionTable
+        struct xExceptionMark
         {
             uint16_t StartPC;
             uint16_t EndPC;
-            uint16_t HandlePC;
+            uint16_t HandlerPC;
             uint16_t CatchType;
         };
 
         uint16_t MaxStack;
         uint16_t MaxLocals;
-        std::vector<xel::ubyte>      CodeBinary;
-        std::vector<xExceptionTable> ExceptionTables;
-        std::vector<xAttributeInfo>  SubAttributes;
+        std::vector<xel::ubyte>        CodeBinary;
+        std::vector<xExceptionMark>    ExceptionTable;
+        std::vector<xAttributeInfo>    SubAttributes;
 
         X_PRIVATE_MEMBER bool Extract(const xAttributeBinary & AttributeBinary, const xClassInfo * ClassInfoPtr);
     };

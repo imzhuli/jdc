@@ -12,9 +12,27 @@ namespace jdc
     class xJavaSwitchCase;
     class xJavaExceptionHander;
 
+    class xJavaException
+    {
+    public:
+        size_t      Index       ={};
+        uint16_t    StartPC     ={};
+        uint16_t    EndPC       ={};
+        uint16_t    HandlerPC   ={};
+        uint16_t    CatchType   ={};
+    };
+
     class xJavaSwitchCase
     {
+    public:
+        bool           DefaultCase  = {};
+        size_t         Value        = {};
+        size_t         Offset       = {};
+        xJavaBlock *   BlockPtr     = {};
 
+        X_PRIVATE_MEMBER xJavaSwitchCase() = default;
+        X_PRIVATE_MEMBER xJavaSwitchCase(xJavaBlock * BlockPtr); // default case
+        X_PRIVATE_MEMBER xJavaSwitchCase(size_t Value, xJavaBlock * BlockPtr);
     };
 
     class xJavaBlock
@@ -62,6 +80,15 @@ namespace jdc
         };
 
     public:
+        X_PRIVATE_MEMBER xJavaBlock(size_t FromOffset, size_t ToOffset)
+        : xJavaBlock(TYPE_DELETED, FromOffset, ToOffset)
+        {}
+
+        X_PRIVATE_MEMBER xJavaBlock(eType Type, size_t FromOffset, size_t ToOffset)
+        : Type(Type), FromOffset(FromOffset), ToOffset(ToOffset)
+        {}
+
+    public:
         eType  Type  = TYPE_DELETED;
 
         size_t FromOffset = {};
@@ -74,12 +101,11 @@ namespace jdc
         xJavaBlock * SubBlockPtr1 = {};
         xJavaBlock * SubBlockPtr2 = {};
 
-        std::vector<xJavaExceptionHander *> ExceptionHandlerPtrs;
-        std::vector<xJavaSwitchCase *>      SwitchCases;
+        std::vector<xJavaSwitchCase>        SwitchCases;
         std::vector<xJavaBlock *>           Predecessors;
-
+        std::vector<xJavaExceptionHander *> ExceptionHandlerPtrs;
     };
 
-
+    X_PRIVATE int CodeExceptionComparator(const xJavaException & E1, const xJavaException & E2);
 
 }

@@ -6,6 +6,31 @@
 namespace jdc
 {
 
+    xJavaSwitchCase::xJavaSwitchCase(xJavaBlock * BlockPtr)
+    : DefaultCase(true), Offset(BlockPtr->FromOffset), BlockPtr(BlockPtr)
+    {}
+
+    xJavaSwitchCase::xJavaSwitchCase(size_t Value, xJavaBlock * BlockPtr)
+    : DefaultCase(false), Value(Value), Offset(BlockPtr->FromOffset), BlockPtr(BlockPtr)
+    {}
+
+    int CodeExceptionComparator(const xJavaException & E1, const xJavaException & E2)
+    {
+        if (E1.StartPC == E2.StartPC) {
+            if (E1.EndPC == E2.EndPC) {
+                return 0;
+            }
+            if (E1.EndPC < E2.EndPC) {
+                return -1;
+            }
+            return 1;
+        }
+        if (E1.StartPC < E2.StartPC) {
+            return -1;
+        }
+        return 1;
+    }
+
     std::unique_ptr<xJavaControlFlowGraph> xJavaControlFlowGraph::ParseByteCode(const xJavaMethod * JavaMethodPtr)
     {
         auto JavaControlFlowGraphUPtr = std::make_unique<xJavaControlFlowGraph>();
@@ -91,7 +116,6 @@ namespace jdc
 
     void xJavaControlFlowGraph::InitBlocks()
     {
-        xel::Renew(Blocks);
         xel::Renew(BlockList);
         FirstVariableIndex = 0;
 
@@ -99,15 +123,13 @@ namespace jdc
         auto & CodeBinary = CodeAttributePtr->CodeBinary;
 
         size_t CodeLength = CodeBinary.size();
-        Blocks.resize(CodeLength);
-        BlockList.resize(CodeLength);
 
         auto BlockTypes = std::vector<xJavaBlock::eType>(CodeLength);
         auto CodeTypes = std::vector<eCodeType>(CodeLength);
         auto NextOffsets = std::vector<size_t>(CodeLength);
         auto BranchOffsets = std::vector<size_t>(CodeLength);;
-        auto SwitchValues = std::vector<std::vector<size_t>>(CodeLength);
-        auto SwitchOffsets = std::vector<std::vector<size_t>>(CodeLength);
+        auto SwitchValueTable = std::vector<std::vector<size_t>>(CodeLength);
+        auto SwitchOffsetTable = std::vector<std::vector<size_t>>(CodeLength);
 
         auto MARK = xJavaBlock::TYPE_END;
         BlockTypes[0] = MARK;
@@ -275,8 +297,8 @@ namespace jdc
                     }
                     Offset = Reader.Offset() - 1;
                     CodeTypes[Offset] = CT_SWITCH;
-                    SwitchValues[Offset] = std::move(Values);
-                    SwitchOffsets[Offset] = std::move(Offsets);
+                    SwitchValueTable[Offset] = std::move(Values);
+                    SwitchOffsetTable[Offset] = std::move(Offsets);
                     LastStatementOffset = Offset;
                     break;
                 }
@@ -383,8 +405,125 @@ namespace jdc
                 }
             } // end of switch(opcode)
         } // end of for
+        NextOffsets[LastOffset] = CodeLength;
 
         X_DEBUG_PRINTF("End of init blocks round 0: mark block types\n");
+
+        auto & ExceptionTable = CodeAttributePtr->ExceptionTable;
+        if (ExceptionTable.size()) {
+            for (auto & Record : ExceptionTable) {
+                BlockTypes[Record.StartPC] = MARK;
+                BlockTypes[Record.HandlerPC] = MARK;
+            }
+        }
+
+        // Create basic blocks:
+        BlockList.push_back(std::make_unique<xJavaBlock>(xJavaBlock::TYPE_START, 0, 0));
+        LastOffset = 0;
+        auto Blocks = std::vector<xJavaBlock*>(CodeLength);
+        for (size_t Offset = NextOffsets[0]; Offset < CodeLength; Offset = NextOffsets[Offset]) {
+            if ((BlockTypes[Offset] != xJavaBlock::TYPE_DELETED)) {
+                BlockList.push_back(std::make_unique<xJavaBlock>(LastOffset, Offset));
+                Blocks[LastOffset] = BlockList.back().get();
+                LastOffset = Offset;
+            }
+        }
+        BlockList.push_back(std::make_unique<xJavaBlock>(LastOffset, CodeLength));
+        Blocks[LastOffset] = BlockList.back().get();
+        BlockList.push_back(std::make_unique<xJavaBlock>(xJavaBlock::TYPE_END, 0, 0));
+
+        // set block types:
+        auto MainFlowBlocks = std::vector<xJavaBlock*>();
+        auto StartBlockPtr = BlockList[0].get();
+        auto SuccessBlockPtr = BlockList[1].get();
+        auto EndBlockPtr = BlockList.back().get();
+
+        StartBlockPtr->NextBlockPtr = SuccessBlockPtr;
+        SuccessBlockPtr->Predecessors.push_back(StartBlockPtr);
+        auto BlockListLength = BlockList.size() - 1; // ignore end block
+        for (size_t I = 1; I < BlockListLength; ++I) {
+            auto BlockPtr = BlockList[I].get();
+            size_t LastInstructionOffset = BlockPtr->ToOffset - 1;
+
+            switch(CodeTypes[LastInstructionOffset]) {
+                case CT_GOTO:
+                    BlockPtr->Type = xJavaBlock::TYPE_GOTO;
+                    SuccessBlockPtr = Blocks[BranchOffsets[LastInstructionOffset]];
+                    BlockPtr->NextBlockPtr = SuccessBlockPtr;
+                    SuccessBlockPtr->Predecessors.push_back(BlockPtr);
+                    break;
+                case CT_TERNARY_GOTO:
+                    BlockPtr->Type = xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR;
+                    SuccessBlockPtr = Blocks[BranchOffsets[LastInstructionOffset]];
+                    BlockPtr->NextBlockPtr = SuccessBlockPtr;
+                    SuccessBlockPtr->Predecessors.push_back(BlockPtr);
+                    break;
+                case CT_THROW:
+                    BlockPtr->Type = xJavaBlock::TYPE_THROW;
+                    BlockPtr->NextBlockPtr = EndBlockPtr;
+                    break;
+                case CT_RETURN:
+                    BlockPtr->Type = xJavaBlock::TYPE_RETURN;
+                    BlockPtr->NextBlockPtr = EndBlockPtr;
+                    break;
+                case CT_CONDITIONAL:
+                    BlockPtr->Type = xJavaBlock::TYPE_CONDITIONAL_BRANCH;
+                    SuccessBlockPtr = Blocks[BlockPtr->ToOffset];
+                    BlockPtr->NextBlockPtr = SuccessBlockPtr;
+                    SuccessBlockPtr->Predecessors.push_back(BlockPtr);
+                    SuccessBlockPtr = Blocks[BranchOffsets[LastInstructionOffset]];
+                    BlockPtr->BranchBlockPtr = SuccessBlockPtr;
+                    SuccessBlockPtr->Predecessors.push_back(BlockPtr);
+                    break;
+                case CT_SWITCH: {
+                    BlockPtr->Type = xJavaBlock::TYPE_SWITCH_DECLARATION;
+                    auto & Values = SwitchValueTable[LastInstructionOffset];
+                    auto & Offsets = SwitchOffsetTable[LastInstructionOffset];
+                    auto & SwitchCases = BlockPtr->SwitchCases;
+
+                    size_t DefaultCaseOffset = Offsets[0];
+                    auto CaseBlockPtr = Blocks[DefaultCaseOffset];
+                    SwitchCases.emplace_back(BlockPtr);
+                    CaseBlockPtr->Predecessors.push_back(BlockPtr);
+
+                    for (size_t Index = 1; Index < Offsets.size(); ++Index) {
+                        size_t CaseOffset = Offsets[Index];
+                        // TODO: DEBUG
+                        // if (CaseOffset != DefaultCaseOffset) {
+                            CaseBlockPtr = Blocks[CaseOffset];
+                            SwitchCases.emplace_back(Values[Index], CaseBlockPtr);
+                            CaseBlockPtr->Predecessors.push_back(BlockPtr);
+                        // }
+                    }
+                    break;
+                }
+                case CT_JSR:
+                    BlockPtr->Type = xJavaBlock::TYPE_JSR;
+                    SuccessBlockPtr = Blocks[BlockPtr->ToOffset];
+                    BlockPtr->NextBlockPtr = SuccessBlockPtr;
+                    SuccessBlockPtr->Predecessors.push_back(BlockPtr);
+                    SuccessBlockPtr = Blocks[BranchOffsets[LastInstructionOffset]];
+                    BlockPtr->BranchBlockPtr = SuccessBlockPtr;
+                    SuccessBlockPtr->Predecessors.push_back(BlockPtr);
+                    break;
+                case CT_RET:
+                    BlockPtr->Type = xJavaBlock::TYPE_RET;
+                    BlockPtr->NextBlockPtr = EndBlockPtr;
+                    break;
+                case CT_RETURN_VALUE:
+                    BlockPtr->Type = xJavaBlock::TYPE_RETURN_VALUE;
+                    BlockPtr->NextBlockPtr = EndBlockPtr;
+                    break;
+                default:
+                    BlockPtr->Type = xJavaBlock::TYPE_STATEMENTS;
+                    SuccessBlockPtr = Blocks[BlockPtr->ToOffset];
+                    BlockPtr->NextBlockPtr = SuccessBlockPtr;
+                    SuccessBlockPtr->Predecessors.push_back(BlockPtr);
+                    MainFlowBlocks.push_back(BlockPtr);
+                    break;
+            }
+        }
+
         X_DEBUG_BREAKPOINT();
 
     }

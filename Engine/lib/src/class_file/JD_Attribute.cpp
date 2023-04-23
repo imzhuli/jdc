@@ -50,12 +50,12 @@ namespace jdc
         Reader.R(CodeBinary.data(), CodeSize);
 
         uint16_t ExceptionTableLength = Reader.R2();
-        ExceptionTables.resize(ExceptionTableLength);
-        for (auto & ExceptionTable : ExceptionTables) {
-            ExceptionTable.StartPC = Reader.R2();
-            ExceptionTable.EndPC = Reader.R2();
-            ExceptionTable.HandlePC = Reader.R2();
-            ExceptionTable.CatchType = Reader.R2();
+        ExceptionTable.resize(ExceptionTableLength);
+        for (auto & Mark : ExceptionTable) {
+            Mark.StartPC = Reader.R2();
+            Mark.EndPC = Reader.R2();
+            Mark.HandlerPC = Reader.R2();
+            Mark.CatchType = Reader.R2();
         }
 
         uint16_t SubAttributeCount = Reader.R2();

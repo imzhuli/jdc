@@ -16,10 +16,9 @@ namespace jdc
     class xJavaControlFlowGraph
     {
     public:
-        std::vector<xJavaLocalVariable> LocalVariableList;
-        std::vector<xJavaBlock>         Blocks;
-        std::vector<xJavaBlock*>        BlockList;
-        size_t                          FirstVariableIndex;
+        std::vector<xJavaLocalVariable>            LocalVariableList;
+        std::vector<std::unique_ptr<xJavaBlock>>   BlockList;
+        size_t                                     FirstVariableIndex;
 
     protected:
         const xJavaMethod *             _JavaMethodPtr;
