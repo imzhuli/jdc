@@ -1,7 +1,9 @@
 #include <jdc/decompiler/JD_JavaControlFlowGraph.hpp>
 #include <jdc/decompiler/JD_JavaMethod.hpp>
 #include <jdc/decompiler/JD_JavaClass.hpp>
+#include <jdc/decompiler/JD_JavaSpace.hpp>
 #include <xel/String.hpp>
+#include <algorithm>
 
 namespace jdc
 {
@@ -14,22 +16,17 @@ namespace jdc
     : DefaultCase(false), Value(Value), Offset(BlockPtr->FromOffset), BlockPtr(BlockPtr)
     {}
 
-    int CodeExceptionComparator(const xJavaException & E1, const xJavaException & E2)
+    class xCodeExceptionComparator
     {
-        if (E1.StartPC == E2.StartPC) {
-            if (E1.EndPC == E2.EndPC) {
-                return 0;
+    public:
+        bool operator () (const xJavaException & E1, const xJavaException & E2) const
+        {
+            if (E1.StartPC == E2.StartPC) {
+                return E1.EndPC < E2.EndPC;
             }
-            if (E1.EndPC < E2.EndPC) {
-                return -1;
-            }
-            return 1;
+            return E1.StartPC < E2.StartPC;
         }
-        if (E1.StartPC < E2.StartPC) {
-            return -1;
-        }
-        return 1;
-    }
+    };
 
     std::unique_ptr<xJavaControlFlowGraph> xJavaControlFlowGraph::ParseByteCode(const xJavaMethod * JavaMethodPtr)
     {
@@ -407,13 +404,11 @@ namespace jdc
         } // end of for
         NextOffsets[LastOffset] = CodeLength;
 
-        X_DEBUG_PRINTF("End of init blocks round 0: mark block types\n");
-
         auto & ExceptionTable = CodeAttributePtr->ExceptionTable;
         if (ExceptionTable.size()) {
-            for (auto & Record : ExceptionTable) {
-                BlockTypes[Record.StartPC] = MARK;
-                BlockTypes[Record.HandlerPC] = MARK;
+            for (auto & Mark : ExceptionTable) {
+                BlockTypes[Mark.StartPC] = MARK;
+                BlockTypes[Mark.HandlerPC] = MARK;
             }
         }
 
@@ -439,7 +434,7 @@ namespace jdc
         auto EndBlockPtr = BlockList.back().get();
 
         StartBlockPtr->NextBlockPtr = SuccessBlockPtr;
-        SuccessBlockPtr->Predecessors.push_back(StartBlockPtr);
+        SuccessBlockPtr->Predecessors.insert(StartBlockPtr);
         auto BlockListLength = BlockList.size() - 1; // ignore end block
         for (size_t I = 1; I < BlockListLength; ++I) {
             auto BlockPtr = BlockList[I].get();
@@ -450,13 +445,13 @@ namespace jdc
                     BlockPtr->Type = xJavaBlock::TYPE_GOTO;
                     SuccessBlockPtr = Blocks[BranchOffsets[LastInstructionOffset]];
                     BlockPtr->NextBlockPtr = SuccessBlockPtr;
-                    SuccessBlockPtr->Predecessors.push_back(BlockPtr);
+                    SuccessBlockPtr->Predecessors.insert(BlockPtr);
                     break;
                 case CT_TERNARY_GOTO:
                     BlockPtr->Type = xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR;
                     SuccessBlockPtr = Blocks[BranchOffsets[LastInstructionOffset]];
                     BlockPtr->NextBlockPtr = SuccessBlockPtr;
-                    SuccessBlockPtr->Predecessors.push_back(BlockPtr);
+                    SuccessBlockPtr->Predecessors.insert(BlockPtr);
                     break;
                 case CT_THROW:
                     BlockPtr->Type = xJavaBlock::TYPE_THROW;
@@ -470,10 +465,10 @@ namespace jdc
                     BlockPtr->Type = xJavaBlock::TYPE_CONDITIONAL_BRANCH;
                     SuccessBlockPtr = Blocks[BlockPtr->ToOffset];
                     BlockPtr->NextBlockPtr = SuccessBlockPtr;
-                    SuccessBlockPtr->Predecessors.push_back(BlockPtr);
+                    SuccessBlockPtr->Predecessors.insert(BlockPtr);
                     SuccessBlockPtr = Blocks[BranchOffsets[LastInstructionOffset]];
                     BlockPtr->BranchBlockPtr = SuccessBlockPtr;
-                    SuccessBlockPtr->Predecessors.push_back(BlockPtr);
+                    SuccessBlockPtr->Predecessors.insert(BlockPtr);
                     break;
                 case CT_SWITCH: {
                     BlockPtr->Type = xJavaBlock::TYPE_SWITCH_DECLARATION;
@@ -484,7 +479,7 @@ namespace jdc
                     size_t DefaultCaseOffset = Offsets[0];
                     auto CaseBlockPtr = Blocks[DefaultCaseOffset];
                     SwitchCases.emplace_back(BlockPtr);
-                    CaseBlockPtr->Predecessors.push_back(BlockPtr);
+                    CaseBlockPtr->Predecessors.insert(BlockPtr);
 
                     for (size_t Index = 1; Index < Offsets.size(); ++Index) {
                         size_t CaseOffset = Offsets[Index];
@@ -492,7 +487,7 @@ namespace jdc
                         // if (CaseOffset != DefaultCaseOffset) {
                             CaseBlockPtr = Blocks[CaseOffset];
                             SwitchCases.emplace_back(Values[Index], CaseBlockPtr);
-                            CaseBlockPtr->Predecessors.push_back(BlockPtr);
+                            CaseBlockPtr->Predecessors.insert(BlockPtr);
                         // }
                     }
                     break;
@@ -501,10 +496,10 @@ namespace jdc
                     BlockPtr->Type = xJavaBlock::TYPE_JSR;
                     SuccessBlockPtr = Blocks[BlockPtr->ToOffset];
                     BlockPtr->NextBlockPtr = SuccessBlockPtr;
-                    SuccessBlockPtr->Predecessors.push_back(BlockPtr);
+                    SuccessBlockPtr->Predecessors.insert(BlockPtr);
                     SuccessBlockPtr = Blocks[BranchOffsets[LastInstructionOffset]];
                     BlockPtr->BranchBlockPtr = SuccessBlockPtr;
-                    SuccessBlockPtr->Predecessors.push_back(BlockPtr);
+                    SuccessBlockPtr->Predecessors.insert(BlockPtr);
                     break;
                 case CT_RET:
                     BlockPtr->Type = xJavaBlock::TYPE_RET;
@@ -518,13 +513,85 @@ namespace jdc
                     BlockPtr->Type = xJavaBlock::TYPE_STATEMENTS;
                     SuccessBlockPtr = Blocks[BlockPtr->ToOffset];
                     BlockPtr->NextBlockPtr = SuccessBlockPtr;
-                    SuccessBlockPtr->Predecessors.push_back(BlockPtr);
+                    SuccessBlockPtr->Predecessors.insert(BlockPtr);
                     MainFlowBlocks.push_back(BlockPtr);
                     break;
             }
         }
 
-        X_DEBUG_BREAKPOINT();
+        if (ExceptionTable.size()) {
+            // copy & sort code exceptions byte StartPC & EndPC
+            std::vector<xJavaException> CodeExceptions;
+            for (auto & Mark : ExceptionTable) {
+                auto NewCodeException = xJavaException {
+                    .StartPC   = Mark.StartPC,
+                    .EndPC     = Mark.EndPC,
+                    .HandlerPC = Mark.HandlerPC,
+                    .CatchType = Mark.CatchType,
+                };
+                CodeExceptions.push_back(NewCodeException);
+            }
+            std::sort(CodeExceptions.begin(), CodeExceptions.end(), xCodeExceptionComparator());
+
+            auto Cache = std::map<xJavaException, xJavaBlock*, xCodeExceptionComparator>();
+            auto & HandlePCToStartPC = BranchOffsets;
+            auto & HandlePCMarks = CodeTypes;
+            for (auto & CE : CodeExceptions) {
+                auto StartPC = CE.StartPC;
+                auto EndPC = CE.EndPC;
+                auto HandlerPC = CE.HandlerPC;
+
+                if (StartPC == HandlerPC) {
+                    X_DEBUG_BREAKPOINT();
+                    continue;
+                }
+                if (HandlePCMarks[HandlerPC] == CT_THROW && StartPC > Blocks[HandlePCToStartPC[HandlerPC]]->FromOffset) {
+                    X_DEBUG_BREAKPOINT();
+                    continue;
+                }
+
+                auto & TryCatchFinalBlockPtr = Cache[CE];
+                if (!TryCatchFinalBlockPtr) {
+                    // Insert a new 'try-catch-finally' basic block
+                    auto StartBlockPtr = Blocks[StartPC];
+                    BlockList.push_back(std::make_unique<xJavaBlock>(xJavaBlock::TYPE_TRY_DECLARATION, StartPC, EndPC));
+                    TryCatchFinalBlockPtr = BlockList.back().get();
+                    TryCatchFinalBlockPtr->NextBlockPtr = StartBlockPtr;
+
+                    // Update predecessors
+                    auto & StartBlockPredecessors = StartBlockPtr->Predecessors;
+                    for (auto Iter = StartBlockPredecessors.begin(); Iter != StartBlockPredecessors.end();) {
+                        auto & PredecessorPtr = *Iter;
+                        if (!StartBlockPtr->Contains(PredecessorPtr)) {
+                            PredecessorPtr->Replace(StartBlockPtr, TryCatchFinalBlockPtr);
+                            TryCatchFinalBlockPtr->Predecessors.insert(PredecessorPtr);
+                            Iter = StartBlockPredecessors.erase(Iter);
+                        } else {
+                            ++Iter;
+                        }
+                    }
+
+                    StartBlockPredecessors.insert(TryCatchFinalBlockPtr);
+                    Blocks[StartPC] = TryCatchFinalBlockPtr;
+                    Cache[CE] = TryCatchFinalBlockPtr;
+                }
+
+                if (CE.CatchType) {
+                    auto & UnfixedTypeBinaryName = _JavaClassPtr->ClassInfo.GetConstantClassBinaryName(CE.CatchType);
+                    CE.FixedExceptionClassBinaryName = _JavaClassPtr->JavaSpacePtr->GetFixedClassBinaryName(UnfixedTypeBinaryName);
+
+                    X_DEBUG_PRINTF("ExceptionClassBinaryName: %s\n", CE.FixedExceptionClassBinaryName.c_str());
+                }
+
+                // BasicBlock handlerBB = map[handlerPc];
+                // tcf.addExceptionHandler(internalThrowableName, handlerBB);
+                // handlerBB.getPredecessors().add(tcf);
+                // handlePcToStartPc[handlerPc] = startPc;
+                // handlePcMarks[handlerPc] = 'T';
+            }
+
+            X_DEBUG_BREAKPOINT();
+        }
 
     }
 

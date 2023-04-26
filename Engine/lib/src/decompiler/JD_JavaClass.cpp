@@ -53,13 +53,13 @@ namespace jdc
 
     void xJavaClass::DoExtend()
     {
-        X_DEBUG_PRINTF("xJavaClass::DoExtend %s --> %s --> %s\n", _FixedBinaryName.c_str(), _SimpleBinaryName.c_str(), _InnermostName.c_str());
+        // X_DEBUG_PRINTF("xJavaClass::DoExtend %s --> %s --> %s\n", _FixedBinaryName.c_str(), _SimpleBinaryName.c_str(), _InnermostName.c_str());
 
         Extend.AttributeMap = LoadAttributeInfo(ClassInfo.Attributes, &ClassInfo);
 
         auto SourceFile = (const xAttributeSourceFile*)GetAttributePtr(Extend.AttributeMap, xAttributeNames::SourceFile);
         if (SourceFile) {
-            X_DEBUG_PRINTF("Found SourceFile attribute, but ignored: %s\n", SourceFile->Filename.c_str());
+            // X_DEBUG_PRINTF("Found SourceFile attribute, but ignored: %s\n", SourceFile->Filename.c_str());
             // Extend.SuggestedSourceFilename = SourceFile->Filename;
         }
         Extend.SuggestedSourceFilename = GetOutermostClassCodeName(_SimpleBinaryName) + ".java";

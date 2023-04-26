@@ -34,6 +34,13 @@ namespace jdc
             auto Iter = _ClassMap.find(UnfixedClassBinaryName);
             return (Iter == _ClassMap.end()) ? nullptr : Iter->second.get();
         }
+        X_INLINE std::string GetFixedClassBinaryName(const std::string & UnfixedClassBinaryName) const {
+            auto JavaClassPtr = GetClass(UnfixedClassBinaryName);
+            if (JavaClassPtr) {
+                return JavaClassPtr->GetFixedBinaryName();
+            }
+            return UnfixedClassBinaryName;
+        }
         X_INLINE std::string GetFixedClassCodeName(const std::string & UnfixedClassBinaryName) const {
             auto JavaClassPtr = GetClass(UnfixedClassBinaryName);
             if (JavaClassPtr) {

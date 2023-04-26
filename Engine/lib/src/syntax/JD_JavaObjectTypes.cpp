@@ -44,12 +44,12 @@ namespace jdc
         AddJavaObjectType("java/lang/Thread");
         AddJavaObjectType("java/lang/Throwable");
 
-        for (auto & Entry : JavaObjectTypeMap) {
-            X_DEBUG_PRINTF("Init object type: %s --> %s\n", Entry.second->GetInnermostName().c_str(), Entry.first.c_str());
-        }
-        for (auto & Entry : JavaObjectTypeCodeNameMap) {
-            X_DEBUG_PRINTF("Init object type (code name): %s --> %s\n", Entry.second->GetSimpleCodeName().c_str(), Entry.first.c_str());
-        }
+        // for (auto & Entry : JavaObjectTypeMap) {
+        //     X_DEBUG_PRINTF("Init object type: %s --> %s\n", Entry.second->GetInnermostName().c_str(), Entry.first.c_str());
+        // }
+        // for (auto & Entry : JavaObjectTypeCodeNameMap) {
+        //     X_DEBUG_PRINTF("Init object type (code name): %s --> %s\n", Entry.second->GetSimpleCodeName().c_str(), Entry.first.c_str());
+        // }
 
         return true;
     };

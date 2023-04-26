@@ -3,6 +3,8 @@
 #include "../syntax/JD_JavaType.hpp"
 #include "../syntax/JD_JavaPrimitiveTypes.hpp"
 #include "../syntax/JD_JavaObjectTypes.hpp"
+#include <vector>
+#include <set>
 
 namespace jdc
 {
@@ -11,16 +13,6 @@ namespace jdc
     class xJavaBlock;
     class xJavaSwitchCase;
     class xJavaExceptionHander;
-
-    class xJavaException
-    {
-    public:
-        size_t      Index       ={};
-        uint16_t    StartPC     ={};
-        uint16_t    EndPC       ={};
-        uint16_t    HandlerPC   ={};
-        uint16_t    CatchType   ={};
-    };
 
     class xJavaSwitchCase
     {
@@ -33,6 +25,24 @@ namespace jdc
         X_PRIVATE_MEMBER xJavaSwitchCase() = default;
         X_PRIVATE_MEMBER xJavaSwitchCase(xJavaBlock * BlockPtr); // default case
         X_PRIVATE_MEMBER xJavaSwitchCase(size_t Value, xJavaBlock * BlockPtr);
+    };
+
+    class xJavaException
+    {
+    public:
+        // size_t      Index       =  {};
+        uint16_t    StartPC     =  {};
+        uint16_t    EndPC       =  {};
+        uint16_t    HandlerPC   =  {};
+        uint16_t    CatchType   =  {};
+        std::string FixedExceptionClassBinaryName;
+    };
+
+    class xJavaExceptionHander
+    {
+    public:
+        std::string    FixedCatchTypeName = {};
+        xJavaBlock *   HandlerBlockPtr    = {};
     };
 
     class xJavaBlock
@@ -88,6 +98,9 @@ namespace jdc
         : Type(Type), FromOffset(FromOffset), ToOffset(ToOffset)
         {}
 
+        X_PRIVATE_MEMBER bool Contains(xJavaBlock * CheckBlockPtr) const;
+        X_PRIVATE_MEMBER void Replace(xJavaBlock * OldBlockPtr, xJavaBlock * NewBlockPtr);
+
     public:
         eType  Type  = TYPE_DELETED;
 
@@ -97,15 +110,13 @@ namespace jdc
         xJavaBlock * NextBlockPtr = {};
         xJavaBlock * BranchBlockPtr = {};
         xJavaBlock * ConditionBlockPtr = {};
-        bool         InverseCondition = false;
-        xJavaBlock * SubBlockPtr1 = {};
-        xJavaBlock * SubBlockPtr2 = {};
+        bool         InverseCondition = true;
+        xJavaBlock * FirstSubBlockPtr = {};
+        xJavaBlock * SecondSubBlockPtr = {};
 
+        std::set<xJavaBlock *>              Predecessors;
         std::vector<xJavaSwitchCase>        SwitchCases;
-        std::vector<xJavaBlock *>           Predecessors;
-        std::vector<xJavaExceptionHander *> ExceptionHandlerPtrs;
+        std::vector<xJavaExceptionHander>   ExceptionHandlers;
     };
-
-    X_PRIVATE int CodeExceptionComparator(const xJavaException & E1, const xJavaException & E2);
 
 }
