@@ -25,6 +25,7 @@ namespace jdc
 
     X_PRIVATE std::string ConvertTypeDescriptorToBinaryName(const std::string & Descriptor);
     X_PRIVATE xMethodTypeNames ConvertMethodDescriptorToBinaryNames(const std::string & Descriptor);
+    X_PRIVATE size_t CountMethodParameters(const std::string & Descriptor);
 
 
 }

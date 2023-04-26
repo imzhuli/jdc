@@ -198,6 +198,12 @@ namespace jdc
         return MethodTypeName;
     }
 
+    size_t CountMethodParameters(const std::string & Descriptor)
+    {
+        auto Names = ConvertMethodDescriptorToBinaryNames(Descriptor);
+        return Names.ParameterTypeBinaryNames.size();
+    }
+
     const std::string & GetShorterBinaryName(const std::string & FullBinaryName)
     {
         auto & Map = GetJavaObjectTypeMap();
