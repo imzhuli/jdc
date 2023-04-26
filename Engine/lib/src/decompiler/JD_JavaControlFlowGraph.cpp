@@ -92,9 +92,10 @@ namespace jdc
         CT_JSR,          // 'j'
         CT_RET,          // 'R'
         CT_RETURN_VALUE, // 'v'
+        CT_TRY,          // 'T'
 
         // default:
-        CT_STATEMENT
+        CT_STATEMENT     // TYPE_STATEMENTS
     };
 
     static bool IsILOADForIINC(const std::vector<xel::ubyte> & code, size_t offset, size_t index) {
@@ -583,11 +584,13 @@ namespace jdc
                     X_DEBUG_PRINTF("ExceptionClassBinaryName: %s\n", CE.FixedExceptionClassBinaryName.c_str());
                 }
 
-                // BasicBlock handlerBB = map[handlerPc];
-                // tcf.addExceptionHandler(internalThrowableName, handlerBB);
-                // handlerBB.getPredecessors().add(tcf);
-                // handlePcToStartPc[handlerPc] = startPc;
-                // handlePcMarks[handlerPc] = 'T';
+                auto HandlerBlockPtr = Blocks[HandlerPC];
+                auto Handler = xJavaExceptionHandler{ CE.FixedExceptionClassBinaryName, HandlerBlockPtr };
+                TryCatchFinalBlockPtr->AddExceptionHandler(Handler);
+
+                HandlerBlockPtr->Predecessors.insert(TryCatchFinalBlockPtr);
+                HandlePCToStartPC[HandlerPC] = StartPC;
+                HandlePCMarks[HandlerPC] = CT_THROW;
             }
 
             X_DEBUG_BREAKPOINT();

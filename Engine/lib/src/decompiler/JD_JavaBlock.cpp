@@ -63,5 +63,16 @@ namespace jdc
         }
     }
 
+    void xJavaBlock::AddExceptionHandler(const xJavaExceptionHandler & ExceptionHandler)
+    {
+    #ifndef NDEBUG
+        for(auto & Handler : ExceptionHandlers) {
+            if (Handler.FixedCatchTypeName == ExceptionHandler.FixedCatchTypeName) {
+                xel::Fatal("Duplicate Exception catch type");
+            }
+        }
+    #endif
+        ExceptionHandlers.push_back(ExceptionHandler);
+    }
 
 }

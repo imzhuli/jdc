@@ -12,7 +12,7 @@ namespace jdc
     class xJavaControlFlowGraph;
     class xJavaBlock;
     class xJavaSwitchCase;
-    class xJavaExceptionHander;
+    class xJavaExceptionHandler;
 
     class xJavaSwitchCase
     {
@@ -38,7 +38,7 @@ namespace jdc
         std::string FixedExceptionClassBinaryName;
     };
 
-    class xJavaExceptionHander
+    class xJavaExceptionHandler
     {
     public:
         std::string    FixedCatchTypeName = {};
@@ -100,6 +100,7 @@ namespace jdc
 
         X_PRIVATE_MEMBER bool Contains(xJavaBlock * CheckBlockPtr) const;
         X_PRIVATE_MEMBER void Replace(xJavaBlock * OldBlockPtr, xJavaBlock * NewBlockPtr);
+        X_PRIVATE_MEMBER void AddExceptionHandler(const xJavaExceptionHandler & ExceptionHandler);
 
     public:
         eType  Type  = TYPE_DELETED;
@@ -114,9 +115,9 @@ namespace jdc
         xJavaBlock * FirstSubBlockPtr = {};
         xJavaBlock * SecondSubBlockPtr = {};
 
-        std::set<xJavaBlock *>              Predecessors;
-        std::vector<xJavaSwitchCase>        SwitchCases;
-        std::vector<xJavaExceptionHander>   ExceptionHandlers;
+        std::set<xJavaBlock *>               Predecessors;
+        std::vector<xJavaSwitchCase>         SwitchCases;
+        std::vector<xJavaExceptionHandler>   ExceptionHandlers;
     };
 
 }
