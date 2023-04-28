@@ -46,6 +46,9 @@ namespace jdc
 
         InitLocalVariables();
         InitBlocks();
+        ReduceGoto();
+        ReduceLoop();
+        ReduceGraph();
 
         return true;
     }
@@ -54,8 +57,7 @@ namespace jdc
     {
         xel::Renew(LocalVariableList);
 
-        if (_JavaMethodPtr->MethodInfoPtr->AccessFlags & ACC_STATIC) {
-            // no "this" parameter
+        if (_JavaMethodPtr->MethodInfoPtr->AccessFlags & ACC_STATIC) { // no "this" parameter
         }
         else {
             LocalVariableList.push_back({ _JavaClassPtr->GetInnermostName(), "this"s });
@@ -114,6 +116,7 @@ namespace jdc
 
     void xJavaControlFlowGraph::InitBlocks()
     {
+        xel::Renew(Blocks);
         xel::Renew(BlockList);
         FirstVariableIndex = 0;
 
@@ -415,8 +418,8 @@ namespace jdc
 
         // Create basic blocks:
         BlockList.push_back(std::make_unique<xJavaBlock>(xJavaBlock::TYPE_START, 0, 0));
+        Blocks.resize(CodeLength);
         LastOffset = 0;
-        auto Blocks = std::vector<xJavaBlock*>(CodeLength);
         for (size_t Offset = NextOffsets[0]; Offset < CodeLength; Offset = NextOffsets[Offset]) {
             if ((BlockTypes[Offset] != xJavaBlock::TYPE_DELETED)) {
                 BlockList.push_back(std::make_unique<xJavaBlock>(LastOffset, Offset));
@@ -426,6 +429,7 @@ namespace jdc
         }
         BlockList.push_back(std::make_unique<xJavaBlock>(LastOffset, CodeLength));
         Blocks[LastOffset] = BlockList.back().get();
+        // add and code end block, this is not included in jd-core, since in jd-core code end block is a static block
         BlockList.push_back(std::make_unique<xJavaBlock>(xJavaBlock::TYPE_END, 0, 0));
 
         // set block types:
@@ -484,8 +488,7 @@ namespace jdc
 
                     for (size_t Index = 1; Index < Offsets.size(); ++Index) {
                         size_t CaseOffset = Offsets[Index];
-                        // TODO: DEBUG
-                        // if (CaseOffset != DefaultCaseOffset) {
+                        // if (CaseOffset != DefaultCaseOffset) { // merge case shared with default
                             CaseBlockPtr = Blocks[CaseOffset];
                             SwitchCases.emplace_back(Values[Index], CaseBlockPtr);
                             CaseBlockPtr->Predecessors.insert(BlockPtr);
@@ -645,10 +648,8 @@ namespace jdc
     {
         size_t Depth = 0;
         auto & ClassInfo = JavaClassPtr->ClassInfo;
-        X_DEBUG_PRINTF("xJavaControlFlowGraph::EvalStackDepth: FromOffset:%zi, ToOffset:%zi\n", BlockPtr->FromOffset, BlockPtr->ToOffset);
         for (size_t Offset=BlockPtr->FromOffset, ToOffset=BlockPtr->ToOffset; Offset < ToOffset; ++Offset) {
             xOpCode OpCode = CodeBinary[Offset];
-            X_DEBUG_PRINTF("OpCode: %s\n", GetOpName(OpCode));
             switch(OpCode) {
                 case 1: // ACONST_NULL
                 case 2: case 3: case 4: case 5: case 6: case 7: case 8: // ICONST_M1, ICONST_0 ... ICONST_5
@@ -841,7 +842,45 @@ namespace jdc
             }
         }
 
+        X_DEBUG_PRINTF("xJavaControlFlowGraph::EvalStackDepth: FromOffset:%zi, ToOffset:%zi, Depth:%zi\n", BlockPtr->FromOffset, BlockPtr->ToOffset, Depth);
         return Depth;
+    }
+
+    void xJavaControlFlowGraph::ReduceGoto()
+    {
+        // TODO
+    }
+
+    void xJavaControlFlowGraph::ReduceLoop()
+    {
+        // TODO
+    }
+
+    static bool Reduce(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet)
+    {
+        if (BlockPtr->Type & xJavaBlock::GROUP_END) {
+            return true;
+        }
+        if (VisitedSet.find(BlockPtr) == VisitedSet.end()) {
+            return true;
+        }
+        VisitedSet.insert(BlockPtr);
+        return true;
+    }
+
+    void xJavaControlFlowGraph::ReduceGraph()
+    {
+        X_DEBUG_PRINTF("xJavaControlFlowGraph::ReduceGraph: BlockSize=%zi\n", BlockList.size());
+        if (Blocks.empty()) {
+            return;
+        }
+        auto StartBlockPtr = Blocks[0];
+        if (!StartBlockPtr) {
+            return;
+        }
+        auto VisitedSet = std::set<xJavaBlock*>();
+        auto JsrTargetSet = std::set<xJavaBlock*>();
+        Reduce(StartBlockPtr, VisitedSet, JsrTargetSet);
     }
 
 }

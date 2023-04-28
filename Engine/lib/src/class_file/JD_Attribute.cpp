@@ -173,7 +173,6 @@ namespace jdc
     {
         auto Reader = xStreamReader(AttributeBinary.data());
         Annotations.resize(Reader.R2());
-        X_DEBUG_PRINTF("LoadingRuntimeAnnotation for class %s: size=%u\n", ClassInfoPtr->GetConstantClassBinaryName(ClassInfoPtr->ThisClass).c_str(), (unsigned int)Annotations.size());
         for (auto & Annotation : Annotations) {
             Annotation = LoadAnnotation(Reader);
         }
@@ -188,7 +187,6 @@ namespace jdc
             Annotations.resize(Reader.R2());
             for (auto & Annotation : Annotations) {
                 Annotation = LoadAnnotation(Reader);
-                X_DEBUG_PRINTF("LoadAnnotation: TypeName:%s\n", ClassInfoPtr->GetConstantUtf8(Annotation->TypeNameIndex).c_str());
             }
         }
         return true;
@@ -202,8 +200,6 @@ namespace jdc
         for (auto & Parameter : Parameters) {
             Parameter.Name = ClassInfoPtr->GetConstantUtf8(Reader.R2());
             Parameter.AccessFlags = Reader.R2();
-
-            X_DEBUG_PRINTF("Parameter:%s: %x\n", Parameter.Name.c_str(), (unsigned int)Parameter.AccessFlags);
         }
         return true;
     }
@@ -443,7 +439,11 @@ namespace jdc
                 }
             }
             else {
-                X_DEBUG_PRINTF("Unknonw attribute reached: %s\n", Name.c_str());
+                if (Name == "RuntimeInvisibleTypeAnnotations") { // known and ignored
+                }
+                else {
+                    X_DEBUG_PRINTF("Unknonw attribute reached: %s\n", Name.c_str());
+                }
             }
         }
         return Collection;

@@ -17,6 +17,7 @@ namespace jdc
     {
     public:
         std::vector<xJavaLocalVariable>            LocalVariableList;
+        std::vector<xJavaBlock*>                   Blocks;
         std::vector<std::unique_ptr<xJavaBlock>>   BlockList;
         size_t                                     FirstVariableIndex;
 
@@ -25,9 +26,12 @@ namespace jdc
         const xJavaClass *              _JavaClassPtr;
 
     protected:
-        X_PRIVATE_MEMBER bool   Init(const xJavaMethod * JavaMethodPtr);
-        X_PRIVATE_MEMBER void   InitLocalVariables();
-        X_PRIVATE_MEMBER void   InitBlocks();
+        X_PRIVATE_MEMBER bool Init(const xJavaMethod * JavaMethodPtr);
+        X_PRIVATE_MEMBER void InitLocalVariables();
+        X_PRIVATE_MEMBER void InitBlocks();
+        X_PRIVATE_MEMBER void ReduceGoto();
+        X_PRIVATE_MEMBER void ReduceLoop();
+        X_PRIVATE_MEMBER void ReduceGraph();
         X_PRIVATE_STATIC_MEMBER size_t EvalStackDepth(const xJavaClass * JavaClassPtr, const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr);
 
     public:

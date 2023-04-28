@@ -92,11 +92,6 @@ namespace jdc
         AddJavaPrimitiveType("long",    xJavaPrimitiveType::FLAG_LONG);
         AddJavaPrimitiveType("short",   xJavaPrimitiveType::FLAG_SHORT);
         AddJavaPrimitiveType("void",    xJavaPrimitiveType::FLAG_VOID);
-
-        for (auto & Entry : PrimativeJavaTypeMap) {
-            X_DEBUG_PRINTF("Init primitive type: %s --> %s\n", Entry.second.GetInnermostName().c_str(), Entry.first.c_str());
-        }
-
         return true;
     }
 
