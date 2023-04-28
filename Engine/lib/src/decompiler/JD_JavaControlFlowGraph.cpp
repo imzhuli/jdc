@@ -46,8 +46,8 @@ namespace jdc
 
         InitLocalVariables();
         InitBlocks();
-        ReduceGoto();
-        ReduceLoop();
+        // ReduceGoto(); in jd-core
+        // ReduceLoop(); in jd-core
         ReduceGraph();
 
         return true;
@@ -846,17 +846,37 @@ namespace jdc
         return Depth;
     }
 
-    void xJavaControlFlowGraph::ReduceGoto()
+    bool xJavaControlFlowGraph::ReduceConditionalBranch(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet)
     {
         // TODO
+        return true;
     }
 
-    void xJavaControlFlowGraph::ReduceLoop()
+    bool xJavaControlFlowGraph::ReduceSwitchDeclaration(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet)
     {
         // TODO
+        return true;
     }
 
-    static bool Reduce(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet)
+    bool xJavaControlFlowGraph::ReduceTryDeclaration(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet)
+    {
+        // TODO
+        return true;
+    }
+
+    bool xJavaControlFlowGraph::ReduceJsr(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet)
+    {
+        // TODO
+        return true;
+    }
+
+    bool xJavaControlFlowGraph::ReduceLoop(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet)
+    {
+        // TODO
+        return true;
+    }
+
+    bool xJavaControlFlowGraph::Reduce(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet)
     {
         if (BlockPtr->Type & xJavaBlock::GROUP_END) {
             return true;
@@ -865,6 +885,35 @@ namespace jdc
             return true;
         }
         VisitedSet.insert(BlockPtr);
+
+        switch (BlockPtr->Type) {
+                case xJavaBlock::TYPE_START:
+                case xJavaBlock::TYPE_STATEMENTS:
+                case xJavaBlock::TYPE_IF:
+                case xJavaBlock::TYPE_IF_ELSE:
+                case xJavaBlock::TYPE_SWITCH:
+                case xJavaBlock::TYPE_TRY:
+                case xJavaBlock::TYPE_TRY_JSR:
+                case xJavaBlock::TYPE_TRY_ECLIPSE:
+                case xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR:
+                    return Reduce(BlockPtr->NextBlockPtr, VisitedSet, JsrTargetSet);
+                case xJavaBlock::TYPE_CONDITIONAL_BRANCH:
+                case xJavaBlock::TYPE_CONDITION:
+                case xJavaBlock::TYPE_CONDITION_OR:
+                case xJavaBlock::TYPE_CONDITION_AND:
+                case xJavaBlock::TYPE_CONDITION_TERNARY_OPERATOR:
+                    return ReduceConditionalBranch(BlockPtr, VisitedSet, JsrTargetSet);
+                case xJavaBlock::TYPE_SWITCH_DECLARATION:
+                    return ReduceSwitchDeclaration(BlockPtr, VisitedSet, JsrTargetSet);
+                case xJavaBlock::TYPE_TRY_DECLARATION:
+                    return ReduceTryDeclaration(BlockPtr, VisitedSet, JsrTargetSet);
+                case xJavaBlock::TYPE_JSR:
+                    return ReduceJsr(BlockPtr, VisitedSet, JsrTargetSet);
+                case xJavaBlock::TYPE_LOOP:
+                    return ReduceLoop(BlockPtr, VisitedSet, JsrTargetSet);
+                default:
+                    break;
+            }
         return true;
     }
 
