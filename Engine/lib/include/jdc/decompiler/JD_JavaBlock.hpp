@@ -101,6 +101,7 @@ namespace jdc
         X_PRIVATE_MEMBER bool Contains(xJavaBlock * CheckBlockPtr) const;
         X_PRIVATE_MEMBER void Replace(xJavaBlock * OldBlockPtr, xJavaBlock * NewBlockPtr);
         X_PRIVATE_MEMBER void AddExceptionHandler(const xJavaExceptionHandler & ExceptionHandler);
+        X_PRIVATE_MEMBER void InverseCondition();
 
     public:
         eType  Type  = TYPE_DELETED;
@@ -111,9 +112,9 @@ namespace jdc
         xJavaBlock * NextBlockPtr = {};
         xJavaBlock * BranchBlockPtr = {};
         xJavaBlock * ConditionBlockPtr = {};
-        bool         InverseCondition = true;
         xJavaBlock * FirstSubBlockPtr = {};
         xJavaBlock * SecondSubBlockPtr = {};
+        bool         MustInverseCondition = true;
 
         std::set<xJavaBlock *>               Predecessors;
         std::vector<xJavaSwitchCase>         SwitchCases;

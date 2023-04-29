@@ -8,6 +8,8 @@
 namespace jdc
 {
 
+    xJavaBlock xJavaControlFlowGraph::EndBlock = xJavaBlock(xJavaBlock::TYPE_END, 0, 0);
+
     xJavaSwitchCase::xJavaSwitchCase(xJavaBlock * BlockPtr)
     : DefaultCase(true), Offset(BlockPtr->FromOffset), BlockPtr(BlockPtr)
     {}
@@ -44,6 +46,11 @@ namespace jdc
         _JavaMethodPtr = JavaMethodPtr;
         _JavaClassPtr = JavaMethodPtr->JavaClassPtr;
 
+        assert(LocalVariableList.empty());
+        xel::Renew(FirstVariableIndex);
+        assert(Blocks.empty());
+        assert(BlockList.empty());
+
         InitLocalVariables();
         InitBlocks();
         // ReduceGoto(); in jd-core
@@ -51,6 +58,17 @@ namespace jdc
         ReduceGraph();
 
         return true;
+    }
+
+    void xJavaControlFlowGraph::Clean()
+    {
+        xel::Renew(FirstVariableIndex);
+        xel::Renew(LocalVariableList);
+        xel::Renew(Blocks);
+        xel::Renew(BlockList);
+
+        _JavaClassPtr = nullptr;
+        _JavaMethodPtr = nullptr;
     }
 
     void xJavaControlFlowGraph::InitLocalVariables()
@@ -429,14 +447,11 @@ namespace jdc
         }
         BlockList.push_back(std::make_unique<xJavaBlock>(LastOffset, CodeLength));
         Blocks[LastOffset] = BlockList.back().get();
-        // add and code end block, this is not included in jd-core, since in jd-core code end block is a static block
-        BlockList.push_back(std::make_unique<xJavaBlock>(xJavaBlock::TYPE_END, 0, 0));
 
         // set block types:
         auto MainFlowBlocks = std::vector<xJavaBlock*>();
         auto StartBlockPtr = BlockList[0].get();
         auto SuccessBlockPtr = BlockList[1].get();
-        auto EndBlockPtr = BlockList.back().get();
 
         StartBlockPtr->NextBlockPtr = SuccessBlockPtr;
         SuccessBlockPtr->Predecessors.insert(StartBlockPtr);
@@ -1363,6 +1378,63 @@ namespace jdc
         return MinDepth;
     }
 
+    void xJavaControlFlowGraph::UpdateConditionalBranches(xJavaBlock * BlockPtr, xJavaBlock * LeftBlockPtr, xJavaBlock::eType OperatorType, xJavaBlock * SubBlockPtr)
+    {
+        BlockPtr->Type = OperatorType;
+        BlockPtr->ToOffset = SubBlockPtr->ToOffset;
+        BlockPtr->NextBlockPtr = SubBlockPtr->NextBlockPtr;
+        BlockPtr->BranchBlockPtr = SubBlockPtr->BranchBlockPtr;
+        BlockPtr->ConditionBlockPtr = EndBlockPtr;
+        BlockPtr->FirstSubBlockPtr = LeftBlockPtr;
+        BlockPtr->SecondSubBlockPtr = SubBlockPtr;
+
+        SubBlockPtr->NextBlockPtr->Replace(SubBlockPtr, BlockPtr);
+        SubBlockPtr->BranchBlockPtr->Replace(SubBlockPtr, BlockPtr);
+    }
+
+    void xJavaControlFlowGraph::UpdateConditionTernaryOperator(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr)
+    {
+        size_t FromOffset =  NextNextBlockPtr->FromOffset;
+        size_t ToOffset   = NextNextBlockPtr->ToOffset;
+        xJavaBlock * NewNextBlockPtr = NextNextBlockPtr->NextBlockPtr;
+        xJavaBlock * NewBranchBlockPtr = NextNextBlockPtr->BranchBlockPtr;
+
+        if (BlockPtr->Type == xJavaBlock::TYPE_CONDITIONAL_BRANCH) {
+            BlockPtr->Type = xJavaBlock::TYPE_CONDITION;
+        }
+        if ((NextNextBlockPtr->Type == xJavaBlock::TYPE_CONDITION) && !NextNextBlockPtr->MustInverseCondition) {
+            BlockPtr->InverseCondition();
+        }
+
+        auto ConditionBlockPtr = NextNextBlockPtr;
+        ConditionBlockPtr->Type = BlockPtr->Type;
+        ConditionBlockPtr->FromOffset = BlockPtr->FromOffset;
+        ConditionBlockPtr->ToOffset   = BlockPtr->ToOffset;
+        ConditionBlockPtr->NextBlockPtr = EndBlockPtr;
+        ConditionBlockPtr->BranchBlockPtr = EndBlockPtr;
+        ConditionBlockPtr->ConditionBlockPtr = BlockPtr->ConditionBlockPtr;
+        ConditionBlockPtr->FirstSubBlockPtr = BlockPtr->FirstSubBlockPtr;
+        ConditionBlockPtr->SecondSubBlockPtr = BlockPtr->SecondSubBlockPtr;
+        ConditionBlockPtr->Predecessors.clear();
+
+        BlockPtr->Type = xJavaBlock::TYPE_CONDITION_TERNARY_OPERATOR;
+        BlockPtr->FromOffset = FromOffset;
+        BlockPtr->ToOffset = ToOffset;
+        BlockPtr->ConditionBlockPtr = ConditionBlockPtr;
+        BlockPtr->FirstSubBlockPtr  = BlockPtr->NextBlockPtr;
+        BlockPtr->SecondSubBlockPtr = BlockPtr->BranchBlockPtr;
+        BlockPtr->NextBlockPtr = NewNextBlockPtr;
+        BlockPtr->BranchBlockPtr = NewBranchBlockPtr;
+        BlockPtr->FirstSubBlockPtr->NextBlockPtr = EndBlockPtr;
+        BlockPtr->SecondSubBlockPtr->NextBlockPtr = EndBlockPtr;
+
+        NewNextBlockPtr->Replace(NextNextBlockPtr, BlockPtr);
+        NewBranchBlockPtr->Replace(NextNextBlockPtr, BlockPtr);
+
+        BlockPtr->FirstSubBlockPtr->Predecessors.clear();
+        BlockPtr->SecondSubBlockPtr->Predecessors.clear();
+    }
+
     bool xJavaControlFlowGraph::AggregateConditionalBranches(xJavaBlock * BlockPtr)
     {
         auto Change = false;
@@ -1372,7 +1444,7 @@ namespace jdc
         if (NextBlockPtr->Type == xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR && NextBlockPtr->Predecessors.size() == 1) {
             auto NextNextBlockPtr = NextBlockPtr->NextBlockPtr;
             if (NextNextBlockPtr->Type & (xJavaBlock::TYPE_CONDITIONAL_BRANCH | xJavaBlock::TYPE_CONDITION)) {
-
+                // TODO
             }
         }
 

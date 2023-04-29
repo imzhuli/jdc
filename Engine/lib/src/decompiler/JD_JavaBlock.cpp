@@ -75,4 +75,28 @@ namespace jdc
         ExceptionHandlers.push_back(ExceptionHandler);
     }
 
+    void xJavaBlock::InverseCondition()
+    {
+        switch (Type) {
+            case TYPE_CONDITION:
+            case TYPE_CONDITION_TERNARY_OPERATOR:
+            case TYPE_GOTO_IN_TERNARY_OPERATOR:
+                MustInverseCondition ^= true;
+                break;
+            case TYPE_CONDITION_AND:
+                Type = TYPE_CONDITION_OR;
+                FirstSubBlockPtr->InverseCondition();
+                SecondSubBlockPtr->InverseCondition();
+                break;
+            case TYPE_CONDITION_OR:
+                Type = TYPE_CONDITION_AND;
+                FirstSubBlockPtr->InverseCondition();
+                SecondSubBlockPtr->InverseCondition();
+                break;
+            default:
+                xel::Fatal("Invalid condition");
+                break;
+        }
+    }
+
 }
