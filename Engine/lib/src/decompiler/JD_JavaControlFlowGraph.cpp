@@ -751,6 +751,109 @@ namespace jdc
         return 0;
     }
 
+    xOpCode xJavaControlFlowGraph::GetLastOpcode(const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr)
+    {
+        size_t Offset = BlockPtr->FromOffset;
+        size_t ToOffset = BlockPtr->ToOffset;
+        if (Offset >= ToOffset) {
+            return 0;
+        }
+        size_t LastOffset = ToOffset;
+        auto Reader = xel::xStreamReader(CodeBinary.data());
+        for (; Offset < ToOffset; Offset++) {
+            xOpCode OpCode = CodeBinary[Offset];
+            LastOffset = Offset;
+            switch (OpCode) {
+                case 16: case 18: // BIPUSH, LDC
+                case 21: case 22: case 23: case 24: case 25: // ILOAD, LLOAD, FLOAD, DLOAD, ALOAD
+                case 54: case 55: case 56: case 57: case 58: // ISTORE, LSTORE, FSTORE, DSTORE, ASTORE
+                case 169: // RET
+                case 188: // NEWARRAY
+                    Offset++;
+                    break;
+                case 17: // SIPUSH
+                case 19: case 20: // LDC_W, LDC2_W
+                case 132: // IINC
+                case 178: // GETSTATIC
+                case 179: // PUTSTATIC
+                case 187: // NEW
+                case 180: // GETFIELD
+                case 181: // PUTFIELD
+                case 182: case 183: // INVOKEVIRTUAL, INVOKESPECIAL
+                case 184: // INVOKESTATIC
+                case 189: // ANEWARRAY
+                case 192: // CHECKCAST
+                case 193: // INSTANCEOF
+                    Offset += 2;
+                    break;
+                case 153: case 154: case 155: case 156: case 157: case 158: // IFEQ, IFNE, IFLT, IFGE, IFGT, IFLE
+                case 159: case 160: case 161: case 162: case 163: case 164: case 165: case 166: // IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE
+                case 167: // GOTO
+                case 198: case 199: { // IFNULL, IFNONNULL
+                    Reader.Offset(Offset);
+                    auto DeltaOffset = (int16_t)Reader.R2();
+                    Offset += 2;
+                    if (DeltaOffset > 0) {
+                        Offset += DeltaOffset - 2 - 1;
+                    }
+                    break;
+                }
+                case 200: { // GOTO_W
+                    Reader.Offset(Offset);
+                    auto DeltaOffset = (int32_t)Reader.R4();
+                    Offset += 4;
+                    if (DeltaOffset > 0) {
+                        Offset += DeltaOffset - 4 - 1;
+                    }
+                    break;
+                }
+                case 168: // JSR
+                    Offset += 2;
+                    break;
+                case 197: // MULTIANEWARRAY
+                    Offset += 3;
+                    break;
+                case 185: // INVOKEINTERFACE
+                case 186: // INVOKEDYNAMIC
+                    Offset += 4;
+                    break;
+                case 201: // JSR_W
+                    Offset += 4;
+                    break;
+                case 170: { // TABLESWITCH
+                    Offset = (Offset + 4) & 0xFFFC; // Skip padding
+                    Offset += 4; // Skip default offset
+                    Reader.Offset(Offset);
+                    auto Low = (int32_t)Reader.R4();
+                    auto High = (int32_t)Reader.R4();
+                    Offset += 8;
+                    Offset += (4 * (High - Low + 1)) - 1;
+                    break;
+                }
+                case 171: { // LOOKUPSWITCH
+                    Offset = (Offset + 4) & 0xFFFC; // Skip padding
+                    Offset += 4; // Skip default offset
+                    Reader.Offset(Offset);
+                    auto Count = (int32_t)Reader.R4();
+                    Offset += 4;
+                    Offset += (8 * Count) - 1;
+                    break;
+                }
+                case 196: // WIDE
+                    OpCode = CodeBinary[++Offset];
+                    if (OpCode == 132) { // IINC
+                        Offset += 4;
+                    } else {
+                        OpCode += 2;
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+        return CodeBinary[LastOffset];
+    }
+
     size_t xJavaControlFlowGraph::EvalStackDepth(const xJavaClass * JavaClassPtr, const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr)
     {
         ssize_t Depth = 0;
