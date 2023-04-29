@@ -869,7 +869,7 @@ namespace jdc
         return CodeBinary[LastOffset];
     }
 
-    size_t xJavaControlFlowGraph::EvalStackDepth(const xJavaClass * JavaClassPtr, const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr)
+    ssize_t xJavaControlFlowGraph::EvalStackDepth(const xJavaClass * JavaClassPtr, const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr)
     {
         ssize_t Depth = 0;
         auto & ClassInfo = JavaClassPtr->ClassInfo;
@@ -1071,7 +1071,7 @@ namespace jdc
         return Depth;
     }
 
-    size_t xJavaControlFlowGraph::GetMinDepth(const xJavaClass * JavaClassPtr, const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr)
+    ssize_t xJavaControlFlowGraph::GetMinDepth(const xJavaClass * JavaClassPtr, const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr)
     {
         ssize_t Depth = 0;
         ssize_t MinDepth = 0;
@@ -1443,8 +1443,38 @@ namespace jdc
 
         if (NextBlockPtr->Type == xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR && NextBlockPtr->Predecessors.size() == 1) {
             auto NextNextBlockPtr = NextBlockPtr->NextBlockPtr;
+
             if (NextNextBlockPtr->Type & (xJavaBlock::TYPE_CONDITIONAL_BRANCH | xJavaBlock::TYPE_CONDITION)) {
-                // TODO
+                if ((BranchBlockPtr->Type & (xJavaBlock::TYPE_STATEMENTS | xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR))
+                 && (NextNextBlockPtr == BranchBlockPtr->NextBlockPtr)
+                 && (BranchBlockPtr->Predecessors.size() == 1)
+                 && (NextNextBlockPtr->Predecessors.size() == 2)) {
+                    if (GetMinDepth(NextNextBlockPtr) == -1) {
+                        UpdateConditionTernaryOperator(BlockPtr, NextNextBlockPtr);
+                        return true;
+                    }
+                    auto NextNextNextBlockPtr = NextNextBlockPtr->NextBlockPtr;
+                    auto NextNextBranchBlockPtr = NextNextBlockPtr->BranchBlockPtr;
+
+                    if (NextNextNextBlockPtr->Type == xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR && NextNextNextBlockPtr->Predecessors.size() == 1) {
+                        auto NextNextNextNextBlockPtr = NextNextNextBlockPtr->NextBlockPtr;
+
+                        if (NextNextNextNextBlockPtr->Type & (xJavaBlock::TYPE_CONDITIONAL_BRANCH | xJavaBlock::TYPE_CONDITION)) {
+                            if ((NextNextBranchBlockPtr->Type & (xJavaBlock::TYPE_STATEMENTS | xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR))
+                             && (NextNextNextNextBlockPtr == NextNextBranchBlockPtr->NextBlockPtr)
+                             && (NextNextBlockPtr->Predecessors.size() == 1)
+                             && (NextNextNextNextBlockPtr->Predecessors.size() == 2)) {
+                                if (GetMinDepth(NextNextNextNextBlockPtr) == -2) {
+                                    UpdateCondition(BlockPtr, NextNextBlockPtr, NextNextNextNextBlockPtr);
+                                    return true;
+                                }
+                             }
+                        }
+                    }
+                }
+
+                //TODO
+
             }
         }
 
