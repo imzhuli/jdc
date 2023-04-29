@@ -1,6 +1,7 @@
 #pragma once
 #include "./_.hpp"
 #include "./JD_JavaBlock.hpp"
+#include "../base/JD_Instructions.hpp"
 #include "../syntax/JD_JavaType.hpp"
 #include "../syntax/JD_JavaPrimitiveTypes.hpp"
 #include "../syntax/JD_JavaObjectTypes.hpp"
@@ -39,9 +40,10 @@ namespace jdc
         X_PRIVATE_STATIC_MEMBER bool ReduceJsr(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet);
         X_PRIVATE_STATIC_MEMBER bool ReduceLoop(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet);
 
-        X_PRIVATE_STATIC_MEMBER size_t EvalStackDepth(const xJavaClass * JavaClassPtr, const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr);
-        X_PRIVATE_STATIC_MEMBER size_t GetMinDepth(const xJavaClass * JavaClassPtr, const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr);
-        X_PRIVATE_STATIC_MEMBER bool   AggregateConditionalBranches(xJavaBlock * BlockPtr);
+        X_PRIVATE_STATIC_MEMBER xOpCode SearchNextOpcode(const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr, size_t MaxOffset);
+        X_PRIVATE_STATIC_MEMBER size_t  EvalStackDepth(const xJavaClass * JavaClassPtr, const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr);
+        X_PRIVATE_STATIC_MEMBER size_t  GetMinDepth(const xJavaClass * JavaClassPtr, const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr);
+        X_PRIVATE_STATIC_MEMBER bool    AggregateConditionalBranches(xJavaBlock * BlockPtr);
 
     public:
         X_PRIVATE_STATIC_MEMBER std::unique_ptr<xJavaControlFlowGraph> ParseByteCode(const xJavaMethod * JavaMethodPtr);
