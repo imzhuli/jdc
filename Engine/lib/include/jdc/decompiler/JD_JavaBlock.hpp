@@ -1,5 +1,7 @@
 #pragma once
 #include "./_.hpp"
+#include "./JD_JavaClass.hpp"
+#include "./JD_JavaMethod.hpp"
 #include "../syntax/JD_JavaType.hpp"
 #include "../syntax/JD_JavaPrimitiveTypes.hpp"
 #include "../syntax/JD_JavaObjectTypes.hpp"
@@ -90,18 +92,36 @@ namespace jdc
         };
 
     public:
-        X_PRIVATE_MEMBER xJavaBlock(size_t FromOffset, size_t ToOffset)
-        : xJavaBlock(TYPE_DELETED, FromOffset, ToOffset)
+        X_PRIVATE_MEMBER xJavaBlock(eType Type)
+        : Type(Type)
         {}
 
-        X_PRIVATE_MEMBER xJavaBlock(eType Type, size_t FromOffset, size_t ToOffset)
-        : Type(Type), FromOffset(FromOffset), ToOffset(ToOffset)
+        X_PRIVATE_MEMBER xJavaBlock(const xJavaMethod * JavaMethodPtr, size_t FromOffset, size_t ToOffset)
+        : xJavaBlock(JavaMethodPtr, eType::TYPE_DELETED, FromOffset, ToOffset)
         {}
+
+        X_PRIVATE_MEMBER xJavaBlock(const xJavaMethod * JavaMethodPtr, eType Type, size_t FromOffset, size_t ToOffset)
+        : _JavaClassPtr(JavaMethodPtr->JavaClassPtr), _JavaMethodPtr(JavaMethodPtr), Type(Type), FromOffset(FromOffset), ToOffset(ToOffset)
+        {
+            auto CodeAttributePtr = (const xAttributeCode *)GetAttributePtr(_JavaMethodPtr->Converted.AttributeMap, "Code");
+            assert(CodeAttributePtr);
+            _CodeBinaryPtr = &CodeAttributePtr->CodeBinary;
+        }
+
+        X_INLINE const xJavaClass * GetClassPtr() const { assert(_JavaClassPtr); return _JavaClassPtr; }
+        X_INLINE const xJavaMethod * GetMethodPtr() const { assert(_JavaMethodPtr); return _JavaMethodPtr; }
+        X_INLINE const std::vector<xel::ubyte> * GetCodeBinaryPtr() const { assert(_CodeBinaryPtr); return _CodeBinaryPtr; }
 
         X_PRIVATE_MEMBER bool Contains(xJavaBlock * CheckBlockPtr) const;
         X_PRIVATE_MEMBER void Replace(xJavaBlock * OldBlockPtr, xJavaBlock * NewBlockPtr);
         X_PRIVATE_MEMBER void AddExceptionHandler(const xJavaExceptionHandler & ExceptionHandler);
         X_PRIVATE_MEMBER void InverseCondition();
+
+
+    private:
+        const class xJavaClass *        _JavaClassPtr = nullptr;
+        const class xJavaMethod *       _JavaMethodPtr = nullptr;
+        const std::vector<xel::ubyte> * _CodeBinaryPtr = nullptr;
 
     public:
         eType  Type  = TYPE_DELETED;

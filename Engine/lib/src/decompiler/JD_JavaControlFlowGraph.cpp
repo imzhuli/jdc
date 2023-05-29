@@ -8,7 +8,7 @@
 namespace jdc
 {
 
-    xJavaBlock xJavaControlFlowGraph::EndBlock = xJavaBlock(xJavaBlock::TYPE_END, 0, 0);
+    xJavaBlock xJavaControlFlowGraph::EndBlock = xJavaBlock(xJavaBlock::TYPE_END);
 
     xJavaSwitchCase::xJavaSwitchCase(xJavaBlock * BlockPtr)
     : DefaultCase(true), Offset(BlockPtr->FromOffset), BlockPtr(BlockPtr)
@@ -435,17 +435,17 @@ namespace jdc
         }
 
         // Create basic blocks:
-        BlockList.push_back(std::make_unique<xJavaBlock>(xJavaBlock::TYPE_START, 0, 0));
+        BlockList.push_back(std::make_unique<xJavaBlock>(_JavaMethodPtr, xJavaBlock::TYPE_START, 0, 0));
         Blocks.resize(CodeLength);
         LastOffset = 0;
         for (size_t Offset = NextOffsets[0]; Offset < CodeLength; Offset = NextOffsets[Offset]) {
             if ((BlockTypes[Offset] != xJavaBlock::TYPE_DELETED)) {
-                BlockList.push_back(std::make_unique<xJavaBlock>(LastOffset, Offset));
+                BlockList.push_back(std::make_unique<xJavaBlock>(_JavaMethodPtr, LastOffset, Offset));
                 Blocks[LastOffset] = BlockList.back().get();
                 LastOffset = Offset;
             }
         }
-        BlockList.push_back(std::make_unique<xJavaBlock>(LastOffset, CodeLength));
+        BlockList.push_back(std::make_unique<xJavaBlock>(_JavaMethodPtr, LastOffset, CodeLength));
         Blocks[LastOffset] = BlockList.back().get();
 
         // set block types:
@@ -573,7 +573,7 @@ namespace jdc
                 if (!TryCatchFinalBlockPtr) {
                     // Insert a new 'try-catch-finally' basic block
                     auto StartBlockPtr = Blocks[StartPC];
-                    BlockList.push_back(std::make_unique<xJavaBlock>(xJavaBlock::TYPE_TRY_DECLARATION, StartPC, EndPC));
+                    BlockList.push_back(std::make_unique<xJavaBlock>(_JavaMethodPtr, xJavaBlock::TYPE_TRY_DECLARATION, StartPC, EndPC));
                     TryCatchFinalBlockPtr = BlockList.back().get();
                     TryCatchFinalBlockPtr->NextBlockPtr = StartBlockPtr;
 
@@ -1071,10 +1071,13 @@ namespace jdc
         return Depth;
     }
 
-    ssize_t xJavaControlFlowGraph::GetMinDepth(const xJavaClass * JavaClassPtr, const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr)
+    ssize_t xJavaControlFlowGraph::GetMinDepth(xJavaBlock * BlockPtr)
     {
         ssize_t Depth = 0;
         ssize_t MinDepth = 0;
+
+        const xJavaClass * JavaClassPtr = BlockPtr->GetClassPtr();
+        const std::vector<xel::ubyte> & CodeBinary = *BlockPtr->GetCodeBinaryPtr();
 
         auto & ClassInfo = JavaClassPtr->ClassInfo;
         auto Reader = xel::xStreamReader(CodeBinary.data());
