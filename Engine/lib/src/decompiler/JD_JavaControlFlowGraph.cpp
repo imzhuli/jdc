@@ -435,17 +435,17 @@ namespace jdc
         }
 
         // Create basic blocks:
-        BlockList.push_back(std::make_unique<xJavaBlock>(_JavaMethodPtr, xJavaBlock::TYPE_START, 0, 0));
+        NewBlock(xJavaBlock::TYPE_START);
         Blocks.resize(CodeLength);
         LastOffset = 0;
         for (size_t Offset = NextOffsets[0]; Offset < CodeLength; Offset = NextOffsets[Offset]) {
             if ((BlockTypes[Offset] != xJavaBlock::TYPE_DELETED)) {
-                BlockList.push_back(std::make_unique<xJavaBlock>(_JavaMethodPtr, LastOffset, Offset));
+                NewBlock(xJavaBlock::TYPE_DELETED);
                 Blocks[LastOffset] = BlockList.back().get();
                 LastOffset = Offset;
             }
         }
-        BlockList.push_back(std::make_unique<xJavaBlock>(_JavaMethodPtr, LastOffset, CodeLength));
+        NewBlock(LastOffset, CodeLength);
         Blocks[LastOffset] = BlockList.back().get();
 
         // set block types:
@@ -573,7 +573,7 @@ namespace jdc
                 if (!TryCatchFinalBlockPtr) {
                     // Insert a new 'try-catch-finally' basic block
                     auto StartBlockPtr = Blocks[StartPC];
-                    BlockList.push_back(std::make_unique<xJavaBlock>(_JavaMethodPtr, xJavaBlock::TYPE_TRY_DECLARATION, StartPC, EndPC));
+                    NewBlock(xJavaBlock::TYPE_TRY_DECLARATION, StartPC, EndPC);
                     TryCatchFinalBlockPtr = BlockList.back().get();
                     TryCatchFinalBlockPtr->NextBlockPtr = StartBlockPtr;
 
@@ -1436,6 +1436,63 @@ namespace jdc
 
         BlockPtr->FirstSubBlockPtr->Predecessors.clear();
         BlockPtr->SecondSubBlockPtr->Predecessors.clear();
+    }
+
+    void xJavaControlFlowGraph::UpdateCondition(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr, xJavaBlock * NextNextNextNextBlockPtr)
+    {
+        // size_t FromOffset =  NextNextNextNextBlockPtr->FromOffset;
+        // size_t ToOffset = NextNextNextNextBlockPtr->ToOffset;
+        // xJavaBlock * NextBlockPtr = NextNextNextNextBlockPtr->NextBlockPtr;
+        // xJavaBlock * BranchBlockPtr = NextNextNextNextBlockPtr->BranchBlockPtr;
+
+        // xJavaBlock * ConditionBlockPtr = BlockPtr->GetControlFlowGraph()->newBasicBlock(BlockPtr);
+        // ConditionBlockPtr->Type = TYPE_CONDITION;
+
+        // BlockPtr->NextBlockPtr->NextBlockPtr = EndBlockPtr;
+        // BlockPtr->NextBlockPtr->Predecessors.clear();
+        // BlockPtr->BranchBlockPtr->NextBlockPtr = EndBlockPtr;
+        // BlockPtr->BranchBlockPtr->Predecessors.clear();
+
+        // NextNextNextNextBlockPtr->Type = xJavaBlock::TYPE_CONDITION_TERNARY_OPERATOR;
+        // NextNextNextNextBlockPtr->FromOffset = ConditionBlockPtr->ToOffset;
+        // NextNextNextNextBlockPtr->ToOffset = ConditionBlockPtr->ToOffset;
+        // NextNextNextNextBlockPtr->ConditionBlockPtr = ConditionBlockPtr;
+        // NextNextNextNextBlockPtr->FirstSubBlockPtr = BlockPtr->NextBlockPtr;
+        // NextNextNextNextBlockPtr->SecondSubBlockPtr = BlockPtr->BranchBlockPtr;
+        // NextNextNextNextBlockPtr->NextBlockPtr = EndBlockPtr;
+        // NextNextNextNextBlockPtr->BranchBlockPtr = EndBlockPtr;
+        // ConditionBlockPtr->NextBlockPtr = EndBlockPtr;
+        // ConditionBlockPtr->BranchBlockPtr = EndBlockPtr;
+
+        // ConditionBlockPtr = NextNextBlockPtr->getControlFlowGraph()->newBasicBlock(NextNextBlockPtr);
+        // ConditionBlockPtr->Type = xJavaBlock::TYPE_CONDITION;
+
+        // NextNextBlockPtr->NextBlockPtr->NextBlockPtr = EndBlockPtr;
+        // NextNextBlockPtr->NextBlockPtr->Predecessors.clear();
+        // NextNextBlockPtr->BranchBlockPtr->NextBlockPtr =EndBlockPtr;
+        // NextNextBlockPtr->BranchBlockPtr->Predecessors.clear();
+
+        // NextNextBlockPtr->Type = xJavaBlock::TYPE_CONDITION_TERNARY_OPERATOR;
+        // NextNextBlockPtr->FromOffset = ConditionBlockPtr->ToOffset;
+        // NextNextBlockPtr->ToOffset = ConditionBlockPtr->ToOffset;
+        // NextNextBlockPtr->ConditionBlockPtr = ConditionBlockPtr;
+        // NextNextBlockPtr->FirstSubBlockPtr = NextNextBlockPtr->NextBlockPtr;
+        // NextNextBlockPtr->SecondSubBlockPtr = NextNextBlockPtr->BranchBlockPtr;
+        // NextNextBlockPtr->NextBlockPtr = EndBlockPtr;
+        // NextNextBlockPtr->BranchBlockPtr = EndBlockPtr;
+        // ConditionBlockPtr->NextBlockPtr = EndBlockPtr;
+        // ConditionBlockPtr->BranchBlockPtr = EndBlockPtr;
+
+        // BlockPtr->Type = xJavaBlock::TYPE_CONDITION;
+        // BlockPtr->FromOffset = FromOffset;
+        // BlockPtr->ToOffset = ToOffset;
+        // BlockPtr->FirstSubBlockPtr = NextNextNextNextBlockPtr;
+        // BlockPtr->SecondSubBlockPtr = NextNextBlockPtr;
+        // BlockPtr->NextBlockPtr = NextBlockPtr;
+        // BlockPtr->BranchBlockPtr = BranchBlockPtr;
+
+        // NextBlockPtr->Replace(NextNextNextNextBlockPtr, BlockPtr);
+        // BranchBlockPtr->Replace(NextNextNextNextBlockPtr, BlockPtr);
     }
 
     bool xJavaControlFlowGraph::AggregateConditionalBranches(xJavaBlock * BlockPtr)

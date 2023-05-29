@@ -96,6 +96,14 @@ namespace jdc
         : Type(Type)
         {}
 
+        X_PRIVATE_MEMBER xJavaBlock(const xJavaMethod * JavaMethodPtr, eType Type)
+        : _JavaClassPtr(JavaMethodPtr->JavaClassPtr), _JavaMethodPtr(JavaMethodPtr), Type(Type)
+        {
+            auto CodeAttributePtr = (const xAttributeCode *)GetAttributePtr(_JavaMethodPtr->Converted.AttributeMap, "Code");
+            assert(CodeAttributePtr);
+            _CodeBinaryPtr = &CodeAttributePtr->CodeBinary;
+        }
+
         X_PRIVATE_MEMBER xJavaBlock(const xJavaMethod * JavaMethodPtr, size_t FromOffset, size_t ToOffset)
         : xJavaBlock(JavaMethodPtr, eType::TYPE_DELETED, FromOffset, ToOffset)
         {}
@@ -111,6 +119,8 @@ namespace jdc
         X_INLINE const xJavaClass * GetClassPtr() const { assert(_JavaClassPtr); return _JavaClassPtr; }
         X_INLINE const xJavaMethod * GetMethodPtr() const { assert(_JavaMethodPtr); return _JavaMethodPtr; }
         X_INLINE const std::vector<xel::ubyte> * GetCodeBinaryPtr() const { assert(_CodeBinaryPtr); return _CodeBinaryPtr; }
+        X_INLINE const class xJavaControlFlowGraph * GetControlFlowGraph() const { assert(_JavaControlFlowGraphPtr); return _JavaControlFlowGraphPtr; }
+        X_INLINE void  SetControlFlowGraph(class xJavaControlFlowGraph * JavaControlFlowGraphPtr) { _JavaControlFlowGraphPtr = JavaControlFlowGraphPtr; }
 
         X_PRIVATE_MEMBER bool Contains(xJavaBlock * CheckBlockPtr) const;
         X_PRIVATE_MEMBER void Replace(xJavaBlock * OldBlockPtr, xJavaBlock * NewBlockPtr);
@@ -122,6 +132,7 @@ namespace jdc
         const class xJavaClass *        _JavaClassPtr = nullptr;
         const class xJavaMethod *       _JavaMethodPtr = nullptr;
         const std::vector<xel::ubyte> * _CodeBinaryPtr = nullptr;
+        class xJavaControlFlowGraph *   _JavaControlFlowGraphPtr = nullptr;
 
     public:
         eType  Type  = TYPE_DELETED;

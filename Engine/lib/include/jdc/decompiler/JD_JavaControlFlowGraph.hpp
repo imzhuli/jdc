@@ -33,6 +33,15 @@ namespace jdc
         X_PRIVATE_MEMBER void InitLocalVariables();
         X_PRIVATE_MEMBER void InitBlocks();
 
+        template<typename ... tArgs>
+        X_INLINE xJavaBlock * NewBlock(tArgs&& ... Args) {
+            auto BlockUPtr = std::make_unique<xJavaBlock>(_JavaMethodPtr, std::forward<tArgs>(Args)...);
+            auto BlockPtr = BlockUPtr.get();
+            BlockPtr->SetControlFlowGraph(this);
+            BlockList.push_back(std::move(BlockUPtr));
+            return BlockPtr;
+        }
+
         X_PRIVATE_MEMBER void ReduceGraph();
         X_PRIVATE_STATIC_MEMBER bool Reduce(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet);
         X_PRIVATE_STATIC_MEMBER bool ReduceConditionalBranch(xJavaBlock * BlockPtr);
@@ -46,6 +55,7 @@ namespace jdc
         X_PRIVATE_STATIC_MEMBER xOpCode  GetLastOpcode(const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr);
         X_PRIVATE_STATIC_MEMBER ssize_t  EvalStackDepth(const xJavaClass * JavaClassPtr, const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr);
         X_PRIVATE_STATIC_MEMBER ssize_t  GetMinDepth(xJavaBlock * BlockPtr);
+        X_PRIVATE_STATIC_MEMBER void     UpdateCondition(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr, xJavaBlock * NextNextNextNextBlockPtr);
         X_PRIVATE_STATIC_MEMBER void     UpdateConditionalBranches(xJavaBlock * BlockPtr, xJavaBlock * LeftBlockPtr, xJavaBlock::eType OperatorType, xJavaBlock * SubBlockPtr);
         X_PRIVATE_STATIC_MEMBER void     UpdateConditionTernaryOperator(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr);
         X_PRIVATE_STATIC_MEMBER bool     AggregateConditionalBranches(xJavaBlock * BlockPtr);
