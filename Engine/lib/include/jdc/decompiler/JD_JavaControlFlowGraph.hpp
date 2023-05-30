@@ -50,12 +50,12 @@ namespace jdc
 
         X_PRIVATE_MEMBER void InitLocalVariables();
         X_PRIVATE_MEMBER void InitBlocks();
-        X_PRIVATE_MEMBER std::string DumpBlocks();
 
         template<typename ... tArgs>
         X_INLINE xJavaBlock * NewBlock(tArgs&& ... Args) {
             auto BlockUPtr = std::make_unique<xJavaBlock>(this, std::forward<tArgs>(Args)...);
             auto BlockPtr = BlockUPtr.get();
+            BlockPtr->Index = BlockList.size();
             BlockList.push_back(std::move(BlockUPtr));
             return BlockPtr;
         }

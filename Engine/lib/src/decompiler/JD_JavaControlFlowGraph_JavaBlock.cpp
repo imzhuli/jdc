@@ -4,11 +4,40 @@
 #include <jdc/decompiler/JD_JavaSpace.hpp>
 #include <xel/String.hpp>
 #include <algorithm>
+#include <sstream>
+
+using namespace std;
 
 namespace jdc
 {
 
     using namespace std::literals::string_literals;
+
+
+    size_t GetNumberOfTrailingZeros(int32_t i) {
+        // HD, Count trailing 0's
+        i = ~i & (i - 1);
+        if (i <= 0) return i & 32;
+        int n = 1;
+        if (i > 1 << 16) { n += 16; i = ((uint32_t)i) >> 16; }
+        if (i > 1 <<  8) { n +=  8; i = ((uint32_t)i) >>  8; }
+        if (i > 1 <<  4) { n +=  4; i = ((uint32_t)i) >>  4; }
+        if (i > 1 <<  2) { n +=  2; i = ((uint32_t)i) >>  2; }
+        return n + (i = ((uint32_t)i) >> 1);
+    }
+
+    std::string ToString(const xJavaBlock * BlockPtr)
+    {
+        auto OS = std::ostringstream();
+        OS << "BasicBlock{index=" << BlockPtr->Index
+            << ", from=" << BlockPtr->FromOffset
+            << ", to=" << BlockPtr->ToOffset
+            << ", type=" << (ToString(BlockPtr->Type).c_str() + 5)
+            << ", inverseCondition=" << BlockPtr->MustInverseCondition;
+
+        OS << "}";
+        return OS.str();
+    }
 
     #define BLOCK_TYPE_TO_STRING(x) case (xJavaBlock::x): return #x##s
     std::string ToString(const xJavaBlock::eType Type)
@@ -49,7 +78,7 @@ namespace jdc
         default:
             break;
         }
-        return "InvalidType"s;
+        return "TYPE_INVALID"s;
     };
 
     xJavaBlock::xJavaBlock(xJavaControlFlowGraph * CFGPtr, eType Type, size_t FromOffset, size_t ToOffset)

@@ -21,17 +21,6 @@ namespace jdc
         EndBlockPtr  = EndBlockUPtr.get();
     }
 
-    std::string xJavaControlFlowGraph::DumpBlocks()
-    {
-        auto OS = std::ostringstream();
-        OS << "Class: " << _JavaClassPtr->Converted.ClassName << ", Method: " << _JavaMethodPtr->OriginalName << std::endl;
-        OS << "BlockEntries: " << BlockList.size() << std::endl;
-        for (auto & BlockPtr : BlockList) {
-            OS << "Block: " << BlockPtr->FromOffset << "  -->  " << BlockPtr->ToOffset << "  Type=" << ToString(BlockPtr->Type) << std::endl;
-        }
-        return OS.str();
-    }
-
     std::unique_ptr<xJavaControlFlowGraph> xJavaControlFlowGraph::ParseByteCode(const xJavaMethod * JavaMethodPtr)
     {
         auto JavaControlFlowGraphUPtr = std::make_unique<xJavaControlFlowGraph>(JavaMethodPtr);
@@ -52,7 +41,6 @@ namespace jdc
 
         InitLocalVariables();
         InitBlocks();
-        X_DEBUG_PRINTF("DumpBlocks:\n%s\n", DumpBlocks().c_str());
 
         // ReduceGoto(); in jd-core
         // ReduceLoop(); in jd-core
@@ -452,11 +440,14 @@ namespace jdc
         } // end of for
         NextOffsets[LastOffset] = CodeLength;
 
-        /**
+        /***
+         * @brief Ignore linetables
+        */
+
+        /***
          * @brief Processing Exception table
          *
          */
-
         if (ExceptionTable.size()) {
             for (auto & Mark : ExceptionTable) {
                 BlockTypes[Mark.StartPC] = MARK;
@@ -655,6 +646,11 @@ namespace jdc
                 HandlePCToStartPC[HandlerPC] = StartPC;
                 HandlePCMarks[HandlerPC] = CT_THROW;
             }
+        }
+
+        for (size_t i = 0; i < BlockList.size(); ++i) {
+            auto & BlockUPtr = BlockList[i];
+            X_DEBUG_PRINTF("Block[%zi]: %s\n", i, ToString(BlockUPtr.get()).c_str());
         }
 
         /* --- Recheck TYPE_GOTO_IN_TERNARY_OPERATOR --- */

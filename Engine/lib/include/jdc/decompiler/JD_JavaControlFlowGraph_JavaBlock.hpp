@@ -122,6 +122,7 @@ namespace jdc
     public:
         eType  Type  = TYPE_DELETED;
 
+        size_t Index      = 0;
         size_t FromOffset = {};
         size_t ToOffset   = {};
 
@@ -137,6 +138,7 @@ namespace jdc
         std::vector<xJavaExceptionHandler>   ExceptionHandlers;
     };
 
+    X_PRIVATE std::string ToString(const xJavaBlock * BlockPtr);
     X_PRIVATE std::string ToString(const xJavaBlock::eType Type);
 
 }
