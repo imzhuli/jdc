@@ -575,16 +575,6 @@ namespace jdc
             }
         }
 
-        for (size_t i = 0; i < Blocks.size(); ++i) {
-            auto & BlockPtr = Blocks[i];
-            X_DEBUG_PRINTF("** Block[%zi]: %s\n", i, ToString(BlockPtr).c_str());
-        }
-
-        for (size_t i = 0; i < BlockList.size(); ++i) {
-            auto & BlockUPtr = BlockList[i];
-            X_DEBUG_PRINTF("Block[%zi]: %s\n", i, ToString(BlockUPtr.get()).c_str());
-        }
-
         // --- Create try-catch-finally basic blocks --- //
         if (ExceptionTable.size()) {
             // copy & sort code exceptions byte StartPC & EndPC
@@ -659,6 +649,17 @@ namespace jdc
             }
         }
 
+        // X_DEBUG_PRINTF("--------------------------\n");
+        // for (size_t i = 0; i < Blocks.size(); ++i) {
+        //     auto & BlockPtr = Blocks[i];
+        //     X_DEBUG_PRINTF("** Block[%zi]: %s\n", i, ToString(BlockPtr).c_str());
+        // }
+
+        // for (size_t i = 0; i < BlockList.size(); ++i) {
+        //     auto & BlockUPtr = BlockList[i];
+        //     X_DEBUG_PRINTF("Block[%zi]: %s\n", i, ToString(BlockUPtr.get()).c_str());
+        // }
+
         /* --- Recheck TYPE_GOTO_IN_TERNARY_OPERATOR --- */
         for (auto BlockPtr : Blocks) {
             assert(BlockPtr);
@@ -672,7 +673,7 @@ namespace jdc
                 continue;
             }
 
-            if (NextBlockPtr->Type == xJavaBlock::TYPE_GOTO && EvalStackDepth(_JavaClassPtr, CodeBinary, BlockPtr)) {
+            if (NextBlockPtr->Type == xJavaBlock::TYPE_GOTO && EvalStackDepth(_JavaClassPtr, CodeBinary, BlockPtr) > 0) {
                 // Transform STATEMENTS and GOTO to GOTO_IN_TERNARY_OPERATOR
                 BlockPtr->Type = xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR;
                 BlockPtr->ToOffset = NextBlockPtr->ToOffset;
@@ -684,7 +685,7 @@ namespace jdc
 
                 NextBlockPtr->Type = xJavaBlock::TYPE_DELETED;
             }
-            else if (NextBlockPtr->Type == xJavaBlock::TYPE_CONDITIONAL_BRANCH && EvalStackDepth(_JavaClassPtr, CodeBinary, BlockPtr)) {
+            else if (NextBlockPtr->Type == xJavaBlock::TYPE_CONDITIONAL_BRANCH && EvalStackDepth(_JavaClassPtr, CodeBinary, BlockPtr) > 0) {
                 // Merge STATEMENTS and CONDITIONAL_BRANCH
                 BlockPtr->Type = xJavaBlock::TYPE_CONDITIONAL_BRANCH;
                 BlockPtr->ToOffset = NextBlockPtr->ToOffset;
@@ -704,7 +705,6 @@ namespace jdc
         }
 
         X_DEBUG_PRINTF("*************************\n");
-
         for (size_t i = 0; i < Blocks.size(); ++i) {
             auto & BlockPtr = Blocks[i];
             X_DEBUG_PRINTF("** Block[%zi]: %s\n", i, ToString(BlockPtr).c_str());
