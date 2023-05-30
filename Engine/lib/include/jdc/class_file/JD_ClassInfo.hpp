@@ -35,9 +35,9 @@ namespace jdc
     X_GAME_API std::string EscapeString(const std::string & S);
     X_GAME_API std::string EscapeStringQuoted(const std::string & S);
 
-    X_GAME_API bool ExtractAttributeInfo(xel::xStreamReader & Reader, ssize_t & RemainSize, xAttributeInfo & AttributeInfo);
-    X_GAME_API bool ExtractFieldInfo(xel::xStreamReader & Reader, ssize_t & RemainSize, xFieldInfo & FieldInfo);
-    X_GAME_API bool ExtractMethodInfo(xel::xStreamReader & Reader, ssize_t & RemainSize, xMethodInfo & MethodInfo);
+    X_GAME_API bool ExtractAttributeInfo(xel::xStreamReader & Reader, xel::ssize_t & RemainSize, xAttributeInfo & AttributeInfo);
+    X_GAME_API bool ExtractFieldInfo(xel::xStreamReader & Reader, xel::ssize_t & RemainSize, xFieldInfo & FieldInfo);
+    X_GAME_API bool ExtractMethodInfo(xel::xStreamReader & Reader, xel::ssize_t & RemainSize, xMethodInfo & MethodInfo);
 
     X_INLINE std::string MakeArgumentName(size_t Index) { return "__arg_" + std::to_string(Index); }
     X_INLINE std::string MakeVariableName(size_t Index) { return "__var_" + std::to_string(Index); }

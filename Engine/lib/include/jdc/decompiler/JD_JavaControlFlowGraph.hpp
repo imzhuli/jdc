@@ -69,14 +69,14 @@ namespace jdc
         X_PRIVATE_STATIC_MEMBER bool ReduceJsr(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet);
         X_PRIVATE_STATIC_MEMBER bool ReduceLoop(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet);
 
-        X_PRIVATE_STATIC_MEMBER xOpCode  SearchNextOpcode(const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr, size_t MaxOffset);
-        X_PRIVATE_STATIC_MEMBER xOpCode  GetLastOpcode(const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr);
-        X_PRIVATE_STATIC_MEMBER ssize_t  EvalStackDepth(const xJavaClass * JavaClassPtr, const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr);
-        X_PRIVATE_STATIC_MEMBER ssize_t  GetMinDepth(xJavaBlock * BlockPtr);
-        X_PRIVATE_STATIC_MEMBER void     UpdateCondition(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr, xJavaBlock * NextNextNextNextBlockPtr);
-        X_PRIVATE_STATIC_MEMBER void     UpdateConditionalBranches(xJavaBlock * BlockPtr, xJavaBlock * LeftBlockPtr, xJavaBlock::eType OperatorType, xJavaBlock * SubBlockPtr);
-        X_PRIVATE_STATIC_MEMBER void     UpdateConditionTernaryOperator(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr);
-        X_PRIVATE_STATIC_MEMBER bool     AggregateConditionalBranches(xJavaBlock * BlockPtr);
+        X_PRIVATE_STATIC_MEMBER xOpCode       SearchNextOpcode(const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr, size_t MaxOffset);
+        X_PRIVATE_STATIC_MEMBER xOpCode       GetLastOpcode(const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr);
+        X_PRIVATE_STATIC_MEMBER xel::ssize_t  EvalStackDepth(const xJavaClass * JavaClassPtr, const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr);
+        X_PRIVATE_STATIC_MEMBER xel::ssize_t  GetMinDepth(xJavaBlock * BlockPtr);
+        X_PRIVATE_STATIC_MEMBER void          UpdateCondition(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr, xJavaBlock * NextNextNextNextBlockPtr);
+        X_PRIVATE_STATIC_MEMBER void          UpdateConditionalBranches(xJavaBlock * BlockPtr, xJavaBlock * LeftBlockPtr, xJavaBlock::eType OperatorType, xJavaBlock * SubBlockPtr);
+        X_PRIVATE_STATIC_MEMBER void          UpdateConditionTernaryOperator(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr);
+        X_PRIVATE_STATIC_MEMBER bool          AggregateConditionalBranches(xJavaBlock * BlockPtr);
 
     public:
         X_PRIVATE_STATIC_MEMBER std::unique_ptr<xJavaControlFlowGraph> ParseByteCode(const xJavaMethod * JavaMethodPtr);

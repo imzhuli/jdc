@@ -1,22 +1,16 @@
 project(sample_${libname})
 
-find_package(Lua REQUIRED)
-
-
 # local dependencies
 include_directories(
 	../lib/include/
 	${X_INCLUDE_DIRS}
-	${D3RD_INCLUDE_DIRS}
 	)
 link_directories(
 	${X_LIBRARY_DIRS}
-	${D3RD_LIBRARY_DIRS}
 	)
 
 set(shared_lib_dependency_private
 	${X_LIBRARIES}
-	${D3RD_LIBRARIES}
 )
 
 function(add_sub_sample sub_dir_name)

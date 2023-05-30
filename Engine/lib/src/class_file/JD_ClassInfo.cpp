@@ -118,7 +118,7 @@ namespace jdc
         return ThisBinaryName.substr(0, Index);
     }
 
-    static bool LoadConstantInfo(xStreamReader & Reader, ssize_t & RemainSize, xConstantInfo & TagInfo)
+    static bool LoadConstantInfo(xStreamReader & Reader, xel::ssize_t & RemainSize, xConstantInfo & TagInfo)
     {
         if ((RemainSize -= 1) < 0) {
             return false;
@@ -282,7 +282,7 @@ namespace jdc
         return true;
     }
 
-    bool ExtractAttributeInfo(xStreamReader & Reader, ssize_t & RemainSize, xAttributeInfo & AttributeInfo)
+    bool ExtractAttributeInfo(xStreamReader & Reader, xel::ssize_t & RemainSize, xAttributeInfo & AttributeInfo)
     {
         if ((RemainSize -= 6) < 0) {
             return false;
@@ -296,7 +296,7 @@ namespace jdc
         return true;
     }
 
-    bool ExtractFieldInfo(xStreamReader & Reader, ssize_t & RemainSize, xFieldInfo & FieldInfo)
+    bool ExtractFieldInfo(xStreamReader & Reader, xel::ssize_t & RemainSize, xFieldInfo & FieldInfo)
     {
         if ((RemainSize -= 8) < 0) {
             return false;
@@ -313,7 +313,7 @@ namespace jdc
         return true;
     }
 
-    bool ExtractMethodInfo(xStreamReader & Reader, ssize_t & RemainSize, xMethodInfo & MethodInfo)
+    bool ExtractMethodInfo(xStreamReader & Reader, xel::ssize_t & RemainSize, xMethodInfo & MethodInfo)
     {
         if ((RemainSize -= 8) < 0) {
             return false;
