@@ -4,152 +4,43 @@
 #include <jdc/decompiler/JD_JavaSpace.hpp>
 #include <xel/String.hpp>
 #include <algorithm>
+#include <sstream>
 
 namespace jdc
 {
 
-    /**** xJavaBlock ****/
-
-    bool xJavaBlock::Contains(xJavaBlock * CheckBlockPtr) const
+    xJavaControlFlowGraph::xJavaControlFlowGraph(const xJavaMethod * JavaMethodPtr)
     {
-        if (NextBlockPtr == CheckBlockPtr) {
-            return true;
-        }
-        if (BranchBlockPtr == CheckBlockPtr) {
-            return true;
-        }
-        for (auto & EH : ExceptionHandlers) {
-            if (EH.HandlerBlockPtr == CheckBlockPtr) {
-                return true;
-            }
-        }
-        for (auto & SC : SwitchCases) {
-            if (SC.BlockPtr == CheckBlockPtr) {
-                return true;
-            }
-        }
-        if (FirstSubBlockPtr == CheckBlockPtr) {
-            return true;
-        }
-        if (SecondSubBlockPtr == CheckBlockPtr) {
-            return true;
-        }
-        return false;
+        _JavaMethodPtr = JavaMethodPtr;
+        _JavaClassPtr = JavaMethodPtr->JavaClassPtr;
+
+        EndBlockUPtr = std::make_unique<xJavaBlock>(this, xJavaBlock::TYPE_END);
+        EndBlockPtr  = EndBlockUPtr.get();
     }
 
-    void xJavaBlock::Replace(xJavaBlock * OldBlockPtr, xJavaBlock * NewBlockPtr)
+    std::string xJavaControlFlowGraph::DumpBlocks()
     {
-        assert(OldBlockPtr);
-        assert(NewBlockPtr);
-        if (NextBlockPtr == OldBlockPtr) {
-            NextBlockPtr = NewBlockPtr;
+        auto OS = std::ostringstream();
+        OS << "Class: " << _JavaClassPtr->Converted.ClassName << ", Method: " << _JavaMethodPtr->OriginalName << std::endl;
+        for (auto & BlockPtr : BlockList) {
+            OS << "Block: " << BlockPtr->FromOffset << "  -->  " << BlockPtr->ToOffset << "  Type=" << ToString(BlockPtr->Type) << std::endl;
         }
-
-        if (BranchBlockPtr == OldBlockPtr) {
-            BranchBlockPtr = NewBlockPtr;
-        }
-        for (auto & EH : ExceptionHandlers) {
-            EH.HandlerBlockPtr->Replace(OldBlockPtr, NewBlockPtr);
-        }
-        for (auto & SC : SwitchCases) {
-            SC.BlockPtr->Replace(OldBlockPtr, NewBlockPtr);
-        }
-        if (FirstSubBlockPtr == OldBlockPtr) {
-            FirstSubBlockPtr = NewBlockPtr;
-        }
-        if (SecondSubBlockPtr == OldBlockPtr) {
-            SecondSubBlockPtr = NewBlockPtr;
-        }
-
-        auto Iter = Predecessors.find(OldBlockPtr);
-        if (Iter != Predecessors.end()) {
-            Predecessors.erase(Iter);
-            if (NewBlockPtr->Type != xJavaBlock::TYPE_END) {
-                Predecessors.insert(NewBlockPtr);
-            }
-        }
+        return OS.str();
     }
-
-    void xJavaBlock::AddExceptionHandler(const xJavaExceptionHandler & ExceptionHandler)
-    {
-    #ifndef NDEBUG
-        for(auto & Handler : ExceptionHandlers) {
-            if (Handler.FixedCatchTypeName == ExceptionHandler.FixedCatchTypeName) {
-                xel::Fatal("Duplicate Exception catch type");
-            }
-        }
-    #endif
-        ExceptionHandlers.push_back(ExceptionHandler);
-    }
-
-    void xJavaBlock::InverseCondition()
-    {
-        switch (Type) {
-            case TYPE_CONDITION:
-            case TYPE_CONDITION_TERNARY_OPERATOR:
-            case TYPE_GOTO_IN_TERNARY_OPERATOR:
-                MustInverseCondition ^= true;
-                break;
-            case TYPE_CONDITION_AND:
-                Type = TYPE_CONDITION_OR;
-                FirstSubBlockPtr->InverseCondition();
-                SecondSubBlockPtr->InverseCondition();
-                break;
-            case TYPE_CONDITION_OR:
-                Type = TYPE_CONDITION_AND;
-                FirstSubBlockPtr->InverseCondition();
-                SecondSubBlockPtr->InverseCondition();
-                break;
-            default:
-                xel::Fatal("Invalid condition");
-                break;
-        }
-    }
-
-
-    /**
-     * @brief JavaControlFlowGraph
-     *
-    */
-
-    xJavaBlock xJavaControlFlowGraph::EndBlock = xJavaBlock(xJavaBlock::TYPE_END);
-
-    xJavaSwitchCase::xJavaSwitchCase(xJavaBlock * BlockPtr)
-    : DefaultCase(true), Offset(BlockPtr->FromOffset), BlockPtr(BlockPtr)
-    {}
-
-    xJavaSwitchCase::xJavaSwitchCase(size_t Value, xJavaBlock * BlockPtr)
-    : DefaultCase(false), Value(Value), Offset(BlockPtr->FromOffset), BlockPtr(BlockPtr)
-    {}
-
-    class xCodeExceptionComparator
-    {
-    public:
-        bool operator () (const xJavaException & E1, const xJavaException & E2) const
-        {
-            if (E1.StartPC == E2.StartPC) {
-                return E1.EndPC < E2.EndPC;
-            }
-            return E1.StartPC < E2.StartPC;
-        }
-    };
 
     std::unique_ptr<xJavaControlFlowGraph> xJavaControlFlowGraph::ParseByteCode(const xJavaMethod * JavaMethodPtr)
     {
-        auto JavaControlFlowGraphUPtr = std::make_unique<xJavaControlFlowGraph>();
+        auto JavaControlFlowGraphUPtr = std::make_unique<xJavaControlFlowGraph>(JavaMethodPtr);
         auto CFGPtr = JavaControlFlowGraphUPtr.get();
 
-        if (!CFGPtr->Init(JavaMethodPtr)) {
+        if (!CFGPtr->Init()) {
             return {};
         }
         return JavaControlFlowGraphUPtr;
     }
 
-    bool xJavaControlFlowGraph::Init(const xJavaMethod * JavaMethodPtr)
+    bool xJavaControlFlowGraph::Init()
     {
-        _JavaMethodPtr = JavaMethodPtr;
-        _JavaClassPtr = JavaMethodPtr->JavaClassPtr;
-
         assert(LocalVariableList.empty());
         xel::Renew(FirstVariableIndex);
         assert(Blocks.empty());
@@ -157,6 +48,8 @@ namespace jdc
 
         InitLocalVariables();
         InitBlocks();
+        X_DEBUG_PRINTF("DumpBlocks:\n%s\n", DumpBlocks().c_str());
+
         // ReduceGoto(); in jd-core
         // ReduceLoop(); in jd-core
         ReduceGraph();
@@ -549,7 +442,7 @@ namespace jdc
                 LastOffset = Offset;
             }
         }
-        NewBlock(LastOffset, CodeLength);
+        NewBlock(xJavaBlock::TYPE_DELETED, LastOffset, CodeLength);
         Blocks[LastOffset] = BlockList.back().get();
 
         // set block types:
@@ -765,108 +658,108 @@ namespace jdc
 
     xOpCode xJavaControlFlowGraph::SearchNextOpcode(const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr, size_t MaxOffset)
     {
-        size_t Offset   = BlockPtr->FromOffset;
-        size_t ToOffset = BlockPtr->ToOffset;
+        // size_t Offset   = BlockPtr->FromOffset;
+        // size_t ToOffset = BlockPtr->ToOffset;
 
-        if (ToOffset > MaxOffset) {
-            ToOffset = MaxOffset;
-        }
+        // if (ToOffset > MaxOffset) {
+        //     ToOffset = MaxOffset;
+        // }
 
-        auto Reader = xel::xStreamReader(CodeBinary.data());
-        for (; Offset < ToOffset; Offset++) {
-            xOpCode OpCode = CodeBinary[Offset];
-            switch (OpCode) {
-                case 16: case 18: // BIPUSH, LDC
-                case 21: case 22: case 23: case 24: case 25: // ILOAD, LLOAD, FLOAD, DLOAD, ALOAD
-                case 54: case 55: case 56: case 57: case 58: // ISTORE, LSTORE, FSTORE, DSTORE, ASTORE
-                case 169: // RET
-                case 188: // NEWARRAY
-                    Offset++;
-                    break;
-                case 17: // SIPUSH
-                case 19: case 20: // LDC_W, LDC2_W
-                case 132: // IINC
-                case 178: // GETSTATIC
-                case 179: // PUTSTATIC
-                case 187: // NEW
-                case 180: // GETFIELD
-                case 181: // PUTFIELD
-                case 182: case 183: // INVOKEVIRTUAL, INVOKESPECIAL
-                case 184: // INVOKESTATIC
-                case 189: // ANEWARRAY
-                case 192: // CHECKCAST
-                case 193: // INSTANCEOF
-                    Offset += 2;
-                    break;
-                case 153: case 154: case 155: case 156: case 157: case 158: // IFEQ, IFNE, IFLT, IFGE, IFGT, IFLE
-                case 159: case 160: case 161: case 162: case 163: case 164: case 165: case 166: // IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE
-                case 167: // GOTO
-                case 198: case 199: { // IFNULL, IFNONNULL
-                    Reader.Offset(Offset);
-                    auto DeltaOffset = (int16_t)Reader.R2();
-                    Offset += 2;
-                    if (DeltaOffset > 0) {
-                        Offset += DeltaOffset - 2 - 1;
-                    }
-                    break;
-                }
-                case 200: { // GOTO_W
-                    Reader.Offset(Offset);
-                    auto DeltaOffset = (int32_t)Reader.R4();
-                    Offset += 4;
-                    if (DeltaOffset > 0) {
-                        Offset += DeltaOffset - 4 - 1;
-                    }
-                    break;
-                }
-                case 168: // JSR
-                    Offset += 2;
-                    break;
-                case 197: // MULTIANEWARRAY
-                    Offset += 3;
-                    break;
-                case 185: // INVOKEINTERFACE
-                case 186: // INVOKEDYNAMIC
-                    Offset += 4;
-                    break;
-                case 201: // JSR_W
-                    Offset += 4;
-                    break;
-                case 170: { // TABLESWITCH
-                    Offset = (Offset + 4) & 0xFFFC; // Skip padding
-                    Offset += 4; // Skip default offset
-                    Reader.Offset(Offset);
-                    int32_t Low  = Reader.R4();
-                    int32_t High = Reader.R4();
-                    Offset += 8;
-                    Offset += (4 * (High - Low + 1)) - 1;
-                    break;
-                }
-                case 171: { // LOOKUPSWITCH
-                    Offset = (Offset + 4) & 0xFFFC; // Skip padding
-                    Offset += 4; // Skip default offset
-                    Reader.Offset(Offset);
-                    int32_t Count = Reader.R4();
-                    Offset += 4;
-                    Offset += (8 * Count) - 1;
-                    break;
-                }
-                case 196: // WIDE
-                    OpCode = CodeBinary[++Offset];
-                    if (OpCode == 132) { // IINC
-                        Offset += 4;
-                    } else {
-                        Offset += 2;
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
+        // auto Reader = xel::xStreamReader(CodeBinary.data());
+        // for (; Offset < ToOffset; Offset++) {
+        //     xOpCode OpCode = CodeBinary[Offset];
+        //     switch (OpCode) {
+        //         case 16: case 18: // BIPUSH, LDC
+        //         case 21: case 22: case 23: case 24: case 25: // ILOAD, LLOAD, FLOAD, DLOAD, ALOAD
+        //         case 54: case 55: case 56: case 57: case 58: // ISTORE, LSTORE, FSTORE, DSTORE, ASTORE
+        //         case 169: // RET
+        //         case 188: // NEWARRAY
+        //             Offset++;
+        //             break;
+        //         case 17: // SIPUSH
+        //         case 19: case 20: // LDC_W, LDC2_W
+        //         case 132: // IINC
+        //         case 178: // GETSTATIC
+        //         case 179: // PUTSTATIC
+        //         case 187: // NEW
+        //         case 180: // GETFIELD
+        //         case 181: // PUTFIELD
+        //         case 182: case 183: // INVOKEVIRTUAL, INVOKESPECIAL
+        //         case 184: // INVOKESTATIC
+        //         case 189: // ANEWARRAY
+        //         case 192: // CHECKCAST
+        //         case 193: // INSTANCEOF
+        //             Offset += 2;
+        //             break;
+        //         case 153: case 154: case 155: case 156: case 157: case 158: // IFEQ, IFNE, IFLT, IFGE, IFGT, IFLE
+        //         case 159: case 160: case 161: case 162: case 163: case 164: case 165: case 166: // IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE
+        //         case 167: // GOTO
+        //         case 198: case 199: { // IFNULL, IFNONNULL
+        //             Reader.Offset(Offset);
+        //             auto DeltaOffset = (int16_t)Reader.R2();
+        //             Offset += 2;
+        //             if (DeltaOffset > 0) {
+        //                 Offset += DeltaOffset - 2 - 1;
+        //             }
+        //             break;
+        //         }
+        //         case 200: { // GOTO_W
+        //             Reader.Offset(Offset);
+        //             auto DeltaOffset = (int32_t)Reader.R4();
+        //             Offset += 4;
+        //             if (DeltaOffset > 0) {
+        //                 Offset += DeltaOffset - 4 - 1;
+        //             }
+        //             break;
+        //         }
+        //         case 168: // JSR
+        //             Offset += 2;
+        //             break;
+        //         case 197: // MULTIANEWARRAY
+        //             Offset += 3;
+        //             break;
+        //         case 185: // INVOKEINTERFACE
+        //         case 186: // INVOKEDYNAMIC
+        //             Offset += 4;
+        //             break;
+        //         case 201: // JSR_W
+        //             Offset += 4;
+        //             break;
+        //         case 170: { // TABLESWITCH
+        //             Offset = (Offset + 4) & 0xFFFC; // Skip padding
+        //             Offset += 4; // Skip default offset
+        //             Reader.Offset(Offset);
+        //             int32_t Low  = Reader.R4();
+        //             int32_t High = Reader.R4();
+        //             Offset += 8;
+        //             Offset += (4 * (High - Low + 1)) - 1;
+        //             break;
+        //         }
+        //         case 171: { // LOOKUPSWITCH
+        //             Offset = (Offset + 4) & 0xFFFC; // Skip padding
+        //             Offset += 4; // Skip default offset
+        //             Reader.Offset(Offset);
+        //             int32_t Count = Reader.R4();
+        //             Offset += 4;
+        //             Offset += (8 * Count) - 1;
+        //             break;
+        //         }
+        //         case 196: // WIDE
+        //             OpCode = CodeBinary[++Offset];
+        //             if (OpCode == 132) { // IINC
+        //                 Offset += 4;
+        //             } else {
+        //                 Offset += 2;
+        //             }
+        //             break;
+        //         default:
+        //             break;
+        //     }
+        // }
 
-        if (Offset <= MaxOffset) {
-            return CodeBinary[Offset];
-        }
+        // if (Offset <= MaxOffset) {
+        //     return CodeBinary[Offset];
+        // }
         return 0;
     }
 
@@ -878,668 +771,668 @@ namespace jdc
             return 0;
         }
         size_t LastOffset = ToOffset;
-        auto Reader = xel::xStreamReader(CodeBinary.data());
-        for (; Offset < ToOffset; Offset++) {
-            xOpCode OpCode = CodeBinary[Offset];
-            LastOffset = Offset;
-            switch (OpCode) {
-                case 16: case 18: // BIPUSH, LDC
-                case 21: case 22: case 23: case 24: case 25: // ILOAD, LLOAD, FLOAD, DLOAD, ALOAD
-                case 54: case 55: case 56: case 57: case 58: // ISTORE, LSTORE, FSTORE, DSTORE, ASTORE
-                case 169: // RET
-                case 188: // NEWARRAY
-                    Offset++;
-                    break;
-                case 17: // SIPUSH
-                case 19: case 20: // LDC_W, LDC2_W
-                case 132: // IINC
-                case 178: // GETSTATIC
-                case 179: // PUTSTATIC
-                case 187: // NEW
-                case 180: // GETFIELD
-                case 181: // PUTFIELD
-                case 182: case 183: // INVOKEVIRTUAL, INVOKESPECIAL
-                case 184: // INVOKESTATIC
-                case 189: // ANEWARRAY
-                case 192: // CHECKCAST
-                case 193: // INSTANCEOF
-                    Offset += 2;
-                    break;
-                case 153: case 154: case 155: case 156: case 157: case 158: // IFEQ, IFNE, IFLT, IFGE, IFGT, IFLE
-                case 159: case 160: case 161: case 162: case 163: case 164: case 165: case 166: // IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE
-                case 167: // GOTO
-                case 198: case 199: { // IFNULL, IFNONNULL
-                    Reader.Offset(Offset);
-                    auto DeltaOffset = (int16_t)Reader.R2();
-                    Offset += 2;
-                    if (DeltaOffset > 0) {
-                        Offset += DeltaOffset - 2 - 1;
-                    }
-                    break;
-                }
-                case 200: { // GOTO_W
-                    Reader.Offset(Offset);
-                    auto DeltaOffset = (int32_t)Reader.R4();
-                    Offset += 4;
-                    if (DeltaOffset > 0) {
-                        Offset += DeltaOffset - 4 - 1;
-                    }
-                    break;
-                }
-                case 168: // JSR
-                    Offset += 2;
-                    break;
-                case 197: // MULTIANEWARRAY
-                    Offset += 3;
-                    break;
-                case 185: // INVOKEINTERFACE
-                case 186: // INVOKEDYNAMIC
-                    Offset += 4;
-                    break;
-                case 201: // JSR_W
-                    Offset += 4;
-                    break;
-                case 170: { // TABLESWITCH
-                    Offset = (Offset + 4) & 0xFFFC; // Skip padding
-                    Offset += 4; // Skip default offset
-                    Reader.Offset(Offset);
-                    auto Low = (int32_t)Reader.R4();
-                    auto High = (int32_t)Reader.R4();
-                    Offset += 8;
-                    Offset += (4 * (High - Low + 1)) - 1;
-                    break;
-                }
-                case 171: { // LOOKUPSWITCH
-                    Offset = (Offset + 4) & 0xFFFC; // Skip padding
-                    Offset += 4; // Skip default offset
-                    Reader.Offset(Offset);
-                    auto Count = (int32_t)Reader.R4();
-                    Offset += 4;
-                    Offset += (8 * Count) - 1;
-                    break;
-                }
-                case 196: // WIDE
-                    OpCode = CodeBinary[++Offset];
-                    if (OpCode == 132) { // IINC
-                        Offset += 4;
-                    } else {
-                        OpCode += 2;
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
+        // auto Reader = xel::xStreamReader(CodeBinary.data());
+        // for (; Offset < ToOffset; Offset++) {
+        //     xOpCode OpCode = CodeBinary[Offset];
+        //     LastOffset = Offset;
+        //     switch (OpCode) {
+        //         case 16: case 18: // BIPUSH, LDC
+        //         case 21: case 22: case 23: case 24: case 25: // ILOAD, LLOAD, FLOAD, DLOAD, ALOAD
+        //         case 54: case 55: case 56: case 57: case 58: // ISTORE, LSTORE, FSTORE, DSTORE, ASTORE
+        //         case 169: // RET
+        //         case 188: // NEWARRAY
+        //             Offset++;
+        //             break;
+        //         case 17: // SIPUSH
+        //         case 19: case 20: // LDC_W, LDC2_W
+        //         case 132: // IINC
+        //         case 178: // GETSTATIC
+        //         case 179: // PUTSTATIC
+        //         case 187: // NEW
+        //         case 180: // GETFIELD
+        //         case 181: // PUTFIELD
+        //         case 182: case 183: // INVOKEVIRTUAL, INVOKESPECIAL
+        //         case 184: // INVOKESTATIC
+        //         case 189: // ANEWARRAY
+        //         case 192: // CHECKCAST
+        //         case 193: // INSTANCEOF
+        //             Offset += 2;
+        //             break;
+        //         case 153: case 154: case 155: case 156: case 157: case 158: // IFEQ, IFNE, IFLT, IFGE, IFGT, IFLE
+        //         case 159: case 160: case 161: case 162: case 163: case 164: case 165: case 166: // IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE
+        //         case 167: // GOTO
+        //         case 198: case 199: { // IFNULL, IFNONNULL
+        //             Reader.Offset(Offset);
+        //             auto DeltaOffset = (int16_t)Reader.R2();
+        //             Offset += 2;
+        //             if (DeltaOffset > 0) {
+        //                 Offset += DeltaOffset - 2 - 1;
+        //             }
+        //             break;
+        //         }
+        //         case 200: { // GOTO_W
+        //             Reader.Offset(Offset);
+        //             auto DeltaOffset = (int32_t)Reader.R4();
+        //             Offset += 4;
+        //             if (DeltaOffset > 0) {
+        //                 Offset += DeltaOffset - 4 - 1;
+        //             }
+        //             break;
+        //         }
+        //         case 168: // JSR
+        //             Offset += 2;
+        //             break;
+        //         case 197: // MULTIANEWARRAY
+        //             Offset += 3;
+        //             break;
+        //         case 185: // INVOKEINTERFACE
+        //         case 186: // INVOKEDYNAMIC
+        //             Offset += 4;
+        //             break;
+        //         case 201: // JSR_W
+        //             Offset += 4;
+        //             break;
+        //         case 170: { // TABLESWITCH
+        //             Offset = (Offset + 4) & 0xFFFC; // Skip padding
+        //             Offset += 4; // Skip default offset
+        //             Reader.Offset(Offset);
+        //             auto Low = (int32_t)Reader.R4();
+        //             auto High = (int32_t)Reader.R4();
+        //             Offset += 8;
+        //             Offset += (4 * (High - Low + 1)) - 1;
+        //             break;
+        //         }
+        //         case 171: { // LOOKUPSWITCH
+        //             Offset = (Offset + 4) & 0xFFFC; // Skip padding
+        //             Offset += 4; // Skip default offset
+        //             Reader.Offset(Offset);
+        //             auto Count = (int32_t)Reader.R4();
+        //             Offset += 4;
+        //             Offset += (8 * Count) - 1;
+        //             break;
+        //         }
+        //         case 196: // WIDE
+        //             OpCode = CodeBinary[++Offset];
+        //             if (OpCode == 132) { // IINC
+        //                 Offset += 4;
+        //             } else {
+        //                 OpCode += 2;
+        //             }
+        //             break;
+        //         default:
+        //             break;
+        //     }
+        // }
         return CodeBinary[LastOffset];
     }
 
     ssize_t xJavaControlFlowGraph::EvalStackDepth(const xJavaClass * JavaClassPtr, const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr)
     {
         ssize_t Depth = 0;
-        auto & ClassInfo = JavaClassPtr->ClassInfo;
-        for (size_t Offset = BlockPtr->FromOffset, ToOffset = BlockPtr->ToOffset; Offset < ToOffset; ++Offset) {
-            xOpCode OpCode = CodeBinary[Offset];
-            switch(OpCode) {
-                case 1: // ACONST_NULL
-                case 2: case 3: case 4: case 5: case 6: case 7: case 8: // ICONST_M1, ICONST_0 ... ICONST_5
-                case 9: case 10: case 11: case 12: case 13: case 14: case 15: // LCONST_0, LCONST_1, FCONST_0, FCONST_1, FCONST_2, DCONST_0, DCONST_1
-                case 26: case 27: case 28: case 29: // ILOAD_0 ... ILOAD_3
-                case 30: case 31: case 32: case 33: // LLOAD_0 ... LLOAD_3
-                case 34: case 35: case 36: case 37: // FLOAD_0 ... FLOAD_3
-                case 38: case 39: case 40: case 41: // DLOAD_0 ... DLOAD_3
-                case 42: case 43: case 44: case 45: // ALOAD_0 ... ALOAD_3
-                case 89: case 90: case 91: // DUP, DUP_X1, DUP_X2
-                    ++Depth;
-                    break;
-                case 16: case 18: // BIPUSH, LDC
-                case 21: case 22: case 23: case 24: case 25: // ILOAD, LLOAD, FLOAD, DLOAD, ALOAD
-                    ++Offset;
-                    ++Depth;
-                    break;
-                case 17: // SIPUSH
-                case 19: case 20: // LDC_W, LDC2_W
-                case 168: // JSR
-                case 178: // GETSTATIC
-                case 187: // NEW
-                    ++++Offset;
-                    ++Depth;
-                    break;
-                case 46: case 47: case 48: case 49: case 50: case 51: case 52: case 53: // IALOAD, LALOAD, FALOAD, DALOAD, AALOAD, BALOAD, CALOAD, SALOAD
-                case 59: case 60: case 61: case 62: // ISTORE_0 ... ISTORE_3
-                case 63: case 64: case 65: case 66: // LSTORE_0 ... LSTORE_3
-                case 67: case 68: case 69: case 70: // FSTORE_0 ... FSTORE_3
-                case 71: case 72: case 73: case 74: // DSTORE_0 ... DSTORE_3
-                case 75: case 76: case 77: case 78: // ASTORE_0 ... ASTORE_3
-                case 87: // POP
-                case 96: case 97: case 98: case 99:     // IADD, LADD, FADD, DADD
-                case 100: case 101: case 102: case 103: // ISUB, LSUB, FSUB, DSUB
-                case 104: case 105: case 106: case 107: // IMUL, LMUL, FMUL, DMUL
-                case 108: case 109: case 110: case 111: // IDIV, LDIV, FDIV, DDIV
-                case 112: case 113: case 114: case 115: // IREM, LREM, FREM, DREM
-                case 120: case 121: // ISHL, LSHL
-                case 122: case 123: // ISHR, LSHR
-                case 124: case 125: // IUSHR, LUSHR
-                case 126: case 127: // IAND, LAND
-                case 128: case 129: // IOR, LOR
-                case 130: case 131: // IXOR, LXOR
-                case 148: case 149: case 150: case 151: case 152: // LCMP, FCMPL, FCMPG, DCMPL, DCMPG
-                case 172: case 173: case 174: case 175: case 176: // IRETURN, LRETURN, FRETURN, DRETURN, ARETURN
-                case 194: case 195: // MONITORENTER, MONITOREXIT
-                    --Depth;
-                    break;
-                case 153: case 154: case 155: case 156: case 157: case 158: // IFEQ, IFNE, IFLT, IFGE, IFGT, IFLE
-                case 179: // PUTSTATIC
-                case 198: case 199: // IFNULL, IFNONNULL
-                    ++++Offset;
-                    --Depth;
-                    break;
-                case 54: case 55: case 56: case 57: case 58: // ISTORE, LSTORE, FSTORE, DSTORE, ASTORE
-                    ++Offset;
-                    --Depth;
-                    break;
-                case 79: case 80: case 81: case 82: case 83: case 84: case 85: case 86: // IASTORE, LASTORE, FASTORE, DASTORE, AASTORE, BASTORE, CASTORE, SASTORE
-                    ------Depth;
-                    break;
-                case 92: case 93: case 94: // DUP2, DUP2_X1, DUP2_X2
-                    ++++Depth;
-                    break;
-                case 132: // IINC
-                case 167: // GOTO
-                case 180: // GETFIELD
-                case 189: // ANEWARRAY
-                case 192: // CHECKCAST
-                case 193: // INSTANCEOF
-                    ++++Offset;
-                    break;
-                case 159: case 160: case 161: case 162: case 163: case 164: case 165: case 166: // IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE
-                case 181: // PUTFIELD
-                    ++++Offset;
-                    ----Depth;
-                    break;
-                case 88: // POP2
-                    ----Depth;
-                    break;
-                case 169: // RET
-                case 188: // NEWARRAY
-                    ++Offset;
-                    break;
-                case 170: { // TABLESWITCH
-                    Offset = (Offset + 4) & 0x00FFFC; // Skip padding
-                    Offset += 4; // Skip default offset
-                    auto Reader = xel::xStreamReader(&CodeBinary[Offset]);
-                    uint32_t Low = Reader.R4();
-                    uint32_t High = Reader.R4();
-                    Offset += 8;
-                    Offset += 4 * (High - Low + 1) - 1;
-                    --Depth;
-                    break;
-                }
-                case 171: { // LOOKUPSWITCH
-                    Offset = (Offset + 4) & 0xFFFC; // Skip padding
-                    Offset += 4; // Skip default offset
-                    auto Reader = xel::xStreamReader(&CodeBinary[Offset]);
-                    auto Count = Reader.R4();
-                    Offset += 4;
-                    Offset += (8 * Count) - 1;
-                    --Depth;
-                    break;
-                }
-                case 182: case 183: { // INVOKEVIRTUAL, INVOKESPECIAL
-                    auto Reader = xel::xStreamReader(&CodeBinary[Offset + 1]);
-                    auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
-                    Offset += 2;
-                    assert(ConstantRef.Tag == eConstantTag::MethodRef);
-                    auto & NameAndType = ClassInfo.GetConstantInfo(ConstantRef.Details.MethodRef.NameAndTypeIndex);
-                    auto & Descriptor = ClassInfo.GetConstantUtf8(NameAndType.Details.NameAndType.DescriptorIndex);
-                    Depth -= 1 + CountMethodParameters(Descriptor); // 1 for 'this'
-                    if (Descriptor.back() != 'V') {
-                        ++Depth;
-                    }
-                    break;
-                }
-                case 184: { // INVOKESTATIC
-                    auto Reader = xel::xStreamReader(&CodeBinary[Offset + 1]);
-                    auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
-                    Offset += 2;
-                    assert(ConstantRef.Tag == eConstantTag::MethodRef);
-                    auto & NameAndType = ClassInfo.GetConstantInfo(ConstantRef.Details.MethodRef.NameAndTypeIndex);
-                    auto & Descriptor = ClassInfo.GetConstantUtf8(NameAndType.Details.NameAndType.DescriptorIndex);
-                    Depth -= CountMethodParameters(Descriptor);
-                    if (Descriptor.back() != 'V') {
-                        ++Depth;
-                    }
-                    break;
-                }
-                case 185: { // INVOKEINTERFACE
-                    auto Reader = xel::xStreamReader(&CodeBinary[Offset + 1]);
-                    auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
-                    Offset += 2;
-                    assert(ConstantRef.Tag == eConstantTag::MethodRef);
-                    auto & NameAndType = ClassInfo.GetConstantInfo(ConstantRef.Details.MethodRef.NameAndTypeIndex);
-                    auto & Descriptor = ClassInfo.GetConstantUtf8(NameAndType.Details.NameAndType.DescriptorIndex);
-                    Depth -= 1 + CountMethodParameters(Descriptor);
-                    if (Descriptor.back() != 'V') {
-                        ++Depth;
-                    }
-                    Offset += 2; // skip count + one byte
-                    break;
-                }
-                case 186: { // INVOKEDYNAMIC
-                    auto Reader = xel::xStreamReader(&CodeBinary[Offset + 1]);
-                    auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
-                    Offset += 2;
-                    assert(ConstantRef.Tag == eConstantTag::MethodRef);
-                    auto & NameAndType = ClassInfo.GetConstantInfo(ConstantRef.Details.MethodRef.NameAndTypeIndex);
-                    auto & Descriptor = ClassInfo.GetConstantUtf8(NameAndType.Details.NameAndType.DescriptorIndex);
-                    Depth -= CountMethodParameters(Descriptor);
-                    if (Descriptor.back() != 'V') {
-                        ++Depth;
-                    }
-                    Offset += 2; // skip count + one byte
-                    break;
-                }
-                case 196: // WIDE
-                    OpCode = CodeBinary[++Offset];
-                    if (OpCode == 132) { // IINC
-                        Offset += 4;
-                    } else {
-                        Offset += 2;
-                        switch (OpCode) {
-                            case 21: case 22: case 23: case 24: case 25: // ILOAD, LLOAD, FLOAD, DLOAD, ALOAD
-                                ++Depth;
-                                break;
-                            case 54: case 55: case 56: case 57: case 58: // ISTORE, LSTORE, FSTORE, DSTORE, ASTORE
-                                --Depth;
-                                break;
-                            case 169: // RET
-                                break;
-                        }
-                    }
-                    break;
-                case 197: // MULTIANEWARRAY
-                    Offset += 3;
-                    Depth += 1 - CodeBinary[Offset];
-                    break;
-                case 201: // JSR_W
-                    Offset += 4;
-                    ++Depth;
-                case 200: // GOTO_W
-                    Offset += 4;
-                    break;
-                default:
-                    break;
-            }
-        }
+        // auto & ClassInfo = JavaClassPtr->ClassInfo;
+        // for (size_t Offset = BlockPtr->FromOffset, ToOffset = BlockPtr->ToOffset; Offset < ToOffset; ++Offset) {
+        //     xOpCode OpCode = CodeBinary[Offset];
+        //     switch(OpCode) {
+        //         case 1: // ACONST_NULL
+        //         case 2: case 3: case 4: case 5: case 6: case 7: case 8: // ICONST_M1, ICONST_0 ... ICONST_5
+        //         case 9: case 10: case 11: case 12: case 13: case 14: case 15: // LCONST_0, LCONST_1, FCONST_0, FCONST_1, FCONST_2, DCONST_0, DCONST_1
+        //         case 26: case 27: case 28: case 29: // ILOAD_0 ... ILOAD_3
+        //         case 30: case 31: case 32: case 33: // LLOAD_0 ... LLOAD_3
+        //         case 34: case 35: case 36: case 37: // FLOAD_0 ... FLOAD_3
+        //         case 38: case 39: case 40: case 41: // DLOAD_0 ... DLOAD_3
+        //         case 42: case 43: case 44: case 45: // ALOAD_0 ... ALOAD_3
+        //         case 89: case 90: case 91: // DUP, DUP_X1, DUP_X2
+        //             ++Depth;
+        //             break;
+        //         case 16: case 18: // BIPUSH, LDC
+        //         case 21: case 22: case 23: case 24: case 25: // ILOAD, LLOAD, FLOAD, DLOAD, ALOAD
+        //             ++Offset;
+        //             ++Depth;
+        //             break;
+        //         case 17: // SIPUSH
+        //         case 19: case 20: // LDC_W, LDC2_W
+        //         case 168: // JSR
+        //         case 178: // GETSTATIC
+        //         case 187: // NEW
+        //             ++++Offset;
+        //             ++Depth;
+        //             break;
+        //         case 46: case 47: case 48: case 49: case 50: case 51: case 52: case 53: // IALOAD, LALOAD, FALOAD, DALOAD, AALOAD, BALOAD, CALOAD, SALOAD
+        //         case 59: case 60: case 61: case 62: // ISTORE_0 ... ISTORE_3
+        //         case 63: case 64: case 65: case 66: // LSTORE_0 ... LSTORE_3
+        //         case 67: case 68: case 69: case 70: // FSTORE_0 ... FSTORE_3
+        //         case 71: case 72: case 73: case 74: // DSTORE_0 ... DSTORE_3
+        //         case 75: case 76: case 77: case 78: // ASTORE_0 ... ASTORE_3
+        //         case 87: // POP
+        //         case 96: case 97: case 98: case 99:     // IADD, LADD, FADD, DADD
+        //         case 100: case 101: case 102: case 103: // ISUB, LSUB, FSUB, DSUB
+        //         case 104: case 105: case 106: case 107: // IMUL, LMUL, FMUL, DMUL
+        //         case 108: case 109: case 110: case 111: // IDIV, LDIV, FDIV, DDIV
+        //         case 112: case 113: case 114: case 115: // IREM, LREM, FREM, DREM
+        //         case 120: case 121: // ISHL, LSHL
+        //         case 122: case 123: // ISHR, LSHR
+        //         case 124: case 125: // IUSHR, LUSHR
+        //         case 126: case 127: // IAND, LAND
+        //         case 128: case 129: // IOR, LOR
+        //         case 130: case 131: // IXOR, LXOR
+        //         case 148: case 149: case 150: case 151: case 152: // LCMP, FCMPL, FCMPG, DCMPL, DCMPG
+        //         case 172: case 173: case 174: case 175: case 176: // IRETURN, LRETURN, FRETURN, DRETURN, ARETURN
+        //         case 194: case 195: // MONITORENTER, MONITOREXIT
+        //             --Depth;
+        //             break;
+        //         case 153: case 154: case 155: case 156: case 157: case 158: // IFEQ, IFNE, IFLT, IFGE, IFGT, IFLE
+        //         case 179: // PUTSTATIC
+        //         case 198: case 199: // IFNULL, IFNONNULL
+        //             ++++Offset;
+        //             --Depth;
+        //             break;
+        //         case 54: case 55: case 56: case 57: case 58: // ISTORE, LSTORE, FSTORE, DSTORE, ASTORE
+        //             ++Offset;
+        //             --Depth;
+        //             break;
+        //         case 79: case 80: case 81: case 82: case 83: case 84: case 85: case 86: // IASTORE, LASTORE, FASTORE, DASTORE, AASTORE, BASTORE, CASTORE, SASTORE
+        //             ------Depth;
+        //             break;
+        //         case 92: case 93: case 94: // DUP2, DUP2_X1, DUP2_X2
+        //             ++++Depth;
+        //             break;
+        //         case 132: // IINC
+        //         case 167: // GOTO
+        //         case 180: // GETFIELD
+        //         case 189: // ANEWARRAY
+        //         case 192: // CHECKCAST
+        //         case 193: // INSTANCEOF
+        //             ++++Offset;
+        //             break;
+        //         case 159: case 160: case 161: case 162: case 163: case 164: case 165: case 166: // IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE
+        //         case 181: // PUTFIELD
+        //             ++++Offset;
+        //             ----Depth;
+        //             break;
+        //         case 88: // POP2
+        //             ----Depth;
+        //             break;
+        //         case 169: // RET
+        //         case 188: // NEWARRAY
+        //             ++Offset;
+        //             break;
+        //         case 170: { // TABLESWITCH
+        //             Offset = (Offset + 4) & 0x00FFFC; // Skip padding
+        //             Offset += 4; // Skip default offset
+        //             auto Reader = xel::xStreamReader(&CodeBinary[Offset]);
+        //             uint32_t Low = Reader.R4();
+        //             uint32_t High = Reader.R4();
+        //             Offset += 8;
+        //             Offset += 4 * (High - Low + 1) - 1;
+        //             --Depth;
+        //             break;
+        //         }
+        //         case 171: { // LOOKUPSWITCH
+        //             Offset = (Offset + 4) & 0xFFFC; // Skip padding
+        //             Offset += 4; // Skip default offset
+        //             auto Reader = xel::xStreamReader(&CodeBinary[Offset]);
+        //             auto Count = Reader.R4();
+        //             Offset += 4;
+        //             Offset += (8 * Count) - 1;
+        //             --Depth;
+        //             break;
+        //         }
+        //         case 182: case 183: { // INVOKEVIRTUAL, INVOKESPECIAL
+        //             auto Reader = xel::xStreamReader(&CodeBinary[Offset + 1]);
+        //             auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
+        //             Offset += 2;
+        //             assert(ConstantRef.Tag == eConstantTag::MethodRef);
+        //             auto & NameAndType = ClassInfo.GetConstantInfo(ConstantRef.Details.MethodRef.NameAndTypeIndex);
+        //             auto & Descriptor = ClassInfo.GetConstantUtf8(NameAndType.Details.NameAndType.DescriptorIndex);
+        //             Depth -= 1 + CountMethodParameters(Descriptor); // 1 for 'this'
+        //             if (Descriptor.back() != 'V') {
+        //                 ++Depth;
+        //             }
+        //             break;
+        //         }
+        //         case 184: { // INVOKESTATIC
+        //             auto Reader = xel::xStreamReader(&CodeBinary[Offset + 1]);
+        //             auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
+        //             Offset += 2;
+        //             assert(ConstantRef.Tag == eConstantTag::MethodRef);
+        //             auto & NameAndType = ClassInfo.GetConstantInfo(ConstantRef.Details.MethodRef.NameAndTypeIndex);
+        //             auto & Descriptor = ClassInfo.GetConstantUtf8(NameAndType.Details.NameAndType.DescriptorIndex);
+        //             Depth -= CountMethodParameters(Descriptor);
+        //             if (Descriptor.back() != 'V') {
+        //                 ++Depth;
+        //             }
+        //             break;
+        //         }
+        //         case 185: { // INVOKEINTERFACE
+        //             auto Reader = xel::xStreamReader(&CodeBinary[Offset + 1]);
+        //             auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
+        //             Offset += 2;
+        //             assert(ConstantRef.Tag == eConstantTag::MethodRef);
+        //             auto & NameAndType = ClassInfo.GetConstantInfo(ConstantRef.Details.MethodRef.NameAndTypeIndex);
+        //             auto & Descriptor = ClassInfo.GetConstantUtf8(NameAndType.Details.NameAndType.DescriptorIndex);
+        //             Depth -= 1 + CountMethodParameters(Descriptor);
+        //             if (Descriptor.back() != 'V') {
+        //                 ++Depth;
+        //             }
+        //             Offset += 2; // skip count + one byte
+        //             break;
+        //         }
+        //         case 186: { // INVOKEDYNAMIC
+        //             auto Reader = xel::xStreamReader(&CodeBinary[Offset + 1]);
+        //             auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
+        //             Offset += 2;
+        //             assert(ConstantRef.Tag == eConstantTag::MethodRef);
+        //             auto & NameAndType = ClassInfo.GetConstantInfo(ConstantRef.Details.MethodRef.NameAndTypeIndex);
+        //             auto & Descriptor = ClassInfo.GetConstantUtf8(NameAndType.Details.NameAndType.DescriptorIndex);
+        //             Depth -= CountMethodParameters(Descriptor);
+        //             if (Descriptor.back() != 'V') {
+        //                 ++Depth;
+        //             }
+        //             Offset += 2; // skip count + one byte
+        //             break;
+        //         }
+        //         case 196: // WIDE
+        //             OpCode = CodeBinary[++Offset];
+        //             if (OpCode == 132) { // IINC
+        //                 Offset += 4;
+        //             } else {
+        //                 Offset += 2;
+        //                 switch (OpCode) {
+        //                     case 21: case 22: case 23: case 24: case 25: // ILOAD, LLOAD, FLOAD, DLOAD, ALOAD
+        //                         ++Depth;
+        //                         break;
+        //                     case 54: case 55: case 56: case 57: case 58: // ISTORE, LSTORE, FSTORE, DSTORE, ASTORE
+        //                         --Depth;
+        //                         break;
+        //                     case 169: // RET
+        //                         break;
+        //                 }
+        //             }
+        //             break;
+        //         case 197: // MULTIANEWARRAY
+        //             Offset += 3;
+        //             Depth += 1 - CodeBinary[Offset];
+        //             break;
+        //         case 201: // JSR_W
+        //             Offset += 4;
+        //             ++Depth;
+        //         case 200: // GOTO_W
+        //             Offset += 4;
+        //             break;
+        //         default:
+        //             break;
+        //     }
+        // }
 
-        X_DEBUG_PRINTF("xJavaControlFlowGraph::EvalStackDepth: FromOffset:%zi, ToOffset:%zi, Depth:%zi\n", BlockPtr->FromOffset, BlockPtr->ToOffset, Depth);
+        // X_DEBUG_PRINTF("xJavaControlFlowGraph::EvalStackDepth: FromOffset:%zi, ToOffset:%zi, Depth:%zi\n", BlockPtr->FromOffset, BlockPtr->ToOffset, Depth);
         return Depth;
     }
 
     ssize_t xJavaControlFlowGraph::GetMinDepth(xJavaBlock * BlockPtr)
     {
         ssize_t Depth = 0;
-        ssize_t MinDepth = 0;
+        ssize_t MinDepth = Depth;
 
-        const xJavaClass * JavaClassPtr = BlockPtr->GetClassPtr();
-        const std::vector<xel::ubyte> & CodeBinary = *BlockPtr->GetCodeBinaryPtr();
+        // const xJavaClass * JavaClassPtr = BlockPtr->GetClassPtr();
+        // const std::vector<xel::ubyte> & CodeBinary = *BlockPtr->GetCodeBinaryPtr();
 
-        auto & ClassInfo = JavaClassPtr->ClassInfo;
-        auto Reader = xel::xStreamReader(CodeBinary.data());
-        for (size_t Offset=BlockPtr->FromOffset, ToOffset=BlockPtr->ToOffset; Offset < ToOffset; Offset++) {
-            auto OpCode = CodeBinary[Offset];
+        // auto & ClassInfo = JavaClassPtr->ClassInfo;
+        // auto Reader = xel::xStreamReader(CodeBinary.data());
+        // for (size_t Offset=BlockPtr->FromOffset, ToOffset=BlockPtr->ToOffset; Offset < ToOffset; Offset++) {
+        //     auto OpCode = CodeBinary[Offset];
 
-            switch (OpCode) {
-                case 1: // ACONST_NULL
-                case 2: case 3: case 4: case 5: case 6: case 7: case 8: // ICONST_M1, ICONST_0 ... ICONST_5
-                case 9: case 10: case 11: case 12: case 13: case 14: case 15: // LCONST_0, LCONST_1, FCONST_0, FCONST_1, FCONST_2, DCONST_0, DCONST_1
-                case 26: case 27: case 28: case 29: // ILOAD_0 ... ILOAD_3
-                case 30: case 31: case 32: case 33: // LLOAD_0 ... LLOAD_3
-                case 34: case 35: case 36: case 37: // FLOAD_0 ... FLOAD_3
-                case 38: case 39: case 40: case 41: // DLOAD_0 ... DLOAD_3
-                case 42: case 43: case 44: case 45: // ALOAD_0 ... ALOAD_3
-                    Depth += 1;
-                    break;
-                case 89: // DUP
-                    Depth -= 1;
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    Depth += 2;
-                    break;
-                case 90: // DUP_X1
-                    Depth -= 2;
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    Depth += 3;
-                    break;
-                case 91: // DUP_X2
-                    Depth -= 3;
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    Depth += 4;
-                    break;
-                case 16: case 18: // BIPUSH, LDC
-                case 21: case 22: case 23: case 24: case 25: // ILOAD, LLOAD, FLOAD, DLOAD, ALOAD
-                    Offset += 1;
-                    Depth  += 1;
-                    break;
-                case 17: // SIPUSH
-                case 19: case 20: // LDC_W, LDC2_W
-                case 168: // JSR
-                case 178: // GETSTATIC
-                case 187: // NEW
-                    Offset += 2;
-                    Depth  += 1;
-                    break;
-                case 46: case 47: case 48: case 49: case 50: case 51: case 52: case 53: // IALOAD, LALOAD, FALOAD, DALOAD, AALOAD, BALOAD, CALOAD, SALOAD
-                case 96: case 97: case 98: case 99:     // IADD, LADD, FADD, DADD
-                case 100: case 101: case 102: case 103: // ISUB, LSUB, FSUB, DSUB
-                case 104: case 105: case 106: case 107: // IMUL, LMUL, FMUL, DMUL
-                case 108: case 109: case 110: case 111: // IDIV, LDIV, FDIV, DDIV
-                case 112: case 113: case 114: case 115: // IREM, LREM, FREM, DREM
-                case 120: case 121: // ISHL, LSHL
-                case 122: case 123: // ISHR, LSHR
-                case 124: case 125: // IUSHR, LUSHR
-                case 126: case 127: // IAND, LAND
-                case 128: case 129: // IOR, LOR
-                case 130: case 131: // IXOR, LXOR
-                case 148: case 149: case 150: case 151: case 152: // LCMP, FCMPL, FCMPG, DCMPL, DCMPG
-                    Depth -= 2;
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    Depth += 1;
-                    break;
-                case 59: case 60: case 61: case 62: // ISTORE_0 ... ISTORE_3
-                case 63: case 64: case 65: case 66: // LSTORE_0 ... LSTORE_3
-                case 67: case 68: case 69: case 70: // FSTORE_0 ... FSTORE_3
-                case 71: case 72: case 73: case 74: // DSTORE_0 ... DSTORE_3
-                case 75: case 76: case 77: case 78: // ASTORE_0 ... ASTORE_3
-                case 87: // POP
-                case 172: case 173: case 174: case 175: case 176: // IRETURN, LRETURN, FRETURN, DRETURN, ARETURN
-                case 194: case 195: // MONITORENTER, MONITOREXIT
-                    Depth -= 1;
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    break;
-                case 153: case 154: case 155: case 156: case 157: case 158: // IFEQ, IFNE, IFLT, IFGE, IFGT, IFLE
-                case 179: // PUTSTATIC
-                case 198: case 199: // IFNULL, IFNONNULL
-                    Offset += 2;
-                    Depth  -= 1;
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    break;
-                case 54: case 55: case 56: case 57: case 58: // ISTORE, LSTORE, FSTORE, DSTORE, ASTORE
-                    Offset += 1;
-                    Depth  -= 1;
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    break;
-                case 79: case 80: case 81: case 82: case 83: case 84: case 85: case 86: // IASTORE, LASTORE, FASTORE, DASTORE, AASTORE, BASTORE, CASTORE, SASTORE
-                    Depth -= 3;
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    break;
-                case 92: // DUP2
-                    Depth -= 2;
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    Depth += 4;
-                    break;
-                case 93: // DUP2_X1
-                    Depth -= 3;
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    Depth += 5;
-                    break;
-                case 94: // DUP2_X2
-                    Depth -= 4;
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    Depth += 6;
-                    break;
-                case 132: // IINC
-                case 167: // GOTO
-                    Offset += 2;
-                    break;
-                case 180: // GETFIELD
-                case 189: // ANEWARRAY
-                case 192: // CHECKCAST
-                case 193: // INSTANCEOF
-                    Offset += 2;
-                    Depth  -= 1;
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    Depth += 1;
-                    break;
-                case 159: case 160: case 161: case 162: case 163: case 164: case 165: case 166: // IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE
-                case 181: // PUTFIELD
-                    Offset += 2;
-                    Depth  -= 2;
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    break;
-                case 88: // POP2
-                    Depth -= 2;
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    break;
-                case 169: // RET
-                    Offset += 1;
-                    break;
-                case 188: // NEWARRAY
-                    Offset += 1;
-                    Depth  -= 1;
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    Depth += 1;
-                    break;
-                case 170: { // TABLESWITCH
-                    Offset = (Offset + 4) & 0xFFFC; // Skip padding
-                    Offset += 4; // Skip default offset
-                    Reader.Offset(Offset);
-                    uint32_t Low  = Reader.R4();
-                    uint32_t High = Reader.R4();
-                    Offset += 8;
-                    Offset += (4 * (High - Low + 1)) - 1;
-                    Depth  -= 1;
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    break;
-                }
-                case 171: { // LOOKUPSWITCH
-                    Offset = (Offset + 4) & 0xFFFC; // Skip padding
-                    Offset += 4; // Skip default offset
-                    Reader.Offset(Offset);
-                    uint32_t Count = Reader.R4();
-                    Offset += 4;
-                    Offset += (8 * Count) - 1;
-                    Depth  -= 1;
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    break;
-                }
-                case 182: case 183: { // INVOKEVIRTUAL, INVOKESPECIAL
-                    Reader.Offset(Offset);
-                    Offset += 2;
-                    auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
-                    assert(ConstantRef.Tag == eConstantTag::MethodRef);
-                    auto & NameAndType = ClassInfo.GetConstantInfo(ConstantRef.Details.MethodRef.NameAndTypeIndex);
-                    auto & Descriptor = ClassInfo.GetConstantUtf8(NameAndType.Details.NameAndType.DescriptorIndex);
-                    Depth  -= 1 + CountMethodParameters(Descriptor);
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    if (Descriptor.back() != 'V') {
-                        ++Depth;
-                    }
-                    break;
-                }
-                case 184: { // INVOKESTATIC
-                    Reader.Offset(Offset);
-                    Offset += 2;
-                    auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
-                    assert(ConstantRef.Tag == eConstantTag::MethodRef);
-                    auto & NameAndType = ClassInfo.GetConstantInfo(ConstantRef.Details.MethodRef.NameAndTypeIndex);
-                    auto & Descriptor = ClassInfo.GetConstantUtf8(NameAndType.Details.NameAndType.DescriptorIndex);
-                    Depth  -= CountMethodParameters(Descriptor);
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    if (Descriptor.back() != 'V') {
-                        ++Depth;
-                    }
-                    break;
-                }
-                case 185: { // INVOKEINTERFACE
-                    Reader.Offset(Offset);
-                    Offset += 2;
-                    auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
-                    assert(ConstantRef.Tag == eConstantTag::MethodRef);
-                    auto & NameAndType = ClassInfo.GetConstantInfo(ConstantRef.Details.MethodRef.NameAndTypeIndex);
-                    auto & Descriptor = ClassInfo.GetConstantUtf8(NameAndType.Details.NameAndType.DescriptorIndex);
-                    Depth  -= 1 + CountMethodParameters(Descriptor);
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    Offset += 2; // Skip 'count' and one byte
-                    if (Descriptor.back() != 'V') {
-                        ++Depth;
-                    }
-                    break;
-                }
-                case 186: { // INVOKEDYNAMIC
-                    Reader.Offset(Offset);
-                    Offset += 2;
-                    auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
-                    assert(ConstantRef.Tag == eConstantTag::MethodRef);
-                    auto & NameAndType = ClassInfo.GetConstantInfo(ConstantRef.Details.MethodRef.NameAndTypeIndex);
-                    auto & Descriptor = ClassInfo.GetConstantUtf8(NameAndType.Details.NameAndType.DescriptorIndex);
-                    Depth  -= CountMethodParameters(Descriptor);
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    Offset += 2; // Skip 2 bytes
-                    if (Descriptor.back() != 'V') {
-                        ++Depth;
-                    }
-                    break;
-                }
-                case 196: // WIDE
-                    OpCode = CodeBinary[++Offset];
-                    if (OpCode == 132) { // IINC
-                        Offset += 4;
-                    } else {
-                        Offset += 2;
-                        switch (OpCode) {
-                            case 21: case 22: case 23: case 24: case 25: // ILOAD, LLOAD, FLOAD, DLOAD, ALOAD
-                                Depth++;
-                                break;
-                            case 54: case 55: case 56: case 57: case 58: // ISTORE, LSTORE, FSTORE, DSTORE, ASTORE
-                                Depth--;
-                                if (MinDepth > Depth) {
-                                    MinDepth = Depth;
-                                }
-                                break;
-                            case 169: // RET
-                                break;
-                        }
-                    }
-                    break;
-                case 197: // MULTIANEWARRAY
-                    Offset += 3;
-                    Depth -= CodeBinary[Offset];
-                    if (MinDepth > Depth) {
-                        MinDepth = Depth;
-                    }
-                    Depth += 1;
-                    break;
-                case 201: // JSR_W
-                    Offset += 4;
-                    Depth  += 1;
-                case 200: // GOTO_W
-                    Offset += 4;
-                    break;
-                default:
-                    break;
-            }
-        }
+        //     switch (OpCode) {
+        //         case 1: // ACONST_NULL
+        //         case 2: case 3: case 4: case 5: case 6: case 7: case 8: // ICONST_M1, ICONST_0 ... ICONST_5
+        //         case 9: case 10: case 11: case 12: case 13: case 14: case 15: // LCONST_0, LCONST_1, FCONST_0, FCONST_1, FCONST_2, DCONST_0, DCONST_1
+        //         case 26: case 27: case 28: case 29: // ILOAD_0 ... ILOAD_3
+        //         case 30: case 31: case 32: case 33: // LLOAD_0 ... LLOAD_3
+        //         case 34: case 35: case 36: case 37: // FLOAD_0 ... FLOAD_3
+        //         case 38: case 39: case 40: case 41: // DLOAD_0 ... DLOAD_3
+        //         case 42: case 43: case 44: case 45: // ALOAD_0 ... ALOAD_3
+        //             Depth += 1;
+        //             break;
+        //         case 89: // DUP
+        //             Depth -= 1;
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             Depth += 2;
+        //             break;
+        //         case 90: // DUP_X1
+        //             Depth -= 2;
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             Depth += 3;
+        //             break;
+        //         case 91: // DUP_X2
+        //             Depth -= 3;
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             Depth += 4;
+        //             break;
+        //         case 16: case 18: // BIPUSH, LDC
+        //         case 21: case 22: case 23: case 24: case 25: // ILOAD, LLOAD, FLOAD, DLOAD, ALOAD
+        //             Offset += 1;
+        //             Depth  += 1;
+        //             break;
+        //         case 17: // SIPUSH
+        //         case 19: case 20: // LDC_W, LDC2_W
+        //         case 168: // JSR
+        //         case 178: // GETSTATIC
+        //         case 187: // NEW
+        //             Offset += 2;
+        //             Depth  += 1;
+        //             break;
+        //         case 46: case 47: case 48: case 49: case 50: case 51: case 52: case 53: // IALOAD, LALOAD, FALOAD, DALOAD, AALOAD, BALOAD, CALOAD, SALOAD
+        //         case 96: case 97: case 98: case 99:     // IADD, LADD, FADD, DADD
+        //         case 100: case 101: case 102: case 103: // ISUB, LSUB, FSUB, DSUB
+        //         case 104: case 105: case 106: case 107: // IMUL, LMUL, FMUL, DMUL
+        //         case 108: case 109: case 110: case 111: // IDIV, LDIV, FDIV, DDIV
+        //         case 112: case 113: case 114: case 115: // IREM, LREM, FREM, DREM
+        //         case 120: case 121: // ISHL, LSHL
+        //         case 122: case 123: // ISHR, LSHR
+        //         case 124: case 125: // IUSHR, LUSHR
+        //         case 126: case 127: // IAND, LAND
+        //         case 128: case 129: // IOR, LOR
+        //         case 130: case 131: // IXOR, LXOR
+        //         case 148: case 149: case 150: case 151: case 152: // LCMP, FCMPL, FCMPG, DCMPL, DCMPG
+        //             Depth -= 2;
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             Depth += 1;
+        //             break;
+        //         case 59: case 60: case 61: case 62: // ISTORE_0 ... ISTORE_3
+        //         case 63: case 64: case 65: case 66: // LSTORE_0 ... LSTORE_3
+        //         case 67: case 68: case 69: case 70: // FSTORE_0 ... FSTORE_3
+        //         case 71: case 72: case 73: case 74: // DSTORE_0 ... DSTORE_3
+        //         case 75: case 76: case 77: case 78: // ASTORE_0 ... ASTORE_3
+        //         case 87: // POP
+        //         case 172: case 173: case 174: case 175: case 176: // IRETURN, LRETURN, FRETURN, DRETURN, ARETURN
+        //         case 194: case 195: // MONITORENTER, MONITOREXIT
+        //             Depth -= 1;
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             break;
+        //         case 153: case 154: case 155: case 156: case 157: case 158: // IFEQ, IFNE, IFLT, IFGE, IFGT, IFLE
+        //         case 179: // PUTSTATIC
+        //         case 198: case 199: // IFNULL, IFNONNULL
+        //             Offset += 2;
+        //             Depth  -= 1;
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             break;
+        //         case 54: case 55: case 56: case 57: case 58: // ISTORE, LSTORE, FSTORE, DSTORE, ASTORE
+        //             Offset += 1;
+        //             Depth  -= 1;
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             break;
+        //         case 79: case 80: case 81: case 82: case 83: case 84: case 85: case 86: // IASTORE, LASTORE, FASTORE, DASTORE, AASTORE, BASTORE, CASTORE, SASTORE
+        //             Depth -= 3;
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             break;
+        //         case 92: // DUP2
+        //             Depth -= 2;
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             Depth += 4;
+        //             break;
+        //         case 93: // DUP2_X1
+        //             Depth -= 3;
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             Depth += 5;
+        //             break;
+        //         case 94: // DUP2_X2
+        //             Depth -= 4;
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             Depth += 6;
+        //             break;
+        //         case 132: // IINC
+        //         case 167: // GOTO
+        //             Offset += 2;
+        //             break;
+        //         case 180: // GETFIELD
+        //         case 189: // ANEWARRAY
+        //         case 192: // CHECKCAST
+        //         case 193: // INSTANCEOF
+        //             Offset += 2;
+        //             Depth  -= 1;
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             Depth += 1;
+        //             break;
+        //         case 159: case 160: case 161: case 162: case 163: case 164: case 165: case 166: // IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE
+        //         case 181: // PUTFIELD
+        //             Offset += 2;
+        //             Depth  -= 2;
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             break;
+        //         case 88: // POP2
+        //             Depth -= 2;
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             break;
+        //         case 169: // RET
+        //             Offset += 1;
+        //             break;
+        //         case 188: // NEWARRAY
+        //             Offset += 1;
+        //             Depth  -= 1;
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             Depth += 1;
+        //             break;
+        //         case 170: { // TABLESWITCH
+        //             Offset = (Offset + 4) & 0xFFFC; // Skip padding
+        //             Offset += 4; // Skip default offset
+        //             Reader.Offset(Offset);
+        //             uint32_t Low  = Reader.R4();
+        //             uint32_t High = Reader.R4();
+        //             Offset += 8;
+        //             Offset += (4 * (High - Low + 1)) - 1;
+        //             Depth  -= 1;
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             break;
+        //         }
+        //         case 171: { // LOOKUPSWITCH
+        //             Offset = (Offset + 4) & 0xFFFC; // Skip padding
+        //             Offset += 4; // Skip default offset
+        //             Reader.Offset(Offset);
+        //             uint32_t Count = Reader.R4();
+        //             Offset += 4;
+        //             Offset += (8 * Count) - 1;
+        //             Depth  -= 1;
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             break;
+        //         }
+        //         case 182: case 183: { // INVOKEVIRTUAL, INVOKESPECIAL
+        //             Reader.Offset(Offset);
+        //             Offset += 2;
+        //             auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
+        //             assert(ConstantRef.Tag == eConstantTag::MethodRef);
+        //             auto & NameAndType = ClassInfo.GetConstantInfo(ConstantRef.Details.MethodRef.NameAndTypeIndex);
+        //             auto & Descriptor = ClassInfo.GetConstantUtf8(NameAndType.Details.NameAndType.DescriptorIndex);
+        //             Depth  -= 1 + CountMethodParameters(Descriptor);
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             if (Descriptor.back() != 'V') {
+        //                 ++Depth;
+        //             }
+        //             break;
+        //         }
+        //         case 184: { // INVOKESTATIC
+        //             Reader.Offset(Offset);
+        //             Offset += 2;
+        //             auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
+        //             assert(ConstantRef.Tag == eConstantTag::MethodRef);
+        //             auto & NameAndType = ClassInfo.GetConstantInfo(ConstantRef.Details.MethodRef.NameAndTypeIndex);
+        //             auto & Descriptor = ClassInfo.GetConstantUtf8(NameAndType.Details.NameAndType.DescriptorIndex);
+        //             Depth  -= CountMethodParameters(Descriptor);
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             if (Descriptor.back() != 'V') {
+        //                 ++Depth;
+        //             }
+        //             break;
+        //         }
+        //         case 185: { // INVOKEINTERFACE
+        //             Reader.Offset(Offset);
+        //             Offset += 2;
+        //             auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
+        //             assert(ConstantRef.Tag == eConstantTag::MethodRef);
+        //             auto & NameAndType = ClassInfo.GetConstantInfo(ConstantRef.Details.MethodRef.NameAndTypeIndex);
+        //             auto & Descriptor = ClassInfo.GetConstantUtf8(NameAndType.Details.NameAndType.DescriptorIndex);
+        //             Depth  -= 1 + CountMethodParameters(Descriptor);
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             Offset += 2; // Skip 'count' and one byte
+        //             if (Descriptor.back() != 'V') {
+        //                 ++Depth;
+        //             }
+        //             break;
+        //         }
+        //         case 186: { // INVOKEDYNAMIC
+        //             Reader.Offset(Offset);
+        //             Offset += 2;
+        //             auto & ConstantRef = ClassInfo.GetConstantInfo(Reader.R2());
+        //             assert(ConstantRef.Tag == eConstantTag::MethodRef);
+        //             auto & NameAndType = ClassInfo.GetConstantInfo(ConstantRef.Details.MethodRef.NameAndTypeIndex);
+        //             auto & Descriptor = ClassInfo.GetConstantUtf8(NameAndType.Details.NameAndType.DescriptorIndex);
+        //             Depth  -= CountMethodParameters(Descriptor);
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             Offset += 2; // Skip 2 bytes
+        //             if (Descriptor.back() != 'V') {
+        //                 ++Depth;
+        //             }
+        //             break;
+        //         }
+        //         case 196: // WIDE
+        //             OpCode = CodeBinary[++Offset];
+        //             if (OpCode == 132) { // IINC
+        //                 Offset += 4;
+        //             } else {
+        //                 Offset += 2;
+        //                 switch (OpCode) {
+        //                     case 21: case 22: case 23: case 24: case 25: // ILOAD, LLOAD, FLOAD, DLOAD, ALOAD
+        //                         Depth++;
+        //                         break;
+        //                     case 54: case 55: case 56: case 57: case 58: // ISTORE, LSTORE, FSTORE, DSTORE, ASTORE
+        //                         Depth--;
+        //                         if (MinDepth > Depth) {
+        //                             MinDepth = Depth;
+        //                         }
+        //                         break;
+        //                     case 169: // RET
+        //                         break;
+        //                 }
+        //             }
+        //             break;
+        //         case 197: // MULTIANEWARRAY
+        //             Offset += 3;
+        //             Depth -= CodeBinary[Offset];
+        //             if (MinDepth > Depth) {
+        //                 MinDepth = Depth;
+        //             }
+        //             Depth += 1;
+        //             break;
+        //         case 201: // JSR_W
+        //             Offset += 4;
+        //             Depth  += 1;
+        //         case 200: // GOTO_W
+        //             Offset += 4;
+        //             break;
+        //         default:
+        //             break;
+        //     }
+        // }
 
-        X_DEBUG_PRINTF("xJavaControlFlowGraph::GetMinDepth: FromOffset:%zi, ToOffset:%zi, Depth:%zi, MinDepth:%zi\n", BlockPtr->FromOffset, BlockPtr->ToOffset, Depth, MinDepth);
+        // X_DEBUG_PRINTF("xJavaControlFlowGraph::GetMinDepth: FromOffset:%zi, ToOffset:%zi, Depth:%zi, MinDepth:%zi\n", BlockPtr->FromOffset, BlockPtr->ToOffset, Depth, MinDepth);
         return MinDepth;
     }
 
     void xJavaControlFlowGraph::UpdateConditionalBranches(xJavaBlock * BlockPtr, xJavaBlock * LeftBlockPtr, xJavaBlock::eType OperatorType, xJavaBlock * SubBlockPtr)
     {
-        BlockPtr->Type = OperatorType;
-        BlockPtr->ToOffset = SubBlockPtr->ToOffset;
-        BlockPtr->NextBlockPtr = SubBlockPtr->NextBlockPtr;
-        BlockPtr->BranchBlockPtr = SubBlockPtr->BranchBlockPtr;
-        BlockPtr->ConditionBlockPtr = EndBlockPtr;
-        BlockPtr->FirstSubBlockPtr = LeftBlockPtr;
-        BlockPtr->SecondSubBlockPtr = SubBlockPtr;
+        // BlockPtr->Type = OperatorType;
+        // BlockPtr->ToOffset = SubBlockPtr->ToOffset;
+        // BlockPtr->NextBlockPtr = SubBlockPtr->NextBlockPtr;
+        // BlockPtr->BranchBlockPtr = SubBlockPtr->BranchBlockPtr;
+        // BlockPtr->ConditionBlockPtr = EndBlockPtr;
+        // BlockPtr->FirstSubBlockPtr = LeftBlockPtr;
+        // BlockPtr->SecondSubBlockPtr = SubBlockPtr;
 
-        SubBlockPtr->NextBlockPtr->Replace(SubBlockPtr, BlockPtr);
-        SubBlockPtr->BranchBlockPtr->Replace(SubBlockPtr, BlockPtr);
+        // SubBlockPtr->NextBlockPtr->Replace(SubBlockPtr, BlockPtr);
+        // SubBlockPtr->BranchBlockPtr->Replace(SubBlockPtr, BlockPtr);
     }
 
     void xJavaControlFlowGraph::UpdateConditionTernaryOperator(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr)
     {
-        size_t FromOffset =  NextNextBlockPtr->FromOffset;
-        size_t ToOffset   = NextNextBlockPtr->ToOffset;
-        xJavaBlock * NewNextBlockPtr = NextNextBlockPtr->NextBlockPtr;
-        xJavaBlock * NewBranchBlockPtr = NextNextBlockPtr->BranchBlockPtr;
+        // size_t FromOffset =  NextNextBlockPtr->FromOffset;
+        // size_t ToOffset   = NextNextBlockPtr->ToOffset;
+        // xJavaBlock * NewNextBlockPtr = NextNextBlockPtr->NextBlockPtr;
+        // xJavaBlock * NewBranchBlockPtr = NextNextBlockPtr->BranchBlockPtr;
 
-        if (BlockPtr->Type == xJavaBlock::TYPE_CONDITIONAL_BRANCH) {
-            BlockPtr->Type = xJavaBlock::TYPE_CONDITION;
-        }
-        if ((NextNextBlockPtr->Type == xJavaBlock::TYPE_CONDITION) && !NextNextBlockPtr->MustInverseCondition) {
-            BlockPtr->InverseCondition();
-        }
+        // if (BlockPtr->Type == xJavaBlock::TYPE_CONDITIONAL_BRANCH) {
+        //     BlockPtr->Type = xJavaBlock::TYPE_CONDITION;
+        // }
+        // if ((NextNextBlockPtr->Type == xJavaBlock::TYPE_CONDITION) && !NextNextBlockPtr->MustInverseCondition) {
+        //     BlockPtr->InverseCondition();
+        // }
 
-        auto ConditionBlockPtr = NextNextBlockPtr;
-        ConditionBlockPtr->Type = BlockPtr->Type;
-        ConditionBlockPtr->FromOffset = BlockPtr->FromOffset;
-        ConditionBlockPtr->ToOffset   = BlockPtr->ToOffset;
-        ConditionBlockPtr->NextBlockPtr = EndBlockPtr;
-        ConditionBlockPtr->BranchBlockPtr = EndBlockPtr;
-        ConditionBlockPtr->ConditionBlockPtr = BlockPtr->ConditionBlockPtr;
-        ConditionBlockPtr->FirstSubBlockPtr = BlockPtr->FirstSubBlockPtr;
-        ConditionBlockPtr->SecondSubBlockPtr = BlockPtr->SecondSubBlockPtr;
-        ConditionBlockPtr->Predecessors.clear();
+        // auto ConditionBlockPtr = NextNextBlockPtr;
+        // ConditionBlockPtr->Type = BlockPtr->Type;
+        // ConditionBlockPtr->FromOffset = BlockPtr->FromOffset;
+        // ConditionBlockPtr->ToOffset   = BlockPtr->ToOffset;
+        // ConditionBlockPtr->NextBlockPtr = EndBlockPtr;
+        // ConditionBlockPtr->BranchBlockPtr = EndBlockPtr;
+        // ConditionBlockPtr->ConditionBlockPtr = BlockPtr->ConditionBlockPtr;
+        // ConditionBlockPtr->FirstSubBlockPtr = BlockPtr->FirstSubBlockPtr;
+        // ConditionBlockPtr->SecondSubBlockPtr = BlockPtr->SecondSubBlockPtr;
+        // ConditionBlockPtr->Predecessors.clear();
 
-        BlockPtr->Type = xJavaBlock::TYPE_CONDITION_TERNARY_OPERATOR;
-        BlockPtr->FromOffset = FromOffset;
-        BlockPtr->ToOffset = ToOffset;
-        BlockPtr->ConditionBlockPtr = ConditionBlockPtr;
-        BlockPtr->FirstSubBlockPtr  = BlockPtr->NextBlockPtr;
-        BlockPtr->SecondSubBlockPtr = BlockPtr->BranchBlockPtr;
-        BlockPtr->NextBlockPtr = NewNextBlockPtr;
-        BlockPtr->BranchBlockPtr = NewBranchBlockPtr;
-        BlockPtr->FirstSubBlockPtr->NextBlockPtr = EndBlockPtr;
-        BlockPtr->SecondSubBlockPtr->NextBlockPtr = EndBlockPtr;
+        // BlockPtr->Type = xJavaBlock::TYPE_CONDITION_TERNARY_OPERATOR;
+        // BlockPtr->FromOffset = FromOffset;
+        // BlockPtr->ToOffset = ToOffset;
+        // BlockPtr->ConditionBlockPtr = ConditionBlockPtr;
+        // BlockPtr->FirstSubBlockPtr  = BlockPtr->NextBlockPtr;
+        // BlockPtr->SecondSubBlockPtr = BlockPtr->BranchBlockPtr;
+        // BlockPtr->NextBlockPtr = NewNextBlockPtr;
+        // BlockPtr->BranchBlockPtr = NewBranchBlockPtr;
+        // BlockPtr->FirstSubBlockPtr->NextBlockPtr = EndBlockPtr;
+        // BlockPtr->SecondSubBlockPtr->NextBlockPtr = EndBlockPtr;
 
-        NewNextBlockPtr->Replace(NextNextBlockPtr, BlockPtr);
-        NewBranchBlockPtr->Replace(NextNextBlockPtr, BlockPtr);
+        // NewNextBlockPtr->Replace(NextNextBlockPtr, BlockPtr);
+        // NewBranchBlockPtr->Replace(NextNextBlockPtr, BlockPtr);
 
-        BlockPtr->FirstSubBlockPtr->Predecessors.clear();
-        BlockPtr->SecondSubBlockPtr->Predecessors.clear();
+        // BlockPtr->FirstSubBlockPtr->Predecessors.clear();
+        // BlockPtr->SecondSubBlockPtr->Predecessors.clear();
     }
 
     void xJavaControlFlowGraph::UpdateCondition(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr, xJavaBlock * NextNextNextNextBlockPtr)
