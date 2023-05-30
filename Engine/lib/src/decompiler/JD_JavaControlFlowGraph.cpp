@@ -649,11 +649,6 @@ namespace jdc
             }
         }
 
-        for (size_t i = 0; i < BlockList.size(); ++i) {
-            auto & BlockUPtr = BlockList[i];
-            X_DEBUG_PRINTF("Block[%zi]: %s\n", i, ToString(BlockUPtr.get()).c_str());
-        }
-
         /* --- Recheck TYPE_GOTO_IN_TERNARY_OPERATOR --- */
         for (auto BlockPtr : Blocks) {
             if (!BlockPtr) {
@@ -699,6 +694,17 @@ namespace jdc
                 NextBlockPtr->Type = xJavaBlock::TYPE_DELETED;
             }
         }
+
+        for (size_t i = 0; i < Blocks.size(); ++i) {
+            auto & BlockPtr = Blocks[i];
+            X_DEBUG_PRINTF("** Block[%zi]: %s\n", i, ToString(BlockPtr).c_str());
+        }
+
+        for (size_t i = 0; i < BlockList.size(); ++i) {
+            auto & BlockUPtr = BlockList[i];
+            X_DEBUG_PRINTF("Block[%zi]: %s\n", i, ToString(BlockUPtr.get()).c_str());
+        }
+
     }
 
     xOpCode xJavaControlFlowGraph::SearchNextOpcode(const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr, size_t MaxOffset)

@@ -36,6 +36,19 @@ namespace jdc
             << ", type=" << (ToString(BlockPtr->Type).c_str() + 5)
             << ", inverseCondition=" << TF(BlockPtr->MustInverseCondition);
 
+        if (BlockPtr->Predecessors.size()) {
+            bool First = true;
+            OS << ", predecessors=[";
+            for (auto PredecessorPtr : BlockPtr->Predecessors) {
+                if (Steal(First, false)) {
+                    OS << PredecessorPtr->Index;
+                } else {
+                    OS << ", " << PredecessorPtr->Index;
+                }
+            }
+            OS << "]";
+        }
+
         OS << "}";
         return OS.str();
     }
