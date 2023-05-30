@@ -36,14 +36,20 @@ namespace jdc
             << ", type=" << (ToString(BlockPtr->Type).c_str() + 5)
             << ", inverseCondition=" << TF(BlockPtr->MustInverseCondition);
 
-        if (BlockPtr->Predecessors.size()) {
+        std::vector<size_t> IndexList;
+        for (auto & PredecessorPtr : BlockPtr->Predecessors) {
+            IndexList.push_back(PredecessorPtr->Index);
+        }
+        std::sort(IndexList.begin(), IndexList.end());
+
+        if (IndexList.size()) {
             bool First = true;
             OS << ", predecessors=[";
-            for (auto PredecessorPtr : BlockPtr->Predecessors) {
+            for (auto Index : IndexList) {
                 if (Steal(First, false)) {
-                    OS << PredecessorPtr->Index;
+                    OS << Index;
                 } else {
-                    OS << ", " << PredecessorPtr->Index;
+                    OS << ", " << Index;
                 }
             }
             OS << "]";

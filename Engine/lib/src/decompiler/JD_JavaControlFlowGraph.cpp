@@ -575,6 +575,16 @@ namespace jdc
             }
         }
 
+        for (size_t i = 0; i < Blocks.size(); ++i) {
+            auto & BlockPtr = Blocks[i];
+            X_DEBUG_PRINTF("** Block[%zi]: %s\n", i, ToString(BlockPtr).c_str());
+        }
+
+        for (size_t i = 0; i < BlockList.size(); ++i) {
+            auto & BlockUPtr = BlockList[i];
+            X_DEBUG_PRINTF("Block[%zi]: %s\n", i, ToString(BlockUPtr.get()).c_str());
+        }
+
         // --- Create try-catch-finally basic blocks --- //
         if (ExceptionTable.size()) {
             // copy & sort code exceptions byte StartPC & EndPC
@@ -693,6 +703,8 @@ namespace jdc
             }
         }
 
+        X_DEBUG_PRINTF("*************************\n");
+
         for (size_t i = 0; i < Blocks.size(); ++i) {
             auto & BlockPtr = Blocks[i];
             X_DEBUG_PRINTF("** Block[%zi]: %s\n", i, ToString(BlockPtr).c_str());
@@ -702,7 +714,6 @@ namespace jdc
             auto & BlockUPtr = BlockList[i];
             X_DEBUG_PRINTF("Block[%zi]: %s\n", i, ToString(BlockUPtr.get()).c_str());
         }
-
     }
 
     xOpCode xJavaControlFlowGraph::SearchNextOpcode(const std::vector<xel::ubyte> & CodeBinary, xJavaBlock * BlockPtr, size_t MaxOffset)
