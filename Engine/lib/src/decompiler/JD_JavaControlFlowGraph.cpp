@@ -22,7 +22,10 @@ namespace jdc
     {
         auto OS = std::ostringstream();
         OS << "Class: " << _JavaClassPtr->Converted.ClassName << ", Method: " << _JavaMethodPtr->OriginalName << std::endl;
-        for (auto & BlockPtr : BlockList) {
+        for (auto & BlockPtr : Blocks) {
+            if (!BlockPtr) {
+                continue;
+            }
             OS << "Block: " << BlockPtr->FromOffset << "  -->  " << BlockPtr->ToOffset << "  Type=" << ToString(BlockPtr->Type) << std::endl;
         }
         return OS.str();
@@ -52,7 +55,7 @@ namespace jdc
 
         // ReduceGoto(); in jd-core
         // ReduceLoop(); in jd-core
-        ReduceGraph();
+        // ReduceGraph();
 
         return true;
     }
@@ -135,10 +138,10 @@ namespace jdc
         xel::Renew(BlockList);
         FirstVariableIndex = 0;
 
-        auto CodeAttributePtr = (const xAttributeCode *)GetAttributePtr(_JavaMethodPtr->Converted.AttributeMap, "Code");
+        auto CodeAttributePtr = GetCodeAttribute();
         auto & CodeBinary = CodeAttributePtr->CodeBinary;
-
         size_t CodeLength = CodeBinary.size();
+        auto & ExceptionTable = CodeAttributePtr->ExceptionTable;
 
         auto BlockTypes = std::vector<xJavaBlock::eType>(CodeLength);
         auto CodeTypes = std::vector<eCodeType>(CodeLength);
@@ -423,7 +426,6 @@ namespace jdc
         } // end of for
         NextOffsets[LastOffset] = CodeLength;
 
-        auto & ExceptionTable = CodeAttributePtr->ExceptionTable;
         if (ExceptionTable.size()) {
             for (auto & Mark : ExceptionTable) {
                 BlockTypes[Mark.StartPC] = MARK;
@@ -609,7 +611,7 @@ namespace jdc
             }
         }
 
-        // --- Recheck TYPE_GOTO_IN_TERNARY_OPERATOR --- //
+        /* --- Recheck TYPE_GOTO_IN_TERNARY_OPERATOR --- */
         for (auto BlockPtr : Blocks) {
             if (!BlockPtr) {
                 continue;

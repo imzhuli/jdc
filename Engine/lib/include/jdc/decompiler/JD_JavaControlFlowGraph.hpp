@@ -41,6 +41,7 @@ namespace jdc
         X_PRIVATE_MEMBER xJavaControlFlowGraph(const xJavaMethod * JavaMethodPtr);
         X_PRIVATE_MEMBER const xJavaClass *  GetClass() const { return _JavaClassPtr; }
         X_PRIVATE_MEMBER const xJavaMethod * GetMethod() const { return _JavaMethodPtr; }
+        X_PRIVATE_MEMBER const xAttributeCode * GetCodeAttribute() const { return (const xAttributeCode *)GetAttributePtr(GetMethod()->Converted.AttributeMap, "Code"); }
 
     protected:
 
