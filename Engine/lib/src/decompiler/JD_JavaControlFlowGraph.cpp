@@ -6,6 +6,9 @@
 #include <algorithm>
 #include <sstream>
 
+using namespace std;
+using namespace xel;
+
 namespace jdc
 {
 
@@ -22,10 +25,8 @@ namespace jdc
     {
         auto OS = std::ostringstream();
         OS << "Class: " << _JavaClassPtr->Converted.ClassName << ", Method: " << _JavaMethodPtr->OriginalName << std::endl;
-        for (auto & BlockPtr : Blocks) {
-            if (!BlockPtr) {
-                continue;
-            }
+        OS << "BlockEntries: " << BlockList.size() << std::endl;
+        for (auto & BlockPtr : BlockList) {
             OS << "Block: " << BlockPtr->FromOffset << "  -->  " << BlockPtr->ToOffset << "  Type=" << ToString(BlockPtr->Type) << std::endl;
         }
         return OS.str();
@@ -102,21 +103,41 @@ namespace jdc
 
     enum eCodeType : uint8_t
     {
-        CT_UNKNOWN = 0,
-        CT_GOTO,         // 'g'
-        CT_TERNARY_GOTO, // 'G'
-        CT_THROW,        // 't'
-        CT_RETURN,       // 'r'
-        CT_CONDITIONAL,  // 'c'
-        CT_SWITCH,       // 's'
-        CT_JSR,          // 'j'
-        CT_RET,          // 'R'
-        CT_RETURN_VALUE, // 'v'
-        CT_TRY,          // 'T'
+        CT_UNKNOWN       = 0,
+        CT_GOTO          = 'g',  // 'g'
+        CT_TERNARY_GOTO  = 'G',  // 'G'
+        CT_THROW         = 't',  // 't'
+        CT_RETURN        = 'r',  // 'r'
+        CT_CONDITIONAL   = 'c',  // 'c'
+        CT_SWITCH        = 's',  // 's'
+        CT_JSR           = 'j',  // 'j'
+        CT_RET           = 'R',  // 'R'
+        CT_RETURN_VALUE  = 'v',  // 'v'
+        CT_TRY           = 'T',  // 'T'
 
         // default:
-        CT_STATEMENT     // TYPE_STATEMENTS
+        // CT_STATEMENT     = ' '// TYPE_STATEMENTS
     };
+
+    #define CODE_TYPE_TO_STRING(x) case (x) : do { return #x; } while(false)
+    const char * ToCString(eCodeType CT)
+    {
+        switch(CT) {
+            CODE_TYPE_TO_STRING(CT_UNKNOWN);
+            CODE_TYPE_TO_STRING(CT_GOTO);
+            CODE_TYPE_TO_STRING(CT_TERNARY_GOTO);
+            CODE_TYPE_TO_STRING(CT_THROW);
+            CODE_TYPE_TO_STRING(CT_RETURN);
+            CODE_TYPE_TO_STRING(CT_CONDITIONAL);
+            CODE_TYPE_TO_STRING(CT_SWITCH);
+            CODE_TYPE_TO_STRING(CT_JSR);
+            CODE_TYPE_TO_STRING(CT_RET);
+            CODE_TYPE_TO_STRING(CT_RETURN_VALUE);
+            CODE_TYPE_TO_STRING(CT_TRY);
+            default: break;
+        }
+        return "CT_STATEMENT";
+    }
 
     static bool IsILOADForIINC(const std::vector<xel::ubyte> & code, size_t offset, int16_t index) {
         if (++offset < code.size()) {
@@ -143,15 +164,20 @@ namespace jdc
         size_t CodeLength = CodeBinary.size();
         auto & ExceptionTable = CodeAttributePtr->ExceptionTable;
 
-        auto BlockTypes = std::vector<xJavaBlock::eType>(CodeLength);
-        auto CodeTypes = std::vector<eCodeType>(CodeLength);
-        auto NextOffsets = std::vector<size_t>(CodeLength);
-        auto BranchOffsets = std::vector<size_t>(CodeLength);;
-        auto SwitchValueTable = std::vector<std::vector<size_t>>(CodeLength);
-        auto SwitchOffsetTable = std::vector<std::vector<size_t>>(CodeLength);
+        auto BlockTypes         = std::vector<xJavaBlock::eType>(CodeLength);
+        auto CodeTypes          = std::vector<eCodeType>(CodeLength);
+        auto NextOffsets        = std::vector<size_t>(CodeLength);
+        auto BranchOffsets      = std::vector<size_t>(CodeLength);;
+        auto SwitchValueTable   = std::vector<std::vector<int32_t>>(CodeLength);
+        auto SwitchOffsetTable  = std::vector<std::vector<size_t>>(CodeLength);
 
         auto MARK = xJavaBlock::TYPE_END;
         BlockTypes[0] = MARK;
+
+        /**
+         * @brief Build CodeTypes & BlockTypes
+         *
+         */
 
         auto LastOffset = size_t(0);
         auto LastStatementOffset = size_t(-1);
@@ -302,9 +328,9 @@ namespace jdc
                     size_t DefaultOffset = Offset + Reader.R4();
                     BlockTypes[DefaultOffset] = MARK;
 
-                    size_t Low = Reader.R4();
-                    size_t High = Reader.R4();
-                    auto Values  = std::vector<size_t>(High - Low + 2);
+                    auto Low = (int32_t)Reader.R4();
+                    auto High = (int32_t)Reader.R4();
+                    auto Values  = std::vector<int32_t>(High - Low + 2);
                     auto Offsets = std::vector<size_t>(High - Low + 2);
 
                     Offsets[0] = DefaultOffset;
@@ -426,6 +452,11 @@ namespace jdc
         } // end of for
         NextOffsets[LastOffset] = CodeLength;
 
+        /**
+         * @brief Processing Exception table
+         *
+         */
+
         if (ExceptionTable.size()) {
             for (auto & Mark : ExceptionTable) {
                 BlockTypes[Mark.StartPC] = MARK;
@@ -433,7 +464,22 @@ namespace jdc
             }
         }
 
-        // Create basic blocks:
+        X_DEBUG_PRINTF("InitBlocks: build types & offsets done.\n");
+        for (size_t I = 0 ; I < NextOffsets.size(); ++I) {
+            X_DEBUG_PRINTF("Offset[%zi]=%zi, codeType=%c, branchOffsets=%zi\n",
+            I, NextOffsets[I], (CodeTypes[I]?CodeTypes[I]:' '), BranchOffsets[I]);
+            if (SwitchValueTable[I].size() || SwitchOffsetTable[I].size()) {
+                assert(SwitchValueTable[I].size() == SwitchOffsetTable[I].size());
+                for (size_t TI = 0 ; TI < SwitchValueTable[I].size(); ++TI) {
+                    X_DEBUG_PRINTF("Values[%zi]=%" PRIi32 ", Offset=%zi\n", TI, SwitchValueTable[I][TI], SwitchOffsetTable[I][TI]);
+                }
+            }
+        }
+
+        /**
+         * @brief Create basic blocks
+         *
+         */
         NewBlock(xJavaBlock::TYPE_START);
         Blocks.resize(CodeLength);
         LastOffset = 0;
