@@ -152,18 +152,18 @@ namespace jdc
         size_t CodeLength = CodeBinary.size();
         auto & ExceptionTable = CodeAttributePtr->ExceptionTable;
 
-        auto BlockTypes         = std::vector<xJavaBlock::eType>(CodeLength);
+        auto BlockMap           = std::vector<xJavaBlock*>(CodeLength);
         auto CodeTypes          = std::vector<eCodeType>(CodeLength);
         auto NextOffsets        = std::vector<size_t>(CodeLength);
         auto BranchOffsets      = std::vector<size_t>(CodeLength);;
         auto SwitchValueTable   = std::vector<std::vector<int32_t>>(CodeLength);
         auto SwitchOffsetTable  = std::vector<std::vector<size_t>>(CodeLength);
 
-        auto MARK = xJavaBlock::TYPE_END;
-        BlockTypes[0] = MARK;
+        auto MARK = EndBlockPtr;
+        BlockMap[0] = MARK;
 
         /**
-         * @brief Build CodeTypes & BlockTypes
+         * @brief Build CodeTypes & BlockMap
          *
          */
 
@@ -202,7 +202,7 @@ namespace jdc
                     // The instruction that immediately follows a conditional or an unconditional goto/jump instruction is a leader
                     CodeTypes[Offset] = CT_RETURN;
                     if (Offset + 1 < CodeLength) {
-                        BlockTypes[Offset + 1] = MARK;
+                        BlockMap[Offset + 1] = MARK;
                     }
                     LastStatementOffset = Offset;
                     break;
@@ -254,25 +254,25 @@ namespace jdc
                 case OP_GOTO: {
                     eCodeType CodeType = (Offset == LastStatementOffset + 1) ? CT_GOTO : CT_TERNARY_GOTO;
                     if (LastStatementOffset != size_t(-1)) {
-                        BlockTypes[LastStatementOffset + 1] = MARK;
+                        BlockMap[LastStatementOffset + 1] = MARK;
                     }
                     // The target of a conditional or an unconditional goto/jump instruction is a leader
                     Reader.Offset(Offset + 1);
                     size_t BranchOffset = Offset + (int16_t)Reader.R2();
                     Offset += 2;
                     CodeTypes[Offset] = CodeType;
-                    BlockTypes[BranchOffset] = MARK;
+                    BlockMap[BranchOffset] = MARK;
                     BranchOffsets[Offset] = BranchOffset;
                     // The instruction that immediately follows a conditional or an unconditional goto/jump instruction is a leader
                     if (Offset + 1 < CodeLength) {
-                        BlockTypes[Offset + 1] = MARK;
+                        BlockMap[Offset + 1] = MARK;
                     }
                     LastStatementOffset = Offset;
                     break;
                 }
                 case OP_JSR: {
                     if (LastStatementOffset != size_t(-1)) {
-                        BlockTypes[LastStatementOffset + 1] = MARK;
+                        BlockMap[LastStatementOffset + 1] = MARK;
                     }
                     // The target of a conditional or an unconditional goto/jump instruction is a leader
                     CodeTypes[Offset] = CT_JSR;
@@ -280,11 +280,11 @@ namespace jdc
                     size_t BranchOffset = Offset + (int16_t)Reader.R2();
                     Offset += 2;
                     CodeTypes[Offset] = CT_JSR;
-                    BlockTypes[BranchOffset] = MARK;
+                    BlockMap[BranchOffset] = MARK;
                     BranchOffsets[Offset] = BranchOffset;
                     // The instruction that immediately follows a conditional or an unconditional goto/jump instruction is a leader
                     if (Offset + 1 < CodeLength) {
-                        BlockTypes[Offset + 1] = MARK;
+                        BlockMap[Offset + 1] = MARK;
                     }
                     LastStatementOffset = Offset;
                     break;
@@ -293,18 +293,18 @@ namespace jdc
                 case OP_IF_ICMPEQ: case OP_IF_ICMPNE: case OP_IF_ICMPLT: case OP_IF_ICMPGE: case OP_IF_ICMPGT: case OP_IF_ICMPLE: case OP_IF_ACMPEQ: case OP_IF_ACMPNE:
                 case OP_IFNULL:    case OP_IFNONNULL: {
                     if (LastStatementOffset != size_t(-1)) {
-                        BlockTypes[LastStatementOffset + 1] = MARK;
+                        BlockMap[LastStatementOffset + 1] = MARK;
                     }
                     // The target of a conditional or an unconditional goto/jump instruction is a leader
                     Reader.Offset(Offset + 1);
                     size_t BranchOffset = Offset + (int16_t)Reader.R2();
                     Offset += 2;
                     CodeTypes[Offset] = CT_CONDITIONAL;
-                    BlockTypes[BranchOffset] = MARK;
+                    BlockMap[BranchOffset] = MARK;
                     BranchOffsets[Offset] = BranchOffset;
                     // The instruction that immediately follows a conditional or an unconditional goto/jump instruction is a leader
                     if (Offset + 1 < CodeLength) {
-                        BlockTypes[Offset + 1] = MARK;
+                        BlockMap[Offset + 1] = MARK;
                     }
                     LastStatementOffset = Offset;
                     break;
@@ -314,7 +314,7 @@ namespace jdc
                     // skip padding:
                     Reader.Offset((Offset + 4) & 0x00FFFC);
                     size_t DefaultOffset = Offset + Reader.R4();
-                    BlockTypes[DefaultOffset] = MARK;
+                    BlockMap[DefaultOffset] = MARK;
 
                     auto Low = (int32_t)Reader.R4();
                     auto High = (int32_t)Reader.R4();
@@ -326,7 +326,7 @@ namespace jdc
                     for (size_t I = 1, Len = High - Low + 2; I < Len; I++) {
                         Values[I] = Low + I - 1;
                         size_t BranchOffset = Offsets[I] = Offset + Reader.R4();
-                        BlockTypes[BranchOffset] = MARK;
+                        BlockMap[BranchOffset] = MARK;
                     }
                     Offset = Reader.Offset() - 1;
                     CodeTypes[Offset] = CT_SWITCH;
@@ -339,18 +339,18 @@ namespace jdc
                 case OP_IRETURN: case OP_LRETURN: case OP_FRETURN: case OP_DRETURN: case OP_ARETURN:
                     CodeTypes[Offset] = CT_RETURN_VALUE;
                     if (Offset + 1 < CodeLength) {
-                        BlockTypes[Offset + 1] = MARK;
+                        BlockMap[Offset + 1] = MARK;
                     }
                     LastStatementOffset = Offset;
                     break;
 
                 case OP_RETURN:
                     if (LastStatementOffset != (size_t)-1) {
-                        BlockTypes[LastStatementOffset + 1] = MARK;
+                        BlockMap[LastStatementOffset + 1] = MARK;
                     }
                     CodeTypes[Offset] = CT_RETURN;
                     if (Offset + 1 < CodeLength) {
-                        BlockTypes[Offset + 1] = MARK;
+                        BlockMap[Offset + 1] = MARK;
                     }
                     LastStatementOffset = Offset;
                     break;
@@ -358,7 +358,7 @@ namespace jdc
                 case OP_ATHROW:
                     CodeTypes[Offset] = CT_THROW;
                     if (Offset + 1 < CodeLength) {
-                        BlockTypes[Offset + 1] = MARK;
+                        BlockMap[Offset + 1] = MARK;
                     }
                     LastStatementOffset = Offset;
                     break;
@@ -379,7 +379,7 @@ namespace jdc
                             Offset += 2;
                             CodeTypes[Offset] = CT_RET;
                             if (Offset + 1 < CodeLength) {
-                                BlockTypes[Offset + 1] = MARK;
+                                BlockMap[Offset + 1] = MARK;
                             }
                             LastStatementOffset = Offset;
                             break;
@@ -405,13 +405,13 @@ namespace jdc
                     size_t BranchOffset = Offset + Reader.R4();
                     Offset += 4;
 
-                    BlockTypes[BranchOffset] = MARK;
+                    BlockMap[BranchOffset] = MARK;
                     CodeTypes[Offset] = CodeType;
                     BranchOffsets[Offset] = BranchOffset;
 
                     // The instruction that immediately follows a conditional or an unconditional goto/jump instruction is a leader
                     if (Offset + 1 < CodeLength) {
-                        BlockTypes[Offset + 1] = MARK;
+                        BlockMap[Offset + 1] = MARK;
                     }
                     LastStatementOffset = Offset;
                     break;
@@ -419,19 +419,19 @@ namespace jdc
 
                 case OP_JSR_W: {
                     if (LastStatementOffset != (size_t)-1) {
-                        BlockTypes[LastStatementOffset + 1] = MARK;
+                        BlockMap[LastStatementOffset + 1] = MARK;
                     }
                     Reader.Offset(Offset + 1);
                     size_t BranchOffset = Offset + Reader.R4();
                     Offset += 4;
 
-                    BlockTypes[BranchOffset] = MARK;
+                    BlockMap[BranchOffset] = MARK;
                     CodeTypes[Offset] = CT_JSR;
                     BranchOffsets[Offset] = BranchOffset;
 
                     // The instruction that immediately follows a conditional or an unconditional goto/jump instruction is a leader
                     if (Offset + 1 < CodeLength) {
-                        BlockTypes[Offset + 1] = MARK;
+                        BlockMap[Offset + 1] = MARK;
                     }
                     LastStatementOffset = Offset;
                     break;
@@ -450,8 +450,8 @@ namespace jdc
          */
         if (ExceptionTable.size()) {
             for (auto & Mark : ExceptionTable) {
-                BlockTypes[Mark.StartPC] = MARK;
-                BlockTypes[Mark.HandlerPC] = MARK;
+                BlockMap[Mark.StartPC] = MARK;
+                BlockMap[Mark.HandlerPC] = MARK;
             }
         }
 
@@ -471,27 +471,28 @@ namespace jdc
          * @brief Create basic blocks
          *
          */
-        NewBlock(xJavaBlock::TYPE_START);
-        Blocks.resize(CodeLength);
         LastOffset = 0;
+        auto StartBlockPtr = NewBlock(xJavaBlock::TYPE_START);
         for (size_t Offset = NextOffsets[0]; Offset < CodeLength; Offset = NextOffsets[Offset]) {
-            if ((BlockTypes[Offset] != xJavaBlock::TYPE_DELETED)) {
-                NewBlock(xJavaBlock::TYPE_DELETED);
-                Blocks[LastOffset] = BlockList.back().get();
+            if (BlockMap[Offset]) { // replace marked block with true one.
+                BlockMap[LastOffset] = NewBlock(xJavaBlock::TYPE_DELETED, LastOffset, Offset);
                 LastOffset = Offset;
             }
         }
-        NewBlock(xJavaBlock::TYPE_DELETED, LastOffset, CodeLength);
-        Blocks[LastOffset] = BlockList.back().get();
+        BlockMap[LastOffset] = NewBlock(xJavaBlock::TYPE_DELETED, LastOffset, CodeLength);
+
+        /**
+         * @brief reduce to simple Blocks and set real types
+         *
+         */
 
         // set block types:
-        auto MainFlowBlocks = std::vector<xJavaBlock*>();
-        auto StartBlockPtr = BlockList[0].get();
+        Blocks.reserve(BlockList.size());
         auto SuccessBlockPtr = BlockList[1].get();
-
         StartBlockPtr->NextBlockPtr = SuccessBlockPtr;
         SuccessBlockPtr->Predecessors.insert(StartBlockPtr);
-        auto BlockListLength = BlockList.size() - 1; // ignore end block
+
+        auto BlockListLength = BlockList.size();
         for (size_t I = 1; I < BlockListLength; ++I) {
             auto BlockPtr = BlockList[I].get();
             size_t LastInstructionOffset = BlockPtr->ToOffset - 1;
@@ -499,13 +500,13 @@ namespace jdc
             switch(CodeTypes[LastInstructionOffset]) {
                 case CT_GOTO:
                     BlockPtr->Type = xJavaBlock::TYPE_GOTO;
-                    SuccessBlockPtr = Blocks[BranchOffsets[LastInstructionOffset]];
+                    SuccessBlockPtr = BlockMap[BranchOffsets[LastInstructionOffset]];
                     BlockPtr->NextBlockPtr = SuccessBlockPtr;
                     SuccessBlockPtr->Predecessors.insert(BlockPtr);
                     break;
                 case CT_TERNARY_GOTO:
                     BlockPtr->Type = xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR;
-                    SuccessBlockPtr = Blocks[BranchOffsets[LastInstructionOffset]];
+                    SuccessBlockPtr = BlockMap[BranchOffsets[LastInstructionOffset]];
                     BlockPtr->NextBlockPtr = SuccessBlockPtr;
                     SuccessBlockPtr->Predecessors.insert(BlockPtr);
                     break;
@@ -519,10 +520,10 @@ namespace jdc
                     break;
                 case CT_CONDITIONAL:
                     BlockPtr->Type = xJavaBlock::TYPE_CONDITIONAL_BRANCH;
-                    SuccessBlockPtr = Blocks[BlockPtr->ToOffset];
+                    SuccessBlockPtr = BlockMap[BlockPtr->ToOffset];
                     BlockPtr->NextBlockPtr = SuccessBlockPtr;
                     SuccessBlockPtr->Predecessors.insert(BlockPtr);
-                    SuccessBlockPtr = Blocks[BranchOffsets[LastInstructionOffset]];
+                    SuccessBlockPtr = BlockMap[BranchOffsets[LastInstructionOffset]];
                     BlockPtr->BranchBlockPtr = SuccessBlockPtr;
                     SuccessBlockPtr->Predecessors.insert(BlockPtr);
                     break;
@@ -533,26 +534,26 @@ namespace jdc
                     auto & SwitchCases = BlockPtr->SwitchCases;
 
                     size_t DefaultCaseOffset = Offsets[0];
-                    auto CaseBlockPtr = Blocks[DefaultCaseOffset];
+                    auto CaseBlockPtr = BlockMap[DefaultCaseOffset];
                     SwitchCases.emplace_back(BlockPtr);
                     CaseBlockPtr->Predecessors.insert(BlockPtr);
 
                     for (size_t Index = 1; Index < Offsets.size(); ++Index) {
                         size_t CaseOffset = Offsets[Index];
-                        // if (CaseOffset != DefaultCaseOffset) { // merge case shared with default
-                            CaseBlockPtr = Blocks[CaseOffset];
+                        if (CaseOffset != DefaultCaseOffset) { // merge case shared with default
+                            CaseBlockPtr = BlockMap[CaseOffset];
                             SwitchCases.emplace_back(Values[Index], CaseBlockPtr);
                             CaseBlockPtr->Predecessors.insert(BlockPtr);
-                        // }
+                        }
                     }
                     break;
                 }
                 case CT_JSR:
                     BlockPtr->Type = xJavaBlock::TYPE_JSR;
-                    SuccessBlockPtr = Blocks[BlockPtr->ToOffset];
+                    SuccessBlockPtr = BlockMap[BlockPtr->ToOffset];
                     BlockPtr->NextBlockPtr = SuccessBlockPtr;
                     SuccessBlockPtr->Predecessors.insert(BlockPtr);
-                    SuccessBlockPtr = Blocks[BranchOffsets[LastInstructionOffset]];
+                    SuccessBlockPtr = BlockMap[BranchOffsets[LastInstructionOffset]];
                     BlockPtr->BranchBlockPtr = SuccessBlockPtr;
                     SuccessBlockPtr->Predecessors.insert(BlockPtr);
                     break;
@@ -566,14 +567,15 @@ namespace jdc
                     break;
                 default:
                     BlockPtr->Type = xJavaBlock::TYPE_STATEMENTS;
-                    SuccessBlockPtr = Blocks[BlockPtr->ToOffset];
+                    SuccessBlockPtr = BlockMap[BlockPtr->ToOffset];
                     BlockPtr->NextBlockPtr = SuccessBlockPtr;
                     SuccessBlockPtr->Predecessors.insert(BlockPtr);
-                    MainFlowBlocks.push_back(BlockPtr);
+                    Blocks.push_back(BlockPtr);
                     break;
             }
         }
 
+        // --- Create try-catch-finally basic blocks --- //
         if (ExceptionTable.size()) {
             // copy & sort code exceptions byte StartPC & EndPC
             std::vector<xJavaException> CodeExceptions;
@@ -597,10 +599,9 @@ namespace jdc
                 auto HandlerPC = CE.HandlerPC;
 
                 if (StartPC == HandlerPC) {
-                    X_DEBUG_BREAKPOINT();
                     continue;
                 }
-                if (HandlePCMarks[HandlerPC] == CT_THROW && StartPC > Blocks[HandlePCToStartPC[HandlerPC]]->FromOffset) {
+                if (HandlePCMarks[HandlerPC] == CT_TRY && StartPC > BlockMap[HandlePCToStartPC[HandlerPC]]->FromOffset) {
                     X_DEBUG_BREAKPOINT();
                     continue;
                 }
@@ -608,7 +609,7 @@ namespace jdc
                 auto & TryCatchFinalBlockPtr = Cache[CE];
                 if (!TryCatchFinalBlockPtr) {
                     // Insert a new 'try-catch-finally' basic block
-                    auto StartBlockPtr = Blocks[StartPC];
+                    auto StartBlockPtr = BlockMap[StartPC];
                     NewBlock(xJavaBlock::TYPE_TRY_DECLARATION, StartPC, EndPC);
                     TryCatchFinalBlockPtr = BlockList.back().get();
                     TryCatchFinalBlockPtr->NextBlockPtr = StartBlockPtr;
@@ -627,7 +628,7 @@ namespace jdc
                     }
 
                     StartBlockPredecessors.insert(TryCatchFinalBlockPtr);
-                    Blocks[StartPC] = TryCatchFinalBlockPtr;
+                    BlockMap[StartPC] = TryCatchFinalBlockPtr;
                     Cache[CE] = TryCatchFinalBlockPtr;
                 }
 
@@ -638,7 +639,7 @@ namespace jdc
                     X_DEBUG_PRINTF("ExceptionClassBinaryName: %s\n", CE.FixedExceptionClassBinaryName.c_str());
                 }
 
-                auto HandlerBlockPtr = Blocks[HandlerPC];
+                auto HandlerBlockPtr = BlockMap[HandlerPC];
                 auto Handler = xJavaExceptionHandler{ CE.FixedExceptionClassBinaryName, HandlerBlockPtr };
                 TryCatchFinalBlockPtr->AddExceptionHandler(Handler);
 

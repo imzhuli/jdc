@@ -7,6 +7,7 @@
 #include <sstream>
 
 using namespace std;
+using namespace xel;
 
 namespace jdc
 {
@@ -33,7 +34,7 @@ namespace jdc
             << ", from=" << BlockPtr->FromOffset
             << ", to=" << BlockPtr->ToOffset
             << ", type=" << (ToString(BlockPtr->Type).c_str() + 5)
-            << ", inverseCondition=" << BlockPtr->MustInverseCondition;
+            << ", inverseCondition=" << TF(BlockPtr->MustInverseCondition);
 
         OS << "}";
         return OS.str();
