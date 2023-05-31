@@ -29,7 +29,6 @@ namespace jdc
     public:
         std::vector<xJavaLocalVariable>            LocalVariableList;
         size_t                                     FirstVariableIndex;
-        std::vector<xJavaBlock*>                   Blocks;
         std::vector<std::unique_ptr<xJavaBlock>>   BlockList;
 
         std::unique_ptr<xJavaBlock>                EndBlockUPtr;
@@ -62,20 +61,7 @@ namespace jdc
             return BlockPtr;
         }
 
-        // X_PRIVATE_MEMBER void ReduceGraph();
-        // X_PRIVATE_STATIC_MEMBER bool Reduce(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet);
-        // X_PRIVATE_STATIC_MEMBER bool ReduceConditionalBranch(xJavaBlock * BlockPtr);
-        // X_PRIVATE_STATIC_MEMBER bool ReduceConditionalBranch(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet);
-        // X_PRIVATE_STATIC_MEMBER bool ReduceSwitchDeclaration(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet);
-        // X_PRIVATE_STATIC_MEMBER bool ReduceTryDeclaration(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet);
-        // X_PRIVATE_STATIC_MEMBER bool ReduceJsr(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet);
-        // X_PRIVATE_STATIC_MEMBER bool ReduceLoop(xJavaBlock * BlockPtr, std::set<xJavaBlock*> & VisitedSet,  std::set<xJavaBlock*> & JsrTargetSet);
-
-        // X_PRIVATE_STATIC_MEMBER void          UpdateCondition(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr, xJavaBlock * NextNextNextNextBlockPtr);
-        // X_PRIVATE_STATIC_MEMBER void          UpdateConditionalBranches(xJavaBlock * BlockPtr, xJavaBlock * LeftBlockPtr, xJavaBlock::eType OperatorType, xJavaBlock * SubBlockPtr);
-        // X_PRIVATE_STATIC_MEMBER void          UpdateConditionTernaryOperator(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr);
-        // X_PRIVATE_STATIC_MEMBER bool          AggregateConditionalBranches(xJavaBlock * BlockPtr);
-
+        X_PRIVATE_MEMBER void ReduceGoto();
     public:
         X_PRIVATE_STATIC_MEMBER std::unique_ptr<xJavaControlFlowGraph> ParseByteCode(const xJavaMethod * JavaMethodPtr);
 

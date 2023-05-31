@@ -16,11 +16,6 @@ namespace jdc
     {
         auto ss = std::ostringstream();
         ss << "*************************\n";
-        // auto & Blocks = CFGPtr->Blocks;
-        // for (size_t i = 0; i < Blocks.size(); ++i) {
-        //     auto & BlockPtr = Blocks[i];
-        //     ss << "** Block[" << i << "]: " << jdc::ToString(BlockPtr) << "\n";
-        // }
 
         auto & BlockList = CFGPtr->BlockList;
         for (size_t i = 0; i < BlockList.size(); ++i) {
@@ -54,14 +49,15 @@ namespace jdc
     {
         assert(LocalVariableList.empty());
         xel::Renew(FirstVariableIndex);
-        assert(Blocks.empty());
         assert(BlockList.empty());
 
         InitLocalVariables();
         InitBlocks();
-        X_DEBUG_PRINTF("xJavaControlFlowGraph InitBlocksDone:\n%s\n", ToString(this).c_str());
+        X_DEBUG_PRINTF("xJavaControlFlowGraph InitBlocks done:\n%s\n", ToString(this).c_str());
 
-        // ReduceGoto(); in jd-core
+        ReduceGoto();
+        X_DEBUG_PRINTF("xJavaControlFlowGraph ReduceGoto done:\n%s\n", ToString(this).c_str());
+
         // ReduceLoop(); in jd-core
         // ReduceGraph();
 
@@ -72,7 +68,6 @@ namespace jdc
     {
         xel::Renew(FirstVariableIndex);
         xel::Renew(LocalVariableList);
-        xel::Renew(Blocks);
         xel::Renew(BlockList);
 
         _JavaClassPtr = nullptr;
