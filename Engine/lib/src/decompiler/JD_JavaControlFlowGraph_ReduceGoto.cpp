@@ -37,7 +37,6 @@ namespace jdc
                     PredecessorPtr->Replace(BlockPtr, SuccessorPtr);
                     SuccessorPredecessors.insert(PredecessorPtr);
                 }
-
                 BlockPtr->Type = xJavaBlock::TYPE_DELETED;
             }
         }

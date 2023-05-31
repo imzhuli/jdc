@@ -926,6 +926,16 @@ namespace jdc
         Predecessors.insert(NewBlockPtr);
     }
 
+    void xJavaBlock::AddExceptionHandler(const xJavaExceptionHandler & ExceptionHandler)
+    {
+        for(auto & Handler : ExceptionHandlers) {
+            if (Handler.FixedCatchTypeName == ExceptionHandler.FixedCatchTypeName) {
+                xel::Fatal("Duplicate Exception catch type");
+            }
+        }
+        ExceptionHandlers.push_back(ExceptionHandler);
+    }
+
     /**************************************
      *
      *
@@ -941,17 +951,6 @@ namespace jdc
 
 
 
-    void xJavaBlock::AddExceptionHandler(const xJavaExceptionHandler & ExceptionHandler)
-    {
-    #ifndef NDEBUG
-        for(auto & Handler : ExceptionHandlers) {
-            if (Handler.FixedCatchTypeName == ExceptionHandler.FixedCatchTypeName) {
-                xel::Fatal("Duplicate Exception catch type");
-            }
-        }
-    #endif
-        ExceptionHandlers.push_back(ExceptionHandler);
-    }
 
     void xJavaBlock::InverseCondition()
     {
