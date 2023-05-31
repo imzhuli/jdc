@@ -845,7 +845,7 @@ namespace jdc
             return true;
         }
         for (auto & EH : ExceptionHandlers) {
-            if (EH.HandlerBlockPtr == CheckBlockPtr) {
+            if (EH.BlockPtr == CheckBlockPtr) {
                 return true;
             }
         }
@@ -863,19 +863,6 @@ namespace jdc
         return false;
     }
 
-    /**************************************
-     *
-     *
-     *
-     *
-     * **********************************/
-
-    /**
-     * @brief not confirmed codes:
-     *
-     */
-
-
     void xJavaBlock::Replace(xJavaBlock * OldBlockPtr, xJavaBlock * NewBlockPtr)
     {
         assert(OldBlockPtr);
@@ -887,7 +874,7 @@ namespace jdc
             BranchBlockPtr = NewBlockPtr;
         }
         for (auto & EH : ExceptionHandlers) {
-            EH.HandlerBlockPtr->Replace(OldBlockPtr, NewBlockPtr);
+            EH.BlockPtr->Replace(OldBlockPtr, NewBlockPtr);
         }
         for (auto & SC : SwitchCases) {
             SC.BlockPtr->Replace(OldBlockPtr, NewBlockPtr);
@@ -907,6 +894,52 @@ namespace jdc
             }
         }
     }
+
+    void xJavaBlock::Replace(const std::set<xJavaBlock *> & Olds, xJavaBlock * NewBlockPtr)
+    {
+        if (Olds.find(NextBlockPtr) != Olds.end()) {
+            NextBlockPtr = NewBlockPtr;
+        }
+        if (Olds.find(BranchBlockPtr) != Olds.end()) {
+            BranchBlockPtr = NewBlockPtr;
+        }
+        for (auto ExceptionHandlerPtr : ExceptionHandlers) {
+            ExceptionHandlerPtr.Replace(Olds, NewBlockPtr);
+        }
+        for (auto SwitchCasePtr : SwitchCases) {
+            SwitchCasePtr.Replace(Olds, NewBlockPtr);
+        }
+        if (Olds.find(FirstSubBlockPtr) != Olds.end()) {
+            FirstSubBlockPtr = NewBlockPtr;
+        }
+        if (Olds.find(SecondSubBlockPtr) != Olds.end()) {
+            SecondSubBlockPtr = NewBlockPtr;
+        }
+
+        for(auto Iter = Predecessors.begin(); Iter != Predecessors.end();) {
+            if (Olds.find(*Iter) != Olds.end()) {
+                Iter = Predecessors.erase(Iter);
+            } else {
+                ++Iter;
+            }
+        }
+        Predecessors.insert(NewBlockPtr);
+    }
+
+    /**************************************
+     *
+     *
+     *
+     *
+     * **********************************/
+
+    /**
+     * @brief not confirmed codes:
+     *
+     */
+
+
+
 
     void xJavaBlock::AddExceptionHandler(const xJavaExceptionHandler & ExceptionHandler)
     {

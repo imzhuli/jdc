@@ -26,6 +26,19 @@ namespace jdc
         X_PRIVATE_MEMBER xJavaSwitchCase() = default;
         X_PRIVATE_MEMBER xJavaSwitchCase(xJavaBlock * BlockPtr); // default case
         X_PRIVATE_MEMBER xJavaSwitchCase(size_t Value, xJavaBlock * BlockPtr);
+
+        void Replace(xJavaBlock* OldBlockPtr, xJavaBlock* NewBlockPtr) {
+            if (BlockPtr == OldBlockPtr) {
+                BlockPtr = NewBlockPtr;
+            }
+        }
+
+        void Replace(const std::set<xJavaBlock *> & Olds, xJavaBlock * NewBlockPtr) {
+            if (Olds.find(BlockPtr) != Olds.end()) {
+                BlockPtr = NewBlockPtr;
+            }
+        }
+
     };
 
     struct xJavaException
@@ -41,7 +54,20 @@ namespace jdc
     {
     public:
         std::string    FixedCatchTypeName = {};
-        xJavaBlock *   HandlerBlockPtr    = {};
+        xJavaBlock *   BlockPtr           = {};
+
+        void Replace(xJavaBlock* OldBlockPtr, xJavaBlock* NewBlockPtr) {
+            if (BlockPtr == OldBlockPtr) {
+                BlockPtr = NewBlockPtr;
+            }
+        }
+
+        void Replace(const std::set<xJavaBlock *> & Olds, xJavaBlock * NewBlockPtr) {
+            if (Olds.find(BlockPtr) != Olds.end()) {
+                BlockPtr = NewBlockPtr;
+            }
+        }
+
     };
 
 
@@ -116,6 +142,7 @@ namespace jdc
 
         X_PRIVATE_MEMBER bool Contains(xJavaBlock * CheckBlockPtr) const;
         X_PRIVATE_MEMBER void Replace(xJavaBlock * OldBlockPtr, xJavaBlock * NewBlockPtr);
+        X_PRIVATE_MEMBER void Replace(const std::set<xJavaBlock *> & Olds, xJavaBlock * NewBlockPtr);
         X_PRIVATE_MEMBER void AddExceptionHandler(const xJavaExceptionHandler & ExceptionHandler);
         X_PRIVATE_MEMBER void InverseCondition();
 
