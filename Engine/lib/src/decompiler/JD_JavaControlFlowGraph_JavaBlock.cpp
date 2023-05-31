@@ -883,7 +883,6 @@ namespace jdc
         if (NextBlockPtr == OldBlockPtr) {
             NextBlockPtr = NewBlockPtr;
         }
-
         if (BranchBlockPtr == OldBlockPtr) {
             BranchBlockPtr = NewBlockPtr;
         }

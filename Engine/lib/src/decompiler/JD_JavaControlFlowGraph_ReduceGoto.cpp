@@ -12,36 +12,34 @@ using namespace xel;
 namespace jdc
 {
 
-    // public static void reduce(ControlFlowGraph cfg) {
-    //     for (BasicBlock basicBlock : cfg.getBasicBlocks()) {
-    //         if (basicBlock.getType() == TYPE_GOTO) {
-    //             BasicBlock successor = basicBlock.getNext();
-
-    //             if (basicBlock == successor) {
-    //                 basicBlock.getPredecessors().remove(basicBlock);
-    //                 basicBlock.setType(TYPE_INFINITE_GOTO);
-    //             } else {
-    //                 Set<BasicBlock> successorPredecessors = successor.getPredecessors();
-    //                 successorPredecessors.remove(basicBlock);
-
-    //                 for (BasicBlock predecessor : basicBlock.getPredecessors()) {
-    //                     predecessor.replace(basicBlock, successor);
-    //                     successorPredecessors.add(predecessor);
-    //                 }
-
-    //                 basicBlock.setType(TYPE_DELETED);
-    //             }
-    //         }
-    //     }
-    // }
-
-
     void xJavaControlFlowGraph::ReduceGoto()
     {
         auto Blocks = std::vector<xJavaBlock*>();
         Blocks.reserve(BlockList.size());
         for (auto & UPtr : BlockList) {
             Blocks.push_back(UPtr.get());
+        }
+
+        for (auto BlockPtr : Blocks) {
+            if (BlockPtr->Type != xJavaBlock::TYPE_GOTO) {
+                continue;
+            }
+
+            auto SuccessorPtr = BlockPtr->NextBlockPtr;
+            if (BlockPtr == SuccessorPtr) { // infinite goto
+                BlockPtr->Predecessors.erase(BlockPtr->Predecessors.find(BlockPtr));
+                BlockPtr->Type = xJavaBlock::TYPE_INFINITE_GOTO;
+            }
+            else {
+                auto & SuccessorPredecessors = SuccessorPtr->Predecessors;
+                SuccessorPredecessors.erase(SuccessorPredecessors.find(BlockPtr));
+                for (auto & PredecessorPtr : BlockPtr->Predecessors) {
+                    PredecessorPtr->Replace(BlockPtr, SuccessorPtr);
+                    SuccessorPredecessors.insert(PredecessorPtr);
+                }
+
+                BlockPtr->Type = xJavaBlock::TYPE_DELETED;
+            }
         }
 
         return;
