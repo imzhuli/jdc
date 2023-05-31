@@ -30,6 +30,7 @@ namespace jdc
         std::vector<xJavaLocalVariable>            LocalVariableList;
         size_t                                     FirstVariableIndex;
         std::vector<std::unique_ptr<xJavaBlock>>   BlockList;
+        std::vector<xJavaBlock*>                   BlockPtrList; // raw pointer version of block list
 
         std::unique_ptr<xJavaBlock>                EndBlockUPtr;
         xJavaBlock *                               EndBlockPtr;
@@ -62,6 +63,8 @@ namespace jdc
         }
 
         X_PRIVATE_MEMBER void ReduceGoto();
+        X_PRIVATE_MEMBER void ReduceLoop();
+
     public:
         X_PRIVATE_STATIC_MEMBER std::unique_ptr<xJavaControlFlowGraph> ParseByteCode(const xJavaMethod * JavaMethodPtr);
 

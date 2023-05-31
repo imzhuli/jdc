@@ -14,13 +14,7 @@ namespace jdc
 
     void xJavaControlFlowGraph::ReduceGoto()
     {
-        auto Blocks = std::vector<xJavaBlock*>();
-        Blocks.reserve(BlockList.size());
-        for (auto & UPtr : BlockList) {
-            Blocks.push_back(UPtr.get());
-        }
-
-        for (auto BlockPtr : Blocks) {
+        for (auto BlockPtr : BlockPtrList) {
             if (BlockPtr->Type != xJavaBlock::TYPE_GOTO) {
                 continue;
             }

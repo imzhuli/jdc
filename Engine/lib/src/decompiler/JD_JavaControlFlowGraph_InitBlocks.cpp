@@ -603,6 +603,15 @@ namespace jdc
                 NextBlockPtr->Type = xJavaBlock::TYPE_DELETED;
             }
         }
+
+        /**
+         * @brief Copy BlockList to its raw pointer version
+         *
+         */
+        BlockPtrList.reserve(BlockList.size());
+        for (auto & UPtr : BlockList) {
+            BlockPtrList.push_back(UPtr.get());
+        }
     }
 
 }
