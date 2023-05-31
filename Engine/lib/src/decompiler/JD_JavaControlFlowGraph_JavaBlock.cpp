@@ -14,38 +14,6 @@ namespace jdc
 
     using namespace std::literals::string_literals;
 
-    std::string ToString(const xJavaBlock * BlockPtr)
-    {
-        auto OS = std::ostringstream();
-        OS << "BasicBlock{index=" << BlockPtr->Index
-            << ", from=" << BlockPtr->FromOffset
-            << ", to=" << BlockPtr->ToOffset
-            << ", type=" << (ToString(BlockPtr->Type).c_str() + 5)
-            << ", inverseCondition=" << TF(BlockPtr->MustInverseCondition);
-
-        std::vector<size_t> IndexList;
-        for (auto & PredecessorPtr : BlockPtr->Predecessors) {
-            IndexList.push_back(PredecessorPtr->Index);
-        }
-        std::sort(IndexList.begin(), IndexList.end());
-
-        if (IndexList.size()) {
-            bool First = true;
-            OS << ", predecessors=[";
-            for (auto Index : IndexList) {
-                if (Steal(First, false)) {
-                    OS << Index;
-                } else {
-                    OS << ", " << Index;
-                }
-            }
-            OS << "]";
-        }
-
-        OS << "}";
-        return OS.str();
-    }
-
     #define BLOCK_TYPE_TO_STRING(x) case (xJavaBlock::x): return #x##s
     std::string ToString(const xJavaBlock::eType Type)
     {
@@ -87,6 +55,38 @@ namespace jdc
         }
         return "TYPE_INVALID"s;
     };
+
+    std::string ToString(const xJavaBlock * BlockPtr)
+    {
+        auto OS = std::ostringstream();
+        OS << "BasicBlock{index=" << BlockPtr->Index
+            << ", from=" << BlockPtr->FromOffset
+            << ", to=" << BlockPtr->ToOffset
+            << ", type=" << (ToString(BlockPtr->Type).c_str() + 5)
+            << ", inverseCondition=" << TF(BlockPtr->MustInverseCondition);
+
+        std::vector<size_t> IndexList;
+        for (auto & PredecessorPtr : BlockPtr->Predecessors) {
+            IndexList.push_back(PredecessorPtr->Index);
+        }
+        std::sort(IndexList.begin(), IndexList.end());
+
+        if (IndexList.size()) {
+            bool First = true;
+            OS << ", predecessors=[";
+            for (auto Index : IndexList) {
+                if (Steal(First, false)) {
+                    OS << Index;
+                } else {
+                    OS << ", " << Index;
+                }
+            }
+            OS << "]";
+        }
+
+        OS << "}";
+        return OS.str();
+    }
 
     xJavaBlock::xJavaBlock(xJavaControlFlowGraph * CFGPtr, eType Type, size_t FromOffset, size_t ToOffset)
     : _JavaControlFlowGraphPtr(CFGPtr), Type(Type), FromOffset(FromOffset), ToOffset(ToOffset)
@@ -831,12 +831,10 @@ namespace jdc
         return MinDepth;
     }
 
-
-
     /**
-     * @brief not confirmed codes:
+     * @brief sub block operations
      *
-     */
+    */
 
     bool xJavaBlock::Contains(xJavaBlock * CheckBlockPtr) const
     {
@@ -864,6 +862,19 @@ namespace jdc
         }
         return false;
     }
+
+    /**************************************
+     *
+     *
+     *
+     *
+     * **********************************/
+
+    /**
+     * @brief not confirmed codes:
+     *
+     */
+
 
     void xJavaBlock::Replace(xJavaBlock * OldBlockPtr, xJavaBlock * NewBlockPtr)
     {
