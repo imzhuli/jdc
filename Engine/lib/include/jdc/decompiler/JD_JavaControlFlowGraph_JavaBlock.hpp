@@ -109,6 +109,10 @@ namespace jdc
         X_PRIVATE_MEMBER const xJavaClass *  GetClass() const;
         X_PRIVATE_MEMBER const xJavaMethod * GetMethod() const;
         X_INLINE const std::vector<xel::ubyte> * GetCode() const { assert(_CodeBinaryPtr); return _CodeBinaryPtr; }
+        X_PRIVATE_MEMBER xOpCode GetNextOpCode(size_t MaxOffset) const;
+        X_PRIVATE_MEMBER xOpCode GetLastOpCode() const;
+        X_PRIVATE_MEMBER xel::ssize_t EvalStackDepth() const;
+        X_PRIVATE_MEMBER xel::ssize_t GetMinDepth() const;
 
         X_PRIVATE_MEMBER bool Contains(xJavaBlock * CheckBlockPtr) const;
         X_PRIVATE_MEMBER void Replace(xJavaBlock * OldBlockPtr, xJavaBlock * NewBlockPtr);
