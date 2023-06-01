@@ -11,36 +11,46 @@ using namespace xel;
 
 namespace jdc
 {
-    [[maybe_unused]]
-    static std::vector<bool> BuildDominatorIndexes(std::vector<xJavaBlock*> & BlockPtrList)
+
+    static std::vector<xBitSet> BuildDominatorIndexes(std::vector<xJavaBlock*> & BlockPtrList)
     {
-        auto ArrayOfDominatorIndexes = std::vector<bool>();
-        // List<BasicBlock> list = cfg.getBasicBlocks();
-        // int length = list.size();
-        // BitSet[] arrayOfDominatorIndexes = new BitSet[length];
+        auto Length = BlockPtrList.size();
+        auto ArrayOfDominatorIndexes = std::vector<xBitSet>(Length);
+        ArrayOfDominatorIndexes[0] = xBitSet(Length);
+        ArrayOfDominatorIndexes[0][0] = true;
 
-        // BitSet initial = new BitSet(length);
-        // initial.set(0);
-        // arrayOfDominatorIndexes[0] = initial;
+        for (size_t i = 1; i < Length; ++i) {
+            auto & Item = ArrayOfDominatorIndexes[i];
+            Item = xBitSet(Length, true);
+        }
 
-        // for (int i=0; i<length; i++) {
-        //     initial = new BitSet(length);
-        //     initial.flip(0, length);
-        //     arrayOfDominatorIndexes[i] = initial;
-        // }
+        for (auto & Item : ArrayOfDominatorIndexes) {
+            X_DEBUG_PRINTF("%s\n", ToString(Item).c_str());
+        }
 
-        // initial = arrayOfDominatorIndexes[0];
-        // initial.clear();
-        // initial.set(0);
+        auto Change = false;
+        do {
+            for (size_t Index = 1; Index < Length; ++Index) {
+                auto BlockPtr = BlockPtrList[Index];
+                assert(BlockPtr->Index == Index);
 
-        // boolean change;
+                auto & DominatorIndexes = ArrayOfDominatorIndexes[Index];
+                auto   Backup = DominatorIndexes;
+                for (auto PredecessorBlockPtr : BlockPtr->Predecessors) {
+                    auto & PredecessorDominatorIndexes = ArrayOfDominatorIndexes[PredecessorBlockPtr->Index];
+                    for (size_t i = 0; i < DominatorIndexes.size(); ++i) {
+                        DominatorIndexes[i] = DominatorIndexes[i] & PredecessorDominatorIndexes[i];
+                    }
+                }
+                DominatorIndexes[Index] = true;
 
-        // do {
-        //     change = false;
+                Change |= DominatorIndexes != Backup;
+            }
+        } while(Steal(Change));
+
 
         //     for (BasicBlock basicBlock : list) {
         //         int index = basicBlock.getIndex();
-
         //         BitSet dominatorIndexes = arrayOfDominatorIndexes[index];
 
         //         initial = (BitSet)dominatorIndexes.clone();
@@ -52,7 +62,10 @@ namespace jdc
         //         dominatorIndexes.set(index);
         //         change |= (! initial.equals(dominatorIndexes));
         //     }
-        // } while (change);
+
+        for (auto & Item : ArrayOfDominatorIndexes) {
+            X_DEBUG_PRINTF("%s\n", ToString(Item).c_str());
+        }
 
         return ArrayOfDominatorIndexes;
     }
@@ -60,7 +73,7 @@ namespace jdc
 
     void xJavaControlFlowGraph::ReduceLoop()
     {
-
+        auto ArrayOfDominatorIndexes = BuildDominatorIndexes(BlockPtrList);
         // BitSet[] arrayOfDominatorIndexes = buildDominatorIndexes(cfg);
         // List<Loop> loops = identifyNaturalLoops(cfg, arrayOfDominatorIndexes);
 

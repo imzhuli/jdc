@@ -2,11 +2,6 @@
 #include "./_.hpp"
 #include "./JD_JavaMethod.hpp"
 #include "../base/JD_Instructions.hpp"
-#include "../syntax/JD_JavaType.hpp"
-#include "../syntax/JD_JavaPrimitiveTypes.hpp"
-#include "../syntax/JD_JavaObjectTypes.hpp"
-#include "../syntax/JD_JavaFrame.hpp"
-#include "../class_file/JD_Attribute.hpp"
 #include <memory>
 #include <set>
 
