@@ -1,4 +1,5 @@
 #include <jdc/decompiler/JD_JavaControlFlowGraph.hpp>
+#include <jdc/decompiler/JD_JavaControlFlowGraph_Loop.hpp>
 #include <jdc/decompiler/JD_JavaMethod.hpp>
 #include <jdc/decompiler/JD_JavaClass.hpp>
 #include <jdc/decompiler/JD_JavaSpace.hpp>
@@ -24,10 +25,6 @@ namespace jdc
             Item = xBitSet(Length, true);
         }
 
-        for (auto & Item : ArrayOfDominatorIndexes) {
-            X_DEBUG_PRINTF("%s\n", ToString(Item).c_str());
-        }
-
         auto Change = false;
         do {
             for (size_t Index = 1; Index < Length; ++Index) {
@@ -48,21 +45,6 @@ namespace jdc
             }
         } while(Steal(Change));
 
-
-        //     for (BasicBlock basicBlock : list) {
-        //         int index = basicBlock.getIndex();
-        //         BitSet dominatorIndexes = arrayOfDominatorIndexes[index];
-
-        //         initial = (BitSet)dominatorIndexes.clone();
-
-        //         for (BasicBlock predecessorBB : basicBlock.getPredecessors()) {
-        //             dominatorIndexes.and(arrayOfDominatorIndexes[predecessorBB.getIndex()]);
-        //         }
-
-        //         dominatorIndexes.set(index);
-        //         change |= (! initial.equals(dominatorIndexes));
-        //     }
-
         for (auto & Item : ArrayOfDominatorIndexes) {
             X_DEBUG_PRINTF("%s\n", ToString(Item).c_str());
         }
@@ -70,12 +52,95 @@ namespace jdc
         return ArrayOfDominatorIndexes;
     }
 
+    static void RecursiveBackwardSearchLoopMemberIndexes(xBitSet & Visited, xJavaBlock * CurrentBlockPtr, xJavaBlock * StartBlockPtr)
+    {
+        if (!Visited[CurrentBlockPtr->Index]) {
+            Visited[CurrentBlockPtr->Index] = true;
+            if (CurrentBlockPtr != StartBlockPtr) {
+                for (xJavaBlock * PredecessorBlockPtr : CurrentBlockPtr->Predecessors) {
+                    RecursiveBackwardSearchLoopMemberIndexes(Visited, PredecessorBlockPtr, StartBlockPtr);
+                }
+            }
+        }
+    }
+
+    static xBitSet SearchLoopMemberIndexes(size_t Length, xBitSet & MemberIndexes, xJavaBlock * CurrentBlockPtr, xJavaBlock * StartBlockPtr)
+    {
+        // assert(Length == MemberIndexes.size()); // TODO: maybe remove Length argument
+
+        xBitSet Visited = xBitSet(Length);
+        RecursiveBackwardSearchLoopMemberIndexes(Visited, CurrentBlockPtr, StartBlockPtr);
+        if (MemberIndexes.empty()) {
+            return Visited;
+        }
+        /* @brief MemberIndexes.or(Visited); */
+        assert(MemberIndexes.size() == Visited.size());
+        for (size_t i = 0; i < MemberIndexes.size(); ++i) {
+            MemberIndexes[i] = MemberIndexes[i] | Visited[i];
+        }
+        return MemberIndexes;
+    }
+
+    static std::vector<xJavaLoop> IdentifyNaturalLoops(std::vector<xJavaBlock*> & BlockPtrList, const std::vector<xBitSet> & ArrayOfDominatorIndexes)
+    {
+        auto Length = BlockPtrList.size();
+        auto ArrayOfMemberIndexes = std::vector<xBitSet>(Length);
+
+        // Identify loop members
+        for (size_t i = 0 ; i < Length ; ++i) {
+            auto BlockPtr = BlockPtrList[i];
+            auto & DominatorIndexes = ArrayOfDominatorIndexes[i];
+
+            switch (BlockPtr->Type) {
+                case xJavaBlock::TYPE_CONDITIONAL_BRANCH: {
+                    auto Index = BlockPtr->BranchBlockPtr->Index;
+                        X_DEBUG_PRINTF("-->B %zi\n", Index);
+                    if (DominatorIndexes[Index]) {
+                        // 'branch' is a dominator -> Back edge found
+                        ArrayOfMemberIndexes[Index] = SearchLoopMemberIndexes(Length, ArrayOfMemberIndexes[Index], BlockPtr, BlockPtr->BranchBlockPtr);
+                    }
+                    // pass through
+                }
+                case xJavaBlock::TYPE_STATEMENTS:
+                case xJavaBlock::TYPE_GOTO: {
+                    auto Index = BlockPtr->NextBlockPtr->Index;
+                        X_DEBUG_PRINTF("-->N %zi\n", Index);
+                    if (DominatorIndexes[Index]) {
+                        // 'next' is a dominator -> Back edge found
+                        ArrayOfMemberIndexes[Index] = SearchLoopMemberIndexes(Length, ArrayOfMemberIndexes[Index], BlockPtr, BlockPtr->NextBlockPtr);
+                    }
+                    break;
+                }
+                case xJavaBlock::TYPE_SWITCH_DECLARATION: {
+                    for (auto SwitchCase : BlockPtr->SwitchCases) {
+                        auto Index = SwitchCase.BlockPtr->Index;
+                        X_DEBUG_PRINTF("-->S %zi\n", Index);
+                        if (DominatorIndexes[Index]) {
+                            // 'switchCase' is a dominator -> Back edge found
+                            ArrayOfMemberIndexes[Index] = SearchLoopMemberIndexes(Length, ArrayOfMemberIndexes[Index], BlockPtr, SwitchCase.BlockPtr);
+                        }
+                    }
+                    break;
+                }
+                default: break;
+            }
+        }
+
+        // Loops & 'try' statements
+        for(size_t i = 0 ; i < ArrayOfMemberIndexes.size(); ++i) {
+            X_DEBUG_PRINTF("%zi %s\n", i, ToString(ArrayOfMemberIndexes[i]).c_str());
+        }
+
+        // Build loops
+        auto Loops = std::vector<xJavaLoop>(); // return value
+
+        return Loops;
+    }
 
     void xJavaControlFlowGraph::ReduceLoop()
     {
         auto ArrayOfDominatorIndexes = BuildDominatorIndexes(BlockPtrList);
-        // BitSet[] arrayOfDominatorIndexes = buildDominatorIndexes(cfg);
-        // List<Loop> loops = identifyNaturalLoops(cfg, arrayOfDominatorIndexes);
+        auto Loops = IdentifyNaturalLoops(BlockPtrList, ArrayOfDominatorIndexes);
 
         // for (int i=0, loopsLength=loops.size(); i<loopsLength; i++) {
         //     Loop loop = loops.get(i);

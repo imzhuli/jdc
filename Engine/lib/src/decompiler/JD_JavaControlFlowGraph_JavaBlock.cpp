@@ -84,6 +84,25 @@ namespace jdc
             OS << "]";
         }
 
+        IndexList.clear();
+        for (auto & SW : BlockPtr->SwitchCases) {
+            IndexList.push_back(SW.BlockPtr->Index);
+        }
+        std::sort(IndexList.begin(), IndexList.end());
+
+        if (IndexList.size()) {
+            bool First = true;
+            OS << ", switchcases=[";
+            for (auto Index : IndexList) {
+                if (Steal(First, false)) {
+                    OS << Index;
+                } else {
+                    OS << ", " << Index;
+                }
+            }
+            OS << "]";
+        }
+
         OS << "}";
         return OS.str();
     }

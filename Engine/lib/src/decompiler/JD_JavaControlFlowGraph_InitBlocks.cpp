@@ -446,7 +446,7 @@ namespace jdc
 
                     size_t DefaultCaseOffset = Offsets[0];
                     auto CaseBlockPtr = BlockMap[DefaultCaseOffset];
-                    SwitchCases.emplace_back(BlockPtr);
+                    SwitchCases.emplace_back(CaseBlockPtr);
                     CaseBlockPtr->Predecessors.insert(BlockPtr);
 
                     for (size_t Index = 1; Index < Offsets.size(); ++Index) {

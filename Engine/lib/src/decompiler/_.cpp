@@ -13,12 +13,10 @@ namespace jdc
         OS << '{';
         bool First = true;
         for (size_t Index = 0 ; Index < BitSet.size() ; ++Index) {
-            if (Steal(First)) {
-                if (BitSet[Index]) {
+            if (BitSet[Index]) {
+                if (Steal(First)) {
                     OS << Index;
-                }
-            } else {
-                if (BitSet[Index]) {
+                } else {
                     OS << ", " << Index;
                 }
             }
