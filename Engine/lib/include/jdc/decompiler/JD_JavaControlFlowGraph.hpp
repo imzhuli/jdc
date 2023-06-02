@@ -1,6 +1,7 @@
 #pragma once
 #include "./_.hpp"
 #include "./JD_JavaControlFlowGraph_JavaBlock.hpp"
+#include "./JD_JavaControlFlowGraph_JavaLoop.hpp"
 #include "./JD_JavaMethod.hpp"
 #include "../base/JD_Instructions.hpp"
 #include "../syntax/JD_JavaFrame.hpp"
@@ -59,6 +60,8 @@ namespace jdc
             return BlockPtr;
         }
 
+        X_PRIVATE_MEMBER xJavaLoop MakeLoop(xJavaBlock * StartBlockPtr, const xBitSet & SearchZoneIndexes, xBitSet & MemberIndexes);
+        X_PRIVATE_MEMBER std::vector<xJavaLoop> IdentifyNaturalLoops(const std::vector<xBitSet> & ArrayOfDominatorIndexes);
         X_PRIVATE_MEMBER void ReduceGoto();
         X_PRIVATE_MEMBER void ReduceLoop();
 

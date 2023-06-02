@@ -1,5 +1,5 @@
 #include <jdc/decompiler/JD_JavaControlFlowGraph.hpp>
-#include <jdc/decompiler/JD_JavaControlFlowGraph_Loop.hpp>
+#include <jdc/decompiler/JD_JavaControlFlowGraph_JavaLoop.hpp>
 #include <jdc/decompiler/JD_JavaMethod.hpp>
 #include <jdc/decompiler/JD_JavaClass.hpp>
 #include <jdc/decompiler/JD_JavaSpace.hpp>
@@ -52,6 +52,58 @@ namespace jdc
         return ArrayOfDominatorIndexes;
     }
 
+    [[maybe_unused]]
+    static void RecursiveForwardSearchLoopMemberIndexes(xBitSet & Visited, const xBitSet & SearchZoneIndexes, xJavaBlock * CurrentBlockPtr, size_t MaxOffset) {
+        if ((!CurrentBlockPtr->Type & (
+                xJavaBlock::TYPE_END | xJavaBlock::TYPE_LOOP_START | xJavaBlock::TYPE_LOOP_CONTINUE | xJavaBlock::TYPE_LOOP_END | xJavaBlock::TYPE_SWITCH_BREAK))
+            && (!Visited[CurrentBlockPtr->Index])
+            && (SearchZoneIndexes[CurrentBlockPtr->Index])
+            && (CurrentBlockPtr->FromOffset <= MaxOffset)) {
+
+            Visited[CurrentBlockPtr->Index] = true;
+            RecursiveForwardSearchLoopMemberIndexes(Visited, SearchZoneIndexes, CurrentBlockPtr->NextBlockPtr, MaxOffset);
+            RecursiveForwardSearchLoopMemberIndexes(Visited, SearchZoneIndexes, CurrentBlockPtr->BranchBlockPtr, MaxOffset);
+
+            for (auto & SwitchCase : CurrentBlockPtr->SwitchCases) {
+                RecursiveForwardSearchLoopMemberIndexes(Visited, SearchZoneIndexes, SwitchCase.BlockPtr, MaxOffset);
+            }
+
+            for (auto & ExceptionHandler : CurrentBlockPtr->ExceptionHandlers) {
+                RecursiveForwardSearchLoopMemberIndexes(Visited, SearchZoneIndexes, ExceptionHandler.BlockPtr, MaxOffset);
+            }
+
+            if (CurrentBlockPtr->Type == xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR) {
+                Visited[CurrentBlockPtr->NextBlockPtr->Index] = true;
+            }
+        }
+    }
+
+    static void RecursiveForwardSearchLoopMemberIndexes(xBitSet & Visited, const xBitSet & SearchZoneIndexes, xJavaBlock * CurrentBlockPtr, xJavaBlock *  TargetBlockPtr) {
+        if (!(CurrentBlockPtr->Type & xJavaBlock::GROUP_END)
+            && (!Visited[CurrentBlockPtr->Index])
+            && (SearchZoneIndexes[CurrentBlockPtr->Index])) {
+
+            Visited[CurrentBlockPtr->Index] = true;
+
+            if (CurrentBlockPtr != TargetBlockPtr) {
+                RecursiveForwardSearchLoopMemberIndexes(Visited, SearchZoneIndexes, CurrentBlockPtr->NextBlockPtr, TargetBlockPtr);
+                RecursiveForwardSearchLoopMemberIndexes(Visited, SearchZoneIndexes, CurrentBlockPtr->BranchBlockPtr, TargetBlockPtr);
+
+                for (auto & SwitchCase : CurrentBlockPtr->SwitchCases) {
+                    RecursiveForwardSearchLoopMemberIndexes(Visited, SearchZoneIndexes, SwitchCase.BlockPtr, TargetBlockPtr);
+                }
+
+                for (auto & ExceptionHandler : CurrentBlockPtr->ExceptionHandlers) {
+                    RecursiveForwardSearchLoopMemberIndexes(Visited, SearchZoneIndexes, ExceptionHandler.BlockPtr, TargetBlockPtr);
+                }
+
+                if (CurrentBlockPtr->Type == xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR) {
+                    Visited[CurrentBlockPtr->NextBlockPtr->Index];
+                }
+            }
+        }
+    }
+
     static void RecursiveBackwardSearchLoopMemberIndexes(xBitSet & Visited, xJavaBlock * CurrentBlockPtr, xJavaBlock * StartBlockPtr)
     {
         if (!Visited[CurrentBlockPtr->Index]) {
@@ -81,7 +133,134 @@ namespace jdc
         return MemberIndexes;
     }
 
-    static std::vector<xJavaLoop> IdentifyNaturalLoops(std::vector<xJavaBlock*> & BlockPtrList, const std::vector<xBitSet> & ArrayOfDominatorIndexes)
+    static size_t CheckMaxOffset(xJavaBlock * BlockPtr) {
+        size_t MaxOffset = BlockPtr->FromOffset;
+        // size_t Offset;
+
+        // if (basicBlock.getType() == TYPE_TRY_DECLARATION) {
+        //     for (ExceptionHandler exceptionHandler : basicBlock.getExceptionHandlers()) {
+        //         if (exceptionHandler.getInternalThrowableName() == null) {
+        //             // Search throw block
+        //             offset = checkThrowBlockOffset(exceptionHandler.getBasicBlock());
+        //         } else {
+        //             offset = checkSynchronizedBlockOffset(exceptionHandler.getBasicBlock());
+        //         }
+        //         if (maxOffset < offset) {
+        //             maxOffset = offset;
+        //         }
+        //     }
+        // } else if (basicBlock.getType() == TYPE_SWITCH_DECLARATION) {
+        //     BasicBlock lastBB = null;
+        //     BasicBlock previousBB = null;
+
+        //     for (SwitchCase switchCase : basicBlock.getSwitchCases()) {
+        //         BasicBlock bb = switchCase.getBasicBlock();
+        //         if ((lastBB == null) || (lastBB.getFromOffset() < bb.getFromOffset())) {
+        //             previousBB = lastBB;
+        //             lastBB = bb;
+        //         }
+        //     }
+        //     if (previousBB != null) {
+        //         offset = checkSynchronizedBlockOffset(previousBB);
+        //         if (maxOffset < offset) {
+        //             maxOffset = offset;
+        //         }
+        //     }
+        // }
+
+        return MaxOffset;
+    }
+
+    xJavaLoop xJavaControlFlowGraph::MakeLoop(xJavaBlock * StartBlockPtr, const xBitSet & SearchZoneIndexes, xBitSet & MemberIndexes)
+    {
+        size_t Length = BlockPtrList.size();
+        assert(Length);
+
+        size_t MaxOffset = 0;
+        for (size_t i = 0; i < Length; ++i) {
+            if (!MemberIndexes[i]) {
+                continue;
+            }
+            auto Offset = CheckMaxOffset(BlockPtrList[i]);
+            if (MaxOffset < Offset) {
+                MaxOffset = Offset;
+            }
+        }
+
+        // // Extend members
+        MemberIndexes.clear();
+        // recursiveForwardSearchLoopMemberIndexes(memberIndexes, searchZoneIndexes, start, maxOffset);
+
+        auto Members = std::set<xJavaBlock*>();
+        for (size_t i=0; i < Length; i++) {
+            if (MemberIndexes[i]) {
+                Members.insert(BlockPtrList[i]);
+            }
+        }
+
+        // // Search 'end' block
+        xJavaBlock * EndBlockPtr = this->EndBlockPtr;
+
+        // if (start.getType() == TYPE_CONDITIONAL_BRANCH) {
+        //     // First, check natural 'end' blocks
+        //     int index = start.getBranch().getIndex();
+        //     if (memberIndexes.get(index) == false) {
+        //         end = start.getBranch();
+        //     } else {
+        //         index = start.getNext().getIndex();
+        //         if (memberIndexes.get(index) == false) {
+        //             end = start.getNext();
+        //         }
+        //     }
+        // }
+
+        // if (end == END) {
+        //     // Not found, check all member blocks
+        //     end = searchEndBasicBlock(memberIndexes, maxOffset, members);
+
+        //     if (!end.matchType(TYPE_END|TYPE_RETURN|TYPE_LOOP_START|TYPE_LOOP_CONTINUE|TYPE_LOOP_END) &&
+        //         (end.getPredecessors().size() == 1) &&
+        //         (end.getPredecessors().iterator().next().getLastLineNumber() + 1 >= end.getFirstLineNumber()))
+        //     {
+        //         HashSet<BasicBlock> set = new HashSet<>();
+
+        //         if (recursiveForwardSearchLastLoopMemberIndexes(members, searchZoneIndexes, set, end, null)) {
+        //             members.addAll(set);
+
+        //             for (BasicBlock member : set) {
+        //                 if (member.getIndex() >= 0) {
+        //                     memberIndexes.set(member.getIndex());
+        //                 }
+        //             }
+
+        //             end = searchEndBasicBlock(memberIndexes, maxOffset, set);
+        //         }
+        //     }
+        // }
+
+        // // Extend last member
+        // if (end != END) {
+        //     HashSet<BasicBlock> m = new HashSet<>(members);
+        //     HashSet<BasicBlock> set = new HashSet<>();
+
+        //     for (BasicBlock member : m) {
+        //         if ((member.getType() == TYPE_CONDITIONAL_BRANCH) && (member != start)) {
+        //             set.clear();
+        //             if (recursiveForwardSearchLastLoopMemberIndexes(members, searchZoneIndexes, set, member.getNext(), end)) {
+        //                 members.addAll(set);
+        //             }
+        //             set.clear();
+        //             if (recursiveForwardSearchLastLoopMemberIndexes(members, searchZoneIndexes, set, member.getBranch(), end)) {
+        //                 members.addAll(set);
+        //             }
+        //         }
+        //     }
+        // }
+
+        return xJavaLoop{ StartBlockPtr, EndBlockPtr, Members };
+    }
+
+    std::vector<xJavaLoop> xJavaControlFlowGraph::IdentifyNaturalLoops(const std::vector<xBitSet> & ArrayOfDominatorIndexes)
     {
         auto Length = BlockPtrList.size();
         auto ArrayOfMemberIndexes = std::vector<xBitSet>(Length);
@@ -182,58 +361,66 @@ namespace jdc
 
         // Build loops
         auto Loops = std::vector<xJavaLoop>(); // return value
-        // for (int i=0; i<length; i++) {
-        //     if (arrayOfMemberIndexes[i] != null) {
-        //         BitSet memberIndexes = arrayOfMemberIndexes[i];
+        for (size_t i = 0; i < Length; ++i) {
+            if (ArrayOfMemberIndexes[i].empty()) {
+                continue;
+            }
+            auto & MemberIndexes = ArrayOfMemberIndexes[i];
 
-        //         // Unoptimize loop
-        //         BasicBlock start = list.get(i);
-        //         BitSet startDominatorIndexes = arrayOfDominatorIndexes[i];
+            // Unoptimize loop
+            auto StartBlockPtr = BlockPtrList[i];
+            auto & StartDominatorIndexes = ArrayOfDominatorIndexes[i];
 
-        //         BitSet searchZoneIndexes = new BitSet(length);
-        //         searchZoneIndexes.or(startDominatorIndexes);
-        //         searchZoneIndexes.flip(0, length);
-        //         searchZoneIndexes.set(start.getIndex());
+            auto SearchZoneIndexes = StartDominatorIndexes; // copy
+            for (auto BitReference : SearchZoneIndexes) { // flip
+                BitReference = !BitReference;
+            }
+            auto CheckSearchZoneIndexes = StartDominatorIndexes;
+            CheckSearchZoneIndexes.flip();
+            assert(SearchZoneIndexes == CheckSearchZoneIndexes);
+            SearchZoneIndexes[StartBlockPtr->Index] = true;
 
-        //         if (start.getType() == TYPE_CONDITIONAL_BRANCH) {
-        //             if ((start.getNext() != start) &&
-        //                 (start.getBranch() != start) &&
-        //                 memberIndexes.get(start.getNext().getIndex()) &&
-        //                 memberIndexes.get(start.getBranch().getIndex()))
-        //             {
-        //                 // 'next' & 'branch' blocks are inside the loop -> Split loop ?
-        //                 BitSet nextIndexes = new BitSet(length);
-        //                 BitSet branchIndexes = new BitSet(length);
+            if (StartBlockPtr->Type == xJavaBlock::TYPE_CONDITIONAL_BRANCH) {
+                if (StartBlockPtr->NextBlockPtr != StartBlockPtr
+                    && StartBlockPtr->BranchBlockPtr != StartBlockPtr
+                    && MemberIndexes[StartBlockPtr->NextBlockPtr->Index]
+                    && MemberIndexes[StartBlockPtr->BranchBlockPtr->Index]) {
 
-        //                 recursiveForwardSearchLoopMemberIndexes(nextIndexes, memberIndexes, start.getNext(), start);
-        //                 recursiveForwardSearchLoopMemberIndexes(branchIndexes, memberIndexes, start.getBranch(), start);
+                    auto NextIndexes = xBitSet(Length);
+                    auto BranchIndexes = xBitSet(Length);
+                    RecursiveForwardSearchLoopMemberIndexes(NextIndexes, MemberIndexes, StartBlockPtr->NextBlockPtr, StartBlockPtr);
+                    RecursiveForwardSearchLoopMemberIndexes(BranchIndexes, MemberIndexes, StartBlockPtr->BranchBlockPtr, StartBlockPtr);
 
-        //                 BitSet commonMemberIndexes = (BitSet)nextIndexes.clone();
-        //                 commonMemberIndexes.and(branchIndexes);
+                    auto CommonMemberIndexes = NextIndexes; // copy
+                    for (size_t j = 0; j < CommonMemberIndexes.size(); ++j) {
+                        CommonMemberIndexes[j] = CommonMemberIndexes[j] & BranchIndexes[j];
+                    }
+                    auto OnlyLoopHeaderIndexes = xBitSet(Length);
+                    OnlyLoopHeaderIndexes[i] = true;
 
-        //                 BitSet onlyLoopHeaderIndex = new BitSet(length);
-        //                 onlyLoopHeaderIndex.set(i);
+                    if (CommonMemberIndexes == OnlyLoopHeaderIndexes) {
+                        // Only 'start' is the common basic block -> Split loop
+                        Loops.push_back(MakeLoop(StartBlockPtr, SearchZoneIndexes, MemberIndexes));
 
-        //                 if (commonMemberIndexes.equals(onlyLoopHeaderIndex)) {
-        //                     // Only 'start' is the common basic block -> Split loop
-        //                     loops.add(makeLoop(list, start, searchZoneIndexes, memberIndexes));
-
-        //                     branchIndexes.flip(0, length);
-        //                     searchZoneIndexes.and(branchIndexes);
-        //                     searchZoneIndexes.set(start.getIndex());
-
-        //                     loops.add(makeLoop(list, start, searchZoneIndexes, nextIndexes));
-        //                 } else {
-        //                     loops.add(makeLoop(list, start, searchZoneIndexes, memberIndexes));
-        //                 }
-        //             } else {
-        //                 loops.add(makeLoop(list, start, searchZoneIndexes, memberIndexes));
-        //             }
-        //         } else {
-        //             loops.add(makeLoop(list, start, searchZoneIndexes, memberIndexes));
-        //         }
-        //     }
-        // }
+                        BranchIndexes.flip();
+                        for (size_t j = 0; j < SearchZoneIndexes.size(); ++j) {
+                            SearchZoneIndexes[j] = SearchZoneIndexes[j] & BranchIndexes[j];
+                        }
+                        SearchZoneIndexes[StartBlockPtr->Index];
+                        Loops.push_back(MakeLoop(StartBlockPtr, SearchZoneIndexes, NextIndexes));
+                    }
+                    else {
+                        Loops.push_back(MakeLoop(StartBlockPtr, SearchZoneIndexes, MemberIndexes));
+                    }
+                }
+                else {
+                    Loops.push_back(MakeLoop(StartBlockPtr, SearchZoneIndexes, MemberIndexes));
+                }
+            }
+            else {
+                Loops.push_back(MakeLoop(StartBlockPtr, SearchZoneIndexes, MemberIndexes));
+            }
+        }
 
         std::sort(Loops.begin(), Loops.end(), xJavaLoop::xComparator());
         return Loops;
@@ -242,7 +429,7 @@ namespace jdc
     void xJavaControlFlowGraph::ReduceLoop()
     {
         auto ArrayOfDominatorIndexes = BuildDominatorIndexes(BlockPtrList);
-        auto Loops = IdentifyNaturalLoops(BlockPtrList, ArrayOfDominatorIndexes);
+        auto Loops = IdentifyNaturalLoops(ArrayOfDominatorIndexes);
 
         // for (int i=0, loopsLength=loops.size(); i<loopsLength; i++) {
         //     Loop loop = loops.get(i);
@@ -269,17 +456,5 @@ namespace jdc
         // }
         return;
     }
-
-
-
-
-
-
-
-
-
-
-
-
 
 }
