@@ -133,40 +133,54 @@ namespace jdc
         return MemberIndexes;
     }
 
+    static size_t CheckThrowBlockOffset(xJavaBlock * BlockPtr)
+    {
+        // TODO
+        Todo();
+        return 0;
+    }
+
+    static size_t CheckSynchronizedBlockOffset(xJavaBlock * BlockPtr)
+    {
+        // TODO
+        Todo();
+        return 0;
+    }
+
     static size_t CheckMaxOffset(xJavaBlock * BlockPtr) {
         size_t MaxOffset = BlockPtr->FromOffset;
-        // size_t Offset;
+        size_t Offset = 0;
 
-        // if (basicBlock.getType() == TYPE_TRY_DECLARATION) {
-        //     for (ExceptionHandler exceptionHandler : basicBlock.getExceptionHandlers()) {
-        //         if (exceptionHandler.getInternalThrowableName() == null) {
-        //             // Search throw block
-        //             offset = checkThrowBlockOffset(exceptionHandler.getBasicBlock());
-        //         } else {
-        //             offset = checkSynchronizedBlockOffset(exceptionHandler.getBasicBlock());
-        //         }
-        //         if (maxOffset < offset) {
-        //             maxOffset = offset;
-        //         }
-        //     }
-        // } else if (basicBlock.getType() == TYPE_SWITCH_DECLARATION) {
-        //     BasicBlock lastBB = null;
-        //     BasicBlock previousBB = null;
+        if (BlockPtr->Type == xJavaBlock::TYPE_TRY_DECLARATION) {
+            for (auto & ExceptionHandler : BlockPtr->ExceptionHandlers) {
+                if (ExceptionHandler.FixedCatchTypeName.empty()) {
+                    // Search throw block
+                    Offset = CheckThrowBlockOffset(ExceptionHandler.BlockPtr);
+                } else {
+                    Offset = CheckSynchronizedBlockOffset(ExceptionHandler.BlockPtr);
+                }
+                if (MaxOffset < Offset) {
+                    MaxOffset = Offset;
+                }
+            }
+        } else if (BlockPtr->Type == xJavaBlock::TYPE_SWITCH_DECLARATION) {
+            xJavaBlock * LastBlockPtr = nullptr;
+            xJavaBlock * PreviousBlockPtr = nullptr;
 
-        //     for (SwitchCase switchCase : basicBlock.getSwitchCases()) {
-        //         BasicBlock bb = switchCase.getBasicBlock();
-        //         if ((lastBB == null) || (lastBB.getFromOffset() < bb.getFromOffset())) {
-        //             previousBB = lastBB;
-        //             lastBB = bb;
-        //         }
-        //     }
-        //     if (previousBB != null) {
-        //         offset = checkSynchronizedBlockOffset(previousBB);
-        //         if (maxOffset < offset) {
-        //             maxOffset = offset;
-        //         }
-        //     }
-        // }
+            for (auto & SwitchCase : BlockPtr->SwitchCases) {
+                xJavaBlock * SwitchCaseBlockPtr = SwitchCase.BlockPtr;
+                if (!LastBlockPtr || (LastBlockPtr->FromOffset < SwitchCaseBlockPtr->FromOffset)) {
+                    PreviousBlockPtr = LastBlockPtr;
+                    LastBlockPtr = SwitchCaseBlockPtr;
+                }
+            }
+            if (PreviousBlockPtr) {
+                Offset = CheckSynchronizedBlockOffset(PreviousBlockPtr);
+                if (MaxOffset < Offset) {
+                    MaxOffset = Offset;
+                }
+            }
+        }
 
         return MaxOffset;
     }
@@ -189,10 +203,10 @@ namespace jdc
 
         // // Extend members
         MemberIndexes.clear();
-        // recursiveForwardSearchLoopMemberIndexes(memberIndexes, searchZoneIndexes, start, maxOffset);
+        RecursiveForwardSearchLoopMemberIndexes(MemberIndexes, SearchZoneIndexes, StartBlockPtr, MaxOffset);
 
         auto Members = std::set<xJavaBlock*>();
-        for (size_t i=0; i < Length; i++) {
+        for (size_t i = 0; i < Length; ++i) {
             if (MemberIndexes[i]) {
                 Members.insert(BlockPtrList[i]);
             }
@@ -201,42 +215,42 @@ namespace jdc
         // // Search 'end' block
         xJavaBlock * EndBlockPtr = this->EndBlockPtr;
 
-        // if (start.getType() == TYPE_CONDITIONAL_BRANCH) {
-        //     // First, check natural 'end' blocks
-        //     int index = start.getBranch().getIndex();
-        //     if (memberIndexes.get(index) == false) {
-        //         end = start.getBranch();
-        //     } else {
-        //         index = start.getNext().getIndex();
-        //         if (memberIndexes.get(index) == false) {
-        //             end = start.getNext();
-        //         }
-        //     }
-        // }
+        if (StartBlockPtr->Type == xJavaBlock::TYPE_CONDITIONAL_BRANCH) {
+            // First, check natural 'end' blocks
+            auto Index = StartBlockPtr->BranchBlockPtr->Index;
+            if (!MemberIndexes[Index]) {
+                EndBlockPtr = EndBlockPtr->BranchBlockPtr;
+            } else {
+                Index = StartBlockPtr->NextBlockPtr->Index;
+                if (!MemberIndexes[Index]) {
+                    EndBlockPtr = StartBlockPtr->NextBlockPtr;
+                }
+            }
+        }
 
-        // if (end == END) {
-        //     // Not found, check all member blocks
-        //     end = searchEndBasicBlock(memberIndexes, maxOffset, members);
+        if (EndBlockPtr == this->EndBlockPtr) {
+            // Not found, check all member blocks
+            // EndBlockPtr = SearchEndBasicBlock(MemberIndexes, MaxOffset, Members);
 
-        //     if (!end.matchType(TYPE_END|TYPE_RETURN|TYPE_LOOP_START|TYPE_LOOP_CONTINUE|TYPE_LOOP_END) &&
-        //         (end.getPredecessors().size() == 1) &&
-        //         (end.getPredecessors().iterator().next().getLastLineNumber() + 1 >= end.getFirstLineNumber()))
-        //     {
-        //         HashSet<BasicBlock> set = new HashSet<>();
+            // if (!(EndBlockPtr->Type & (xJavaBlock::TYPE_END | xJavaBlock::TYPE_RETURN | xJavaBlock::TYPE_LOOP_START | xJavaBlock::TYPE_LOOP_CONTINUE | xJavaBlock::TYPE_LOOP_END)) &&
+            //     (EndBlockPtr->Predecessors.size() == 1)) { // TODO: check if it works w/o line number info
+            //     // && (EndBlockPtr->Predecessors[0].getLastLineNumber() + 1 >= end.getFirstLineNumber()))
+            // {
+            //     auto Set = new HashSet<>();
 
-        //         if (recursiveForwardSearchLastLoopMemberIndexes(members, searchZoneIndexes, set, end, null)) {
-        //             members.addAll(set);
+            //     if (RecursiveForwardSearchLastLoopMemberIndexes(members, searchZoneIndexes, set, end, null)) {
+            //         members.addAll(set);
 
-        //             for (BasicBlock member : set) {
-        //                 if (member.getIndex() >= 0) {
-        //                     memberIndexes.set(member.getIndex());
-        //                 }
-        //             }
+            //         for (BasicBlock member : set) {
+            //             if (member.getIndex() >= 0) {
+            //                 MemberIndexes.set(member.getIndex());
+            //             }
+            //         }
 
-        //             end = searchEndBasicBlock(memberIndexes, maxOffset, set);
-        //         }
-        //     }
-        // }
+            //         end = searchEndBasicBlock(MemberIndexes, maxOffset, set);
+            //     }
+            // }
+        }
 
         // // Extend last member
         // if (end != END) {
