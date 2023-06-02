@@ -14,15 +14,16 @@ namespace jdc
         xJavaBlock *            StartBlockPtr;
         xJavaBlock *            EndBlockPtr;
         std::set<xJavaBlock *>  MemberBlocks;
+
+        /*
+        * Smaller loop first
+        */
+        struct xComparator  {
+            bool operator() (const xJavaLoop & lhs, const xJavaLoop & rhs) { // Compare
+                return lhs.MemberBlocks.size() < rhs.MemberBlocks.size();
+            }
+        };
     };
 
-    /*
-     * Smaller loop first
-     */
-    struct xLoopComparator  {
-        bool operator() (const xJavaLoop & lhs, const xJavaLoop & rhs) { // Compare
-            return lhs.MemberBlocks.size() < rhs.MemberBlocks.size();
-        }
-    };
 
 }

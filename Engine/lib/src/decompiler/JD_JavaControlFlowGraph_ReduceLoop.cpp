@@ -94,7 +94,7 @@ namespace jdc
             switch (BlockPtr->Type) {
                 case xJavaBlock::TYPE_CONDITIONAL_BRANCH: {
                     auto Index = BlockPtr->BranchBlockPtr->Index;
-                        X_DEBUG_PRINTF("-->B %zi\n", Index);
+                        // X_DEBUG_PRINTF("-->B %zi\n", Index);
                     if (DominatorIndexes[Index]) {
                         // 'branch' is a dominator -> Back edge found
                         ArrayOfMemberIndexes[Index] = SearchLoopMemberIndexes(Length, ArrayOfMemberIndexes[Index], BlockPtr, BlockPtr->BranchBlockPtr);
@@ -104,7 +104,7 @@ namespace jdc
                 case xJavaBlock::TYPE_STATEMENTS:
                 case xJavaBlock::TYPE_GOTO: {
                     auto Index = BlockPtr->NextBlockPtr->Index;
-                        X_DEBUG_PRINTF("-->N %zi\n", Index);
+                        // X_DEBUG_PRINTF("-->N %zi\n", Index);
                     if (DominatorIndexes[Index]) {
                         // 'next' is a dominator -> Back edge found
                         ArrayOfMemberIndexes[Index] = SearchLoopMemberIndexes(Length, ArrayOfMemberIndexes[Index], BlockPtr, BlockPtr->NextBlockPtr);
@@ -114,7 +114,7 @@ namespace jdc
                 case xJavaBlock::TYPE_SWITCH_DECLARATION: {
                     for (auto SwitchCase : BlockPtr->SwitchCases) {
                         auto Index = SwitchCase.BlockPtr->Index;
-                        X_DEBUG_PRINTF("-->S %zi\n", Index);
+                        // X_DEBUG_PRINTF("-->S %zi\n", Index);
                         if (DominatorIndexes[Index]) {
                             // 'switchCase' is a dominator -> Back edge found
                             ArrayOfMemberIndexes[Index] = SearchLoopMemberIndexes(Length, ArrayOfMemberIndexes[Index], BlockPtr, SwitchCase.BlockPtr);
@@ -126,14 +126,116 @@ namespace jdc
             }
         }
 
+        // for(size_t i = 0 ; i < ArrayOfMemberIndexes.size(); ++i) {
+        //     X_DEBUG_PRINTF("%zi %s\n", i, ToString(ArrayOfMemberIndexes[i]).c_str());
+        // }
+
         // Loops & 'try' statements
+        for (size_t i = 0 ; i < Length; ++i) {
+            auto & MemberIndexes = ArrayOfMemberIndexes[i];
+            if (MemberIndexes.empty()) {
+                continue;
+            }
+            size_t MaxOffset = 0;
+            for (size_t j = 0; j < Length; ++j) {
+                if (MemberIndexes[j]) {
+                    size_t Offset = BlockPtrList[j]->FromOffset;
+                    if (MaxOffset < Offset) {
+                        MaxOffset = Offset;
+                    }
+                }
+            }
+
+            auto StartBlockPtr = BlockPtrList[i];
+            auto & StartDominatorIndexes = ArrayOfDominatorIndexes[i];
+
+            if ((StartBlockPtr->Type == xJavaBlock::TYPE_TRY_DECLARATION)
+                && (MaxOffset != StartBlockPtr->FromOffset)
+                && (MaxOffset < StartBlockPtr->ExceptionHandlers[0].BlockPtr->FromOffset)) {
+
+                // 'try' statement outside the loop
+                auto NewStartBlockPtr = StartBlockPtr->NextBlockPtr;
+                auto & NewStartBlockPredecessors = NewStartBlockPtr->Predecessors;
+
+                // Loop in 'try' statement
+                for (auto Iter = NewStartBlockPredecessors.begin(); Iter != NewStartBlockPredecessors.end();) {
+                    auto PredecessorBlockPtr = *Iter;
+                    if (!StartDominatorIndexes[PredecessorBlockPtr->Index]) {
+                        Iter = NewStartBlockPredecessors.erase(Iter);
+                        PredecessorBlockPtr->Replace(StartBlockPtr, NewStartBlockPtr);
+                        NewStartBlockPtr->Predecessors.insert(PredecessorBlockPtr);
+                    }
+                    else {
+                        ++Iter;
+                    }
+                }
+
+                MemberIndexes[StartBlockPtr->Index] = false;
+                ArrayOfMemberIndexes[NewStartBlockPtr->Index] = std::move(MemberIndexes);
+            }
+        }
+
+        X_DEBUG_PRINTF("xxxxxxxxxxxxxxxxx\n");
         for(size_t i = 0 ; i < ArrayOfMemberIndexes.size(); ++i) {
             X_DEBUG_PRINTF("%zi %s\n", i, ToString(ArrayOfMemberIndexes[i]).c_str());
         }
 
         // Build loops
         auto Loops = std::vector<xJavaLoop>(); // return value
+        // for (int i=0; i<length; i++) {
+        //     if (arrayOfMemberIndexes[i] != null) {
+        //         BitSet memberIndexes = arrayOfMemberIndexes[i];
 
+        //         // Unoptimize loop
+        //         BasicBlock start = list.get(i);
+        //         BitSet startDominatorIndexes = arrayOfDominatorIndexes[i];
+
+        //         BitSet searchZoneIndexes = new BitSet(length);
+        //         searchZoneIndexes.or(startDominatorIndexes);
+        //         searchZoneIndexes.flip(0, length);
+        //         searchZoneIndexes.set(start.getIndex());
+
+        //         if (start.getType() == TYPE_CONDITIONAL_BRANCH) {
+        //             if ((start.getNext() != start) &&
+        //                 (start.getBranch() != start) &&
+        //                 memberIndexes.get(start.getNext().getIndex()) &&
+        //                 memberIndexes.get(start.getBranch().getIndex()))
+        //             {
+        //                 // 'next' & 'branch' blocks are inside the loop -> Split loop ?
+        //                 BitSet nextIndexes = new BitSet(length);
+        //                 BitSet branchIndexes = new BitSet(length);
+
+        //                 recursiveForwardSearchLoopMemberIndexes(nextIndexes, memberIndexes, start.getNext(), start);
+        //                 recursiveForwardSearchLoopMemberIndexes(branchIndexes, memberIndexes, start.getBranch(), start);
+
+        //                 BitSet commonMemberIndexes = (BitSet)nextIndexes.clone();
+        //                 commonMemberIndexes.and(branchIndexes);
+
+        //                 BitSet onlyLoopHeaderIndex = new BitSet(length);
+        //                 onlyLoopHeaderIndex.set(i);
+
+        //                 if (commonMemberIndexes.equals(onlyLoopHeaderIndex)) {
+        //                     // Only 'start' is the common basic block -> Split loop
+        //                     loops.add(makeLoop(list, start, searchZoneIndexes, memberIndexes));
+
+        //                     branchIndexes.flip(0, length);
+        //                     searchZoneIndexes.and(branchIndexes);
+        //                     searchZoneIndexes.set(start.getIndex());
+
+        //                     loops.add(makeLoop(list, start, searchZoneIndexes, nextIndexes));
+        //                 } else {
+        //                     loops.add(makeLoop(list, start, searchZoneIndexes, memberIndexes));
+        //                 }
+        //             } else {
+        //                 loops.add(makeLoop(list, start, searchZoneIndexes, memberIndexes));
+        //             }
+        //         } else {
+        //             loops.add(makeLoop(list, start, searchZoneIndexes, memberIndexes));
+        //         }
+        //     }
+        // }
+
+        std::sort(Loops.begin(), Loops.end(), xJavaLoop::xComparator());
         return Loops;
     }
 
