@@ -3,7 +3,7 @@ set -e
 
 cd build/engine
 rm -rf "./.local/"
-make -j ${PARAL}
+make
 make test
 make install
 cd ../..

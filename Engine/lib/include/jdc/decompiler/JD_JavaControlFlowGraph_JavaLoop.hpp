@@ -1,5 +1,6 @@
 #pragma once
 #include "./_.hpp"
+#include "./JD_JavaControlFlowGraph_JavaBlock.hpp"
 #include "../base/JD_Instructions.hpp"
 #include <memory>
 #include <set>
@@ -13,7 +14,7 @@ namespace jdc
     {
         xJavaBlock *            StartBlockPtr;
         xJavaBlock *            EndBlockPtr;
-        std::set<xJavaBlock *>  MemberBlocks;
+        xJavaBlockPtrSet        MemberBlocks;
 
         /*
         * Smaller loop first

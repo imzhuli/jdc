@@ -28,10 +28,7 @@ namespace jdc
         std::vector<xJavaLocalVariable>            LocalVariableList;
         size_t                                     FirstVariableIndex;
         std::vector<std::unique_ptr<xJavaBlock>>   BlockList;
-        std::vector<xJavaBlock*>                   BlockPtrList; // raw pointer version of block list
-
-        std::unique_ptr<xJavaBlock>                EndBlockUPtr;
-        xJavaBlock *                               EndBlockPtr;
+        xJavaBlockPtrList                   BlockPtrList; // raw pointer version of block list
 
     protected:
         const xJavaMethod *                        _JavaMethodPtr;
@@ -60,8 +57,19 @@ namespace jdc
             return BlockPtr;
         }
 
-        X_PRIVATE_MEMBER xJavaLoop MakeLoop(xJavaBlock * StartBlockPtr, const xBitSet & SearchZoneIndexes, xBitSet & MemberIndexes);
+        X_INLINE xJavaBlock * NewJumpBlock(xJavaBlock * SourceBlockPtr, xJavaBlock * TargetBlockPtr) {
+            auto NewBlockPtr = NewBlock(xJavaBlock::TYPE_JUMP, SourceBlockPtr->FromOffset, TargetBlockPtr->FromOffset);
+            NewBlockPtr->Predecessors.insert(SourceBlockPtr);
+
+            auto & TargetBlockPredecessors = TargetBlockPtr->Predecessors;
+            TargetBlockPredecessors.erase(TargetBlockPredecessors.find(SourceBlockPtr));
+            return NewBlockPtr;
+        }
+
+        X_PRIVATE_MEMBER xJavaLoop MakeLoop(xJavaBlock * StartBlockPtr, xBitSet & SearchZoneIndexes, xBitSet & MemberIndexes);
         X_PRIVATE_MEMBER std::vector<xJavaLoop> IdentifyNaturalLoops(const std::vector<xBitSet> & ArrayOfDominatorIndexes);
+        X_PRIVATE_MEMBER xJavaBlock * SearchEndBasicBlock(const xBitSet & MemberIndexes, size_t MaxOffset, const xJavaBlockPtrSet & Members);
+        X_PRIVATE_MEMBER xJavaBlock * ReduceLoop(xJavaLoop & Loop);
         X_PRIVATE_MEMBER void ReduceGoto();
         X_PRIVATE_MEMBER void ReduceLoop();
 

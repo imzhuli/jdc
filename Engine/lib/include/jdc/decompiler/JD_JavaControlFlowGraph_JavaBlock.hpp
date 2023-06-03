@@ -3,12 +3,17 @@
 #include "./JD_JavaMethod.hpp"
 #include "../base/JD_Instructions.hpp"
 #include <memory>
+#include <vector>
 #include <set>
 
 namespace jdc
 {
     class xJavaControlFlowGraph;
     class xJavaBlock;
+
+    using xJavaBlockPtr = xJavaBlock *;
+    using xJavaBlockPtrSet = std::set<xJavaBlockPtr>;
+    using xJavaBlockPtrList = std::vector<xJavaBlockPtr>;
 
     class xJavaSwitchCase
     {
@@ -28,7 +33,7 @@ namespace jdc
             }
         }
 
-        void Replace(const std::set<xJavaBlock *> & Olds, xJavaBlock * NewBlockPtr) {
+        void Replace(const xJavaBlockPtrSet & Olds, xJavaBlock * NewBlockPtr) {
             if (Olds.find(BlockPtr) != Olds.end()) {
                 BlockPtr = NewBlockPtr;
             }
@@ -57,7 +62,7 @@ namespace jdc
             }
         }
 
-        void Replace(const std::set<xJavaBlock *> & Olds, xJavaBlock * NewBlockPtr) {
+        void Replace(const xJavaBlockPtrSet & Olds, xJavaBlock * NewBlockPtr) {
             if (Olds.find(BlockPtr) != Olds.end()) {
                 BlockPtr = NewBlockPtr;
             }
@@ -126,7 +131,7 @@ namespace jdc
     public:
         X_PRIVATE_MEMBER xJavaBlock(xJavaControlFlowGraph * CFGPtr, eType Type, size_t FromOffset = 0, size_t ToOffet = 0);
 
-        X_INLINE const class xJavaControlFlowGraph * GetControlFlowGraph() const { assert(_JavaControlFlowGraphPtr); return _JavaControlFlowGraphPtr; }
+        X_INLINE class xJavaControlFlowGraph * GetControlFlowGraph() const { assert(_JavaControlFlowGraphPtr); return _JavaControlFlowGraphPtr; }
         X_PRIVATE_MEMBER const xJavaClass *  GetClass() const;
         X_PRIVATE_MEMBER const xJavaMethod * GetMethod() const;
         X_INLINE const std::vector<xel::ubyte> * GetCode() const { assert(_CodeBinaryPtr); return _CodeBinaryPtr; }
@@ -137,7 +142,7 @@ namespace jdc
 
         X_PRIVATE_MEMBER bool Contains(xJavaBlock * CheckBlockPtr) const;
         X_PRIVATE_MEMBER void Replace(xJavaBlock * OldBlockPtr, xJavaBlock * NewBlockPtr);
-        X_PRIVATE_MEMBER void Replace(const std::set<xJavaBlock *> & Olds, xJavaBlock * NewBlockPtr);
+        X_PRIVATE_MEMBER void Replace(const xJavaBlockPtrSet & Olds, xJavaBlock * NewBlockPtr);
         X_PRIVATE_MEMBER void AddExceptionHandler(const xJavaExceptionHandler & ExceptionHandler);
         X_PRIVATE_MEMBER void InverseCondition();
 
@@ -159,12 +164,20 @@ namespace jdc
         xJavaBlock * SecondSubBlockPtr = {};
         bool         MustInverseCondition = true;
 
-        std::set<xJavaBlock *>               Predecessors;
+        xJavaBlockPtrSet                     Predecessors;
         std::vector<xJavaSwitchCase>         SwitchCases;
         std::vector<xJavaExceptionHandler>   ExceptionHandlers;
+
+    public:
+        X_PRIVATE_STATIC_MEMBER xJavaBlock SwitchBreak;
+        X_PRIVATE_STATIC_MEMBER xJavaBlock LoopStart;
+        X_PRIVATE_STATIC_MEMBER xJavaBlock LoopContinue;
+        X_PRIVATE_STATIC_MEMBER xJavaBlock LoopEnd;
+        X_PRIVATE_STATIC_MEMBER xJavaBlock End;
+        X_PRIVATE_STATIC_MEMBER xJavaBlock Return;
+        X_INLINE bool IsTheEnd() { return this == &End; }
     };
 
     X_PRIVATE std::string ToString(const xJavaBlock * BlockPtr);
     X_PRIVATE std::string ToString(const xJavaBlock::eType Type);
-
 }

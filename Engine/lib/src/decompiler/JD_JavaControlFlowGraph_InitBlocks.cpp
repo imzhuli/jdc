@@ -74,14 +74,14 @@ namespace jdc
         size_t CodeLength = CodeBinary.size();
         auto & ExceptionTable = CodeAttributePtr->ExceptionTable;
 
-        auto BlockMap           = std::vector<xJavaBlock*>(CodeLength);
+        auto BlockMap           = xJavaBlockPtrList(CodeLength);
         auto CodeTypes          = std::vector<eCodeType>(CodeLength);
         auto NextOffsets        = std::vector<size_t>(CodeLength);
         auto BranchOffsets      = std::vector<size_t>(CodeLength);;
         auto SwitchValueTable   = std::vector<std::vector<int32_t>>(CodeLength);
         auto SwitchOffsetTable  = std::vector<std::vector<size_t>>(CodeLength);
 
-        auto MARK = EndBlockPtr;
+        auto MARK = &xJavaBlock::End;
         BlockMap[0] = MARK;
 
         /**
@@ -397,7 +397,7 @@ namespace jdc
          */
 
         // set block types:
-        auto Blocks = std::vector<xJavaBlock*>();
+        auto Blocks = xJavaBlockPtrList();
         Blocks.reserve(BlockList.size());
         auto SuccessBlockPtr = BlockList[1].get();
         StartBlockPtr->NextBlockPtr = SuccessBlockPtr;
@@ -423,11 +423,11 @@ namespace jdc
                     break;
                 case CT_THROW:
                     BlockPtr->Type = xJavaBlock::TYPE_THROW;
-                    BlockPtr->NextBlockPtr = EndBlockPtr;
+                    BlockPtr->NextBlockPtr = &xJavaBlock::End;
                     break;
                 case CT_RETURN:
                     BlockPtr->Type = xJavaBlock::TYPE_RETURN;
-                    BlockPtr->NextBlockPtr = EndBlockPtr;
+                    BlockPtr->NextBlockPtr = &xJavaBlock::End;
                     break;
                 case CT_CONDITIONAL:
                     BlockPtr->Type = xJavaBlock::TYPE_CONDITIONAL_BRANCH;
@@ -470,11 +470,11 @@ namespace jdc
                     break;
                 case CT_RET:
                     BlockPtr->Type = xJavaBlock::TYPE_RET;
-                    BlockPtr->NextBlockPtr = EndBlockPtr;
+                    BlockPtr->NextBlockPtr = &xJavaBlock::End;
                     break;
                 case CT_RETURN_VALUE:
                     BlockPtr->Type = xJavaBlock::TYPE_RETURN_VALUE;
-                    BlockPtr->NextBlockPtr = EndBlockPtr;
+                    BlockPtr->NextBlockPtr = &xJavaBlock::End;
                     break;
                 default:
                     BlockPtr->Type = xJavaBlock::TYPE_STATEMENTS;
@@ -564,7 +564,7 @@ namespace jdc
         for (auto BlockPtr : Blocks) {
             assert(BlockPtr);
             auto NextBlockPtr = BlockPtr->NextBlockPtr;
-            auto PredecessorsPtr = static_cast<std::set<xJavaBlock *>*>(nullptr);
+            auto PredecessorsPtr = static_cast<xJavaBlockPtrSet*>(nullptr);
 
             if (BlockPtr->Type != xJavaBlock::TYPE_STATEMENTS) {
                 continue;

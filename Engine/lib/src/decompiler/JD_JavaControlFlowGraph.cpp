@@ -29,9 +29,6 @@ namespace jdc
     {
         _JavaMethodPtr = JavaMethodPtr;
         _JavaClassPtr = JavaMethodPtr->JavaClassPtr;
-
-        EndBlockUPtr = std::make_unique<xJavaBlock>(this, xJavaBlock::TYPE_END);
-        EndBlockPtr  = EndBlockUPtr.get();
     }
 
     std::unique_ptr<xJavaControlFlowGraph> xJavaControlFlowGraph::ParseByteCode(const xJavaMethod * JavaMethodPtr)

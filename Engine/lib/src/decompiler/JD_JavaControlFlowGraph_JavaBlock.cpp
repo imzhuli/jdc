@@ -14,6 +14,53 @@ namespace jdc
 
     using namespace std::literals::string_literals;
 
+    static auto const SwitchBreak        = xJavaBlock(nullptr, xJavaBlock::TYPE_SWITCH_BREAK);
+    static auto const LoopStart          = xJavaBlock(nullptr, xJavaBlock::TYPE_LOOP_START);
+    static auto const LoopContinue       = xJavaBlock(nullptr, xJavaBlock::TYPE_LOOP_CONTINUE);
+    static auto const LoopEnd            = xJavaBlock(nullptr, xJavaBlock::TYPE_LOOP_END);
+    static auto const End                = xJavaBlock(nullptr, xJavaBlock::TYPE_END);
+    static auto const Return             = xJavaBlock(nullptr, xJavaBlock::TYPE_RETURN);
+
+    xJavaBlock xJavaBlock::SwitchBreak   = xJavaBlock(nullptr, xJavaBlock::TYPE_SWITCH_BREAK);
+    xJavaBlock xJavaBlock::LoopStart     = xJavaBlock(nullptr, xJavaBlock::TYPE_LOOP_START);
+    xJavaBlock xJavaBlock::LoopContinue  = xJavaBlock(nullptr, xJavaBlock::TYPE_LOOP_CONTINUE);
+    xJavaBlock xJavaBlock::LoopEnd       = xJavaBlock(nullptr, xJavaBlock::TYPE_LOOP_END);
+    xJavaBlock xJavaBlock::End           = xJavaBlock(nullptr, xJavaBlock::TYPE_END);
+    xJavaBlock xJavaBlock::Return        = xJavaBlock(nullptr, xJavaBlock::TYPE_RETURN);
+
+    #define CHECK_GLOBAL_BLOCKS(x) do {                               \
+        if (x.Type != xJavaBlock::x.Type) {                           \
+            Fatal("Failed Final Check: Type" #x);                     \
+        }                                                             \
+        if (x.GetControlFlowGraph() || x.GetCode()) {                 \
+            Fatal("Failed Final Check: GetControlFlowGraph " #x);     \
+        }                                                             \
+        if  (  x.Index                                                \
+            || x.FromOffset                                           \
+            || x.ToOffset                                             \
+            || x.NextBlockPtr                                         \
+            || x.BranchBlockPtr                                       \
+            || x.ConditionBlockPtr                                    \
+            || x.FirstSubBlockPtr                                     \
+            || x.SecondSubBlockPtr                                    \
+            || !x.MustInverseCondition                                \
+            || !x.Predecessors.empty()                                \
+            || !x.SwitchCases.empty()                                 \
+            || !x.ExceptionHandlers.empty()                           \
+            ) {                                                       \
+            Fatal("Failed Final Check: Member " #x);                  \
+        }                                                             \
+    } while(false)
+
+    auto FinalCheckGuard = xScopeGuard([]{
+        CHECK_GLOBAL_BLOCKS(SwitchBreak);
+        CHECK_GLOBAL_BLOCKS(LoopStart);
+        CHECK_GLOBAL_BLOCKS(LoopContinue);
+        CHECK_GLOBAL_BLOCKS(LoopEnd);
+        CHECK_GLOBAL_BLOCKS(End);
+        CHECK_GLOBAL_BLOCKS(Return);
+    });
+
     #define BLOCK_TYPE_TO_STRING(x) case (xJavaBlock::x): return #x##s
     std::string ToString(const xJavaBlock::eType Type)
     {
@@ -110,9 +157,14 @@ namespace jdc
     xJavaBlock::xJavaBlock(xJavaControlFlowGraph * CFGPtr, eType Type, size_t FromOffset, size_t ToOffset)
     : _JavaControlFlowGraphPtr(CFGPtr), Type(Type), FromOffset(FromOffset), ToOffset(ToOffset)
     {
-        auto CodeAttributePtr = (const xAttributeCode *)GetAttributePtr(GetMethod()->Converted.AttributeMap, "Code");
-        assert(CodeAttributePtr);
-        _CodeBinaryPtr = &CodeAttributePtr->CodeBinary;
+        if (CFGPtr) {
+            assert(!(Type & (TYPE_SWITCH_BREAK | TYPE_LOOP_START | TYPE_LOOP_CONTINUE | TYPE_LOOP_END | TYPE_END | TYPE_RETURN)));
+            auto CodeAttributePtr = (const xAttributeCode *)GetAttributePtr(GetMethod()->Converted.AttributeMap, "Code");
+            assert(CodeAttributePtr);
+            _CodeBinaryPtr = &CodeAttributePtr->CodeBinary;
+        } else {
+            assert(Type & (TYPE_SWITCH_BREAK | TYPE_LOOP_START | TYPE_LOOP_CONTINUE | TYPE_LOOP_END | TYPE_END | TYPE_RETURN));
+        }
     }
 
     const xJavaClass * xJavaBlock::GetClass() const
@@ -914,7 +966,7 @@ namespace jdc
         }
     }
 
-    void xJavaBlock::Replace(const std::set<xJavaBlock *> & Olds, xJavaBlock * NewBlockPtr)
+    void xJavaBlock::Replace(const xJavaBlockPtrSet & Olds, xJavaBlock * NewBlockPtr)
     {
         if (Olds.find(NextBlockPtr) != Olds.end()) {
             NextBlockPtr = NewBlockPtr;
