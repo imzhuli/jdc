@@ -26,5 +26,6 @@ namespace jdc
         };
     };
 
+    X_PRIVATE std::string ToString(const xJavaLoop & Loop);
 
 }

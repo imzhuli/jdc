@@ -131,10 +131,18 @@ namespace jdc
     public:
         X_PRIVATE_MEMBER xJavaBlock(xJavaControlFlowGraph * CFGPtr, eType Type, size_t FromOffset = 0, size_t ToOffet = 0);
 
-        X_INLINE class xJavaControlFlowGraph * GetControlFlowGraph() const { assert(_JavaControlFlowGraphPtr); return _JavaControlFlowGraphPtr; }
+        X_INLINE class xJavaControlFlowGraph * GetControlFlowGraph() const {
+            assert(_JavaControlFlowGraphPtr || Type & (TYPE_SWITCH_BREAK | TYPE_LOOP_START | TYPE_LOOP_CONTINUE | TYPE_LOOP_END | TYPE_END | TYPE_RETURN));
+            return _JavaControlFlowGraphPtr;
+            }
+        X_INLINE const std::vector<xel::ubyte> * GetCode() const {
+            assert(_CodeBinaryPtr || Type & (TYPE_SWITCH_BREAK | TYPE_LOOP_START | TYPE_LOOP_CONTINUE | TYPE_LOOP_END | TYPE_END | TYPE_RETURN));
+            return _CodeBinaryPtr;
+            }
+
         X_PRIVATE_MEMBER const xJavaClass *  GetClass() const;
         X_PRIVATE_MEMBER const xJavaMethod * GetMethod() const;
-        X_INLINE const std::vector<xel::ubyte> * GetCode() const { assert(_CodeBinaryPtr); return _CodeBinaryPtr; }
+
         X_PRIVATE_MEMBER xOpCode GetNextOpCode(size_t MaxOffset) const;
         X_PRIVATE_MEMBER xOpCode GetLastOpCode() const;
         X_PRIVATE_MEMBER xel::ssize_t EvalStackDepth() const;
@@ -175,7 +183,9 @@ namespace jdc
         X_PRIVATE_STATIC_MEMBER xJavaBlock LoopEnd;
         X_PRIVATE_STATIC_MEMBER xJavaBlock End;
         X_PRIVATE_STATIC_MEMBER xJavaBlock Return;
-        X_INLINE bool IsTheEnd() { return this == &End; }
+
+        X_INLINE bool IsImmutable() const { return Type & (TYPE_SWITCH_BREAK | TYPE_LOOP_START | TYPE_LOOP_CONTINUE | TYPE_LOOP_END | TYPE_END | TYPE_RETURN); }
+        X_INLINE bool IsTheEnd() const { return this == &End; }
     };
 
     X_PRIVATE std::string ToString(const xJavaBlock * BlockPtr);

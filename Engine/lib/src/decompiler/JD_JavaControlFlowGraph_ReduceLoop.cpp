@@ -336,7 +336,7 @@ namespace jdc
             // First, check natural 'end' blocks
             auto Index = StartBlockPtr->BranchBlockPtr->Index;
             if (!MemberIndexes[Index]) {
-                EndBlockPtr = EndBlockPtr->BranchBlockPtr;
+                EndBlockPtr = StartBlockPtr->BranchBlockPtr;
             } else {
                 Index = StartBlockPtr->NextBlockPtr->Index;
                 if (!MemberIndexes[Index]) {
@@ -517,6 +517,9 @@ namespace jdc
             assert(SearchZoneIndexes == CheckSearchZoneIndexes);
             SearchZoneIndexes[StartBlockPtr->Index] = true;
 
+            X_DEBUG_PRINTF("I=%zi, MemberIndexes=%s\n", i, ToString(MemberIndexes).c_str());
+            X_DEBUG_PRINTF("I=%zi, SearchZoneIndexes=%s\n", i, ToString(SearchZoneIndexes).c_str());
+
             if (StartBlockPtr->Type == xJavaBlock::TYPE_CONDITIONAL_BRANCH) {
                 if (StartBlockPtr->NextBlockPtr != StartBlockPtr
                     && StartBlockPtr->BranchBlockPtr != StartBlockPtr
@@ -566,47 +569,44 @@ namespace jdc
     static xJavaBlock * RecheckEndBlock(xJavaBlockPtrSet & Members, xJavaBlockPtr EndBlockPtr)
     {
         do {
-    //         boolean flag = false;
+            bool Flag = false;
+            for (auto & PredecessorPtr : EndBlockPtr->Predecessors) {
+                if (Members.find(PredecessorPtr) == Members.end()) {
+                    Flag = true;
+                    break;
+                }
+            }
+            if (Flag) {
+                break;
+            }
 
-    //         for (BasicBlock predecessor : end.getPredecessors()) {
-    //             if (!members.contains(predecessor)) {
-    //                 flag = true;
-    //                 break;
-    //             }
-    //         }
-
-    //         if (flag) {
-    //             break;
-    //         }
-
-    //         // Search new 'end' block
-    //         BasicBlock newEnd = null;
+            // Search new 'end' block
             auto NewEndBlockPtr = xJavaBlockPtr(nullptr);
 
-    //         for (BasicBlock member : members) {
-    //             if (member.matchType(GROUP_SINGLE_SUCCESSOR)) {
-    //                 BasicBlock bb = member.getNext();
-    //                 if ((bb != end) && !members.contains(bb)) {
-    //                     newEnd = bb;
-    //                     break;
-    //                 }
-    //             } else if (member->Type == TYPE_CONDITIONAL_BRANCH) {
-    //                 BasicBlock bb = member.getNext();
-    //                 if ((bb != end) && !members.contains(bb)) {
-    //                     newEnd = bb;
-    //                     break;
-    //                 }
-    //                 bb = member->BranchBlockPtr;
-    //                 if ((bb != end) && !members.contains(bb)) {
-    //                     newEnd = bb;
-    //                     break;
-    //                 }
-    //             }
-    //         }
+            for (auto & Member : Members) {
+                if (Member->Type & xJavaBlock::GROUP_SINGLE_SUCCESSOR) {
+                    auto BlockPtr = Member->NextBlockPtr;
+                    if ((BlockPtr != EndBlockPtr) && Members.find(BlockPtr) == Members.end()) {
+                        NewEndBlockPtr = BlockPtr;
+                        break;
+                    }
+                } else if (Member->Type == xJavaBlock::TYPE_CONDITIONAL_BRANCH) {
+                    auto BlockPtr = Member->NextBlockPtr;
+                    if ((BlockPtr != EndBlockPtr) && Members.find(BlockPtr) == Members.end()) {
+                        NewEndBlockPtr = BlockPtr;
+                        break;
+                    }
+                    BlockPtr = Member->BranchBlockPtr;
+                    if ((BlockPtr != EndBlockPtr) && Members.find(BlockPtr) == Members.end()) {
+                        NewEndBlockPtr = BlockPtr;
+                        break;
+                    }
+                }
+            }
 
-    //         if ((newEnd == null) || (end.getFromOffset() >= newEnd.getFromOffset())) {
-    //             break;
-    //         }
+            if (!NewEndBlockPtr || (EndBlockPtr->FromOffset >= NewEndBlockPtr->FromOffset)) {
+                break;
+            }
 
             // Replace 'end' block
             if (EndBlockPtr->Type & (xJavaBlock::TYPE_RETURN | xJavaBlock::TYPE_RETURN_VALUE | xJavaBlock::TYPE_THROW)) {
@@ -630,8 +630,8 @@ namespace jdc
         auto EndBlockPtr = Loop.EndBlockPtr;
         auto & Members = Loop.MemberBlocks;
 
-        assert(StartBlockPtr->GetControlFlowGraph() == this);
-        assert(EndBlockPtr->GetControlFlowGraph() == this);
+        assert(StartBlockPtr && StartBlockPtr->GetControlFlowGraph() == this);
+        assert(!EndBlockPtr || EndBlockPtr->GetControlFlowGraph() == nullptr || EndBlockPtr->GetControlFlowGraph() == this);
 
         size_t ToOffset = StartBlockPtr->ToOffset;
 
@@ -722,6 +722,10 @@ namespace jdc
     {
         auto ArrayOfDominatorIndexes = BuildDominatorIndexes(BlockPtrList);
         auto Loops = IdentifyNaturalLoops(ArrayOfDominatorIndexes);
+
+        for (auto & Loop : Loops) {
+            X_DEBUG_PRINTF("%s\n", ToString(Loop).c_str());
+        }
 
         for (size_t i = 0, LoopsLength = Loops.size(); i < LoopsLength; ++i) {
             auto & Loop = Loops[i];
