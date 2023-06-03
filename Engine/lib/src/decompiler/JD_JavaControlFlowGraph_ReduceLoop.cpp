@@ -52,7 +52,6 @@ namespace jdc
         return ArrayOfDominatorIndexes;
     }
 
-    [[maybe_unused]]
     static void RecursiveForwardSearchLoopMemberIndexes(xBitSet & Visited, const xBitSet & SearchZoneIndexes, xJavaBlock * CurrentBlockPtr, size_t MaxOffset) {
         if ((!CurrentBlockPtr->Type & (
                 xJavaBlock::TYPE_END | xJavaBlock::TYPE_LOOP_START | xJavaBlock::TYPE_LOOP_CONTINUE | xJavaBlock::TYPE_LOOP_END | xJavaBlock::TYPE_SWITCH_BREAK))
@@ -135,16 +134,26 @@ namespace jdc
 
     static size_t CheckThrowBlockOffset(xJavaBlock * BlockPtr)
     {
-        // TODO
-        Todo();
-        return 0;
+        size_t Offset = BlockPtr->FromOffset;
+        auto Watchdog = xBitSet();
+
+        while (!(BlockPtr->Type & xJavaBlock::GROUP_END) && !Watchdog[BlockPtr->Index]) {
+            Watchdog[BlockPtr->Index] = true;
+            BlockPtr = BlockPtr->NextBlockPtr;
+        }
+        if (BlockPtr->Type == xJavaBlock::TYPE_THROW) {
+            return BlockPtr->FromOffset;
+        }
+        return Offset;
     }
 
     static size_t CheckSynchronizedBlockOffset(xJavaBlock * BlockPtr)
     {
-        // TODO
-        Todo();
-        return 0;
+        if ((BlockPtr->NextBlockPtr->Type == xJavaBlock::TYPE_TRY_DECLARATION) && (BlockPtr->GetLastOpCode() == 194)) { // MONITORENTER
+            return CheckThrowBlockOffset(BlockPtr->NextBlockPtr->ExceptionHandlers[0].BlockPtr);
+        }
+
+        return BlockPtr->FromOffset;
     }
 
     static size_t CheckMaxOffset(xJavaBlock * BlockPtr) {
