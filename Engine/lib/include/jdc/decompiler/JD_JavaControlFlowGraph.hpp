@@ -41,7 +41,6 @@ namespace jdc
         X_PRIVATE_MEMBER const xAttributeCode * GetCodeAttribute() const { return (const xAttributeCode *)GetAttributePtr(GetMethod()->Converted.AttributeMap, "Code"); }
 
     protected:
-
         X_PRIVATE_MEMBER bool Init();
         X_PRIVATE_MEMBER void Clean();
 
@@ -93,6 +92,26 @@ namespace jdc
             auto & TargetBlockPredecessors = TargetBlockPtr->Predecessors;
             TargetBlockPredecessors.erase(TargetBlockPredecessors.find(SourceBlockPtr));
             return NewBlockPtr;
+        }
+
+        X_INLINE size_t GetFirstLineNumber(xJavaBlock * BlockPtr) {
+            if (BlockPtr->IsImmutable()) {
+                return 0;
+            }
+            assert(BlockPtr->GetControlFlowGraph() == this);
+            return GetLineNumber(BlockPtr->FromOffset);
+        }
+
+        X_INLINE size_t GetLastLineNumber(xJavaBlock * BlockPtr) {
+            if (BlockPtr->IsImmutable()) {
+                return 0;
+            }
+            assert(BlockPtr->GetControlFlowGraph() == this);
+            return GetLineNumber(BlockPtr->ToOffset - 1);
+        }
+
+        X_INLINE size_t GetLineNumber(size_t CodeOffset) {
+            return 0;
         }
 
         X_PRIVATE_MEMBER xJavaLoop MakeLoop(xJavaBlock * StartBlockPtr, xBitSet & SearchZoneIndexes, xBitSet & MemberIndexes);

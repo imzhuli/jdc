@@ -16,37 +16,144 @@ namespace jdc
     static bool ReduceSwitchDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
     static bool ReduceTryDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
     static bool ReduceJsr(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
-    static xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xJavaBlock * BlockPtr, xBitSet & Visited);
+    static xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr);
+    static xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr, xJavaBlock * SubBlockPtr);
     static xJavaBlock * GetLastConditionalBranch(xJavaBlock * BlockPtr, xBitSet & Visited);
     static void RemoveLastContinueLoop(xJavaBlock * BlockPtr);
 
     bool ReduceConditionalBranch(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets)
     {
         // TODO
+        Todo();
         return true;
     }
 
     bool ReduceSwitchDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets)
     {
         // TODO
+        Todo();
         return true;
     }
 
     bool ReduceTryDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets)
     {
         // TODO
+        Todo();
         return true;
     }
 
     bool ReduceJsr(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets)
     {
         // TODO
+        Todo();
         return true;
     }
 
-    xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xJavaBlock * BlockPtr, xBitSet & Visited)
+    xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr)
     {
-        // TODO
+        auto UpdateBasicBlock = xJavaBlockPtr();
+
+        if (!(BlockPtr->Type & xJavaBlock::GROUP_END) && !Visited[BlockPtr->Index]) {
+            Visited[BlockPtr->Index] = true;
+            switch (BlockPtr->Type) {
+                case xJavaBlock::TYPE_CONDITIONAL_BRANCH:
+                case xJavaBlock::TYPE_JSR:
+                case xJavaBlock::TYPE_CONDITION:
+                case xJavaBlock::TYPE_CONDITION_TERNARY_OPERATOR:
+                    UpdateBasicBlock = SearchUpdateBlockAndCreateContinueLoop(Visited, BlockPtr, BlockPtr->BranchBlockPtr);
+                    // pass through
+                case xJavaBlock::TYPE_START:
+                case xJavaBlock::TYPE_STATEMENTS:
+                case xJavaBlock::TYPE_GOTO:
+                case xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR:
+                case xJavaBlock::TYPE_LOOP:
+                    if (!UpdateBasicBlock) {
+                        UpdateBasicBlock = SearchUpdateBlockAndCreateContinueLoop(Visited, BlockPtr, BlockPtr->NextBlockPtr);
+                    }
+                    break;
+                case xJavaBlock::TYPE_TRY:
+                case xJavaBlock::TYPE_TRY_JSR:
+                case xJavaBlock::TYPE_TRY_ECLIPSE:
+                    UpdateBasicBlock = SearchUpdateBlockAndCreateContinueLoop(Visited, BlockPtr, BlockPtr->FirstSubBlockPtr);
+                    // pass through
+                case xJavaBlock::TYPE_TRY_DECLARATION:
+                    for (auto & ExceptionHandler : BlockPtr->ExceptionHandlers) {
+                        if (!UpdateBasicBlock) {
+                            UpdateBasicBlock = SearchUpdateBlockAndCreateContinueLoop(Visited, BlockPtr, ExceptionHandler.BlockPtr);
+                        }
+                    }
+                    if (!UpdateBasicBlock) {
+                        UpdateBasicBlock = SearchUpdateBlockAndCreateContinueLoop(Visited, BlockPtr, BlockPtr->NextBlockPtr);
+                    }
+                    break;
+                case xJavaBlock::TYPE_IF_ELSE:
+                case xJavaBlock::TYPE_TERNARY_OPERATOR:
+                    UpdateBasicBlock = SearchUpdateBlockAndCreateContinueLoop(Visited, BlockPtr, BlockPtr->SecondSubBlockPtr);
+                    // pass through
+                case xJavaBlock::TYPE_IF:
+                    if (!UpdateBasicBlock) {
+                        UpdateBasicBlock = SearchUpdateBlockAndCreateContinueLoop(Visited, BlockPtr, BlockPtr->FirstSubBlockPtr);
+                    }
+                    if (!UpdateBasicBlock) {
+                        UpdateBasicBlock = SearchUpdateBlockAndCreateContinueLoop(Visited, BlockPtr, BlockPtr->NextBlockPtr);
+                    }
+                    break;
+                case xJavaBlock::TYPE_CONDITION_OR:
+                case xJavaBlock::TYPE_CONDITION_AND:
+                    UpdateBasicBlock = SearchUpdateBlockAndCreateContinueLoop(Visited, BlockPtr, BlockPtr->FirstSubBlockPtr);
+                    if (!UpdateBasicBlock) {
+                        UpdateBasicBlock = SearchUpdateBlockAndCreateContinueLoop(Visited, BlockPtr, BlockPtr->SecondSubBlockPtr);
+                    }
+                    break;
+                case xJavaBlock::TYPE_SWITCH:
+                    UpdateBasicBlock = SearchUpdateBlockAndCreateContinueLoop(Visited, BlockPtr, BlockPtr->NextBlockPtr);
+                    // pass through
+                case xJavaBlock::TYPE_SWITCH_DECLARATION:
+                    for (auto & SwitchCase : BlockPtr->SwitchCases) {
+                        if (!UpdateBasicBlock) {
+                            UpdateBasicBlock = SearchUpdateBlockAndCreateContinueLoop(Visited, BlockPtr, SwitchCase.BlockPtr);
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        return UpdateBasicBlock;
+    }
+
+    xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr, xJavaBlock * SubBlockPtr) {
+        if (SubBlockPtr) {
+            auto * CFGPtr = BlockPtr->GetControlFlowGraph();
+            assert(CFGPtr && CFGPtr == SubBlockPtr->GetControlFlowGraph());
+
+            if (BlockPtr->FromOffset < SubBlockPtr->FromOffset) {
+                Todo();
+        //         if (BlockPtr->getFirstLineNumber() == Expression.UNKNOWN_LINE_NUMBER) {
+        //             if (SubBlockPtr->matchType(GROUP_SINGLE_SUCCESSOR) && (SubBlockPtr->NextBlockPtr.getType() == TYPE_LOOP_START)) {
+        //                 int stackDepth = ByteCodeUtil.evalStackDepth(SubBlockPtr);
+
+        //                 while (stackDepth != 0) {
+        //                     Set<BasicBlock> predecessors = SubBlockPtr->getPredecessors();
+        //                     if (predecessors.size() != 1) {
+        //                         break;
+        //                     }
+        //                     stackDepth += ByteCodeUtil.evalStackDepth(SubBlockPtr = predecessors.iterator().next());
+        //                 }
+
+        //                 removePredecessors(SubBlockPtr);
+        //                 return SubBlockPtr;
+        //             }
+        //         } else if (BlockPtr->getFirstLineNumber() > SubBlockPtr->getFirstLineNumber()) {
+        //             removePredecessors(SubBlockPtr);
+        //             return SubBlockPtr;
+        //         }
+            }
+
+            return SearchUpdateBlockAndCreateContinueLoop(Visited, SubBlockPtr);
+        }
+
         return nullptr;
     }
 
@@ -236,7 +343,7 @@ namespace jdc
         if (!Reduced) {
             Visited = VisitedBackup; // restore
             auto VisitedMembers = xBitSet();
-            auto UpdateBlockPtr = SearchUpdateBlockAndCreateContinueLoop(BlockPtr->FirstSubBlockPtr, VisitedMembers);
+            auto UpdateBlockPtr = SearchUpdateBlockAndCreateContinueLoop(VisitedMembers, BlockPtr->FirstSubBlockPtr);
             Reduced = Reduce(BlockPtr->FirstSubBlockPtr, Visited, JstTargets);
 
             if (UpdateBlockPtr) {
