@@ -249,27 +249,27 @@ namespace jdc
 
     void RemoveJsrAndMergeSubTry(xJavaBlock * BlockPtr)
     {
-        // if (BlockPtr->getExceptionHandlers().size() == 1) {
-        //     BasicBlock subTry = BlockPtr->getSub1();
+        if (BlockPtr->ExceptionHandlers.size() == 1) {
+            auto SubTryBlockPtr = BlockPtr->FirstSubBlockPtr;
 
-        //     if (subTry.matchType(TYPE_TRY|TYPE_TRY_JSR|TYPE_TRY_ECLIPSE)) {
-        //         for (BasicBlock.ExceptionHandler exceptionHandler : subTry.getExceptionHandlers()) {
-        //             if (exceptionHandler.getInternalThrowableName() == null)
-        //                 return;
-        //         }
+            if (SubTryBlockPtr->Type & (xJavaBlock::TYPE_TRY | xJavaBlock::TYPE_TRY_JSR | xJavaBlock::TYPE_TRY_ECLIPSE)) {
+                for (auto & ExceptionHandler : SubTryBlockPtr->ExceptionHandlers) {
+                    if (ExceptionHandler.FixedCatchTypeName.empty())
+                        return;
+                }
 
-        //         // Append 'catch' handlers
-        //         for (BasicBlock.ExceptionHandler exceptionHandler : subTry.getExceptionHandlers()) {
-        //             BasicBlock bb = exceptionHandler.getBasicBlock();
-        //             BlockPtr->addExceptionHandler(exceptionHandler.getInternalThrowableName(), bb);
-        //             bb.replace(subTry, BlockPtr->;
-        //         }
+                // Append 'catch' handlers
+                for (auto & ExceptionHandler : SubTryBlockPtr->ExceptionHandlers) {
+                    auto ExceptionHandlerBlockPtr = ExceptionHandler.BlockPtr;
+                    BlockPtr->ExceptionHandlers.push_back(xJavaExceptionHandler{ ExceptionHandler.FixedCatchTypeName, ExceptionHandlerBlockPtr});
+                    ExceptionHandlerBlockPtr->Replace(SubTryBlockPtr, BlockPtr);
+                }
 
-        //         // Move 'try' clause to parent 'try' block
-        //         BlockPtr->setSub1(subTry.getSub1());
-        //         subTry.getSub1().replace(subTry, BlockPtr);
-        //     }
-        // }
+                // Move 'try' clause to parent 'try' block
+                BlockPtr->FirstSubBlockPtr = SubTryBlockPtr->FirstSubBlockPtr;
+                SubTryBlockPtr->FirstSubBlockPtr->Replace(SubTryBlockPtr, BlockPtr);
+            }
+        }
     }
 
     bool ContainsFinally(xJavaBlock * BlockPtr)

@@ -120,7 +120,7 @@ namespace jdc
 
         if (IndexList.size()) {
             bool First = true;
-            OS << ", Predecessors=[";
+            OS << ", predecessors=[";
             for (auto Index : IndexList) {
                 if (Steal(First, false)) {
                     OS << Index;
