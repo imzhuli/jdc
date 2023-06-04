@@ -15,7 +15,6 @@ namespace jdc
     static bool ReduceConditionalBranch(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
     static bool ReduceSwitchDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
     static bool ReduceTryDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
-    static bool ReduceJsr(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
     static xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr);
     static xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr, xJavaBlock * SubBlockPtr);
     static xJavaBlock * GetLastConditionalBranch(xJavaBlock * BlockPtr, xBitSet & Visited);
@@ -42,11 +41,70 @@ namespace jdc
         return true;
     }
 
-    bool ReduceJsr(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets)
+    bool xJavaControlFlowGraph::ReduceJsr(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets)
     {
-        // TODO
-        Todo();
-        return true;
+        auto BranchBlockPtr = BlockPtr->BranchBlockPtr;
+        auto Reduced = Reduce(BlockPtr->NextBlockPtr, Visited, JstTargets) & Reduce(BranchBlockPtr, Visited, JstTargets);
+
+        if ((BranchBlockPtr->Index >= 0) && JstTargets[BranchBlockPtr->Index]) {
+            // Reduce JSR
+            auto Delta = BlockPtr->ToOffset - BlockPtr->FromOffset;
+            if (Delta > 3) {
+                auto OpCode = BlockPtr->GetLastOpCode();
+
+                if (OpCode == 168) { // JSR
+                    BlockPtr->Type = xJavaBlock::TYPE_STATEMENTS;
+                    BlockPtr->ToOffset = BlockPtr->ToOffset - 3;
+                    BranchBlockPtr->Predecessors.erase(BranchBlockPtr->Predecessors.find(BlockPtr));
+                    return true;
+                } else if (Delta > 5) { // JSR_W
+                    BlockPtr->Type = xJavaBlock::TYPE_STATEMENTS;
+                    BlockPtr->ToOffset = BlockPtr->ToOffset - 5;
+                    BranchBlockPtr->Predecessors.erase(BranchBlockPtr->Predecessors.find(BlockPtr));
+                    return true;
+                }
+            }
+
+            // Delete JSR
+            BlockPtr->Type = xJavaBlock::TYPE_DELETED;
+            BranchBlockPtr->Predecessors.erase(BranchBlockPtr->Predecessors.find(BlockPtr));
+            auto & NextPredecessors = BlockPtr->NextBlockPtr->Predecessors;
+            NextPredecessors.erase(NextPredecessors.find(BlockPtr));
+
+            for (auto & PredecessorPtr : BlockPtr->Predecessors) {
+                PredecessorPtr->Replace(BlockPtr, BlockPtr->NextBlockPtr);
+                NextPredecessors.insert(PredecessorPtr);
+            }
+
+            return true;
+        }
+
+        if (BlockPtr->BranchBlockPtr->Predecessors.size() > 1) {
+            // Aggregate JSR
+            auto NextBlockPtr = BlockPtr->NextBlockPtr;
+            auto & BranchPredecessors = BlockPtr->BranchBlockPtr->Predecessors;
+            // Iterator<BasicBlock> iterator = BlockPtr->BranchBlockPtr->Predecessors.iterator();
+            for (auto Iter = BranchPredecessors.begin(); Iter != BranchPredecessors.end();) {
+                auto PredecessorBlockPtr = *Iter;
+                if ((PredecessorBlockPtr != BlockPtr) &&
+                    (PredecessorBlockPtr->Type == xJavaBlock::TYPE_JSR) &&
+                    (PredecessorBlockPtr->NextBlockPtr == NextBlockPtr)) {
+
+                    for (auto & PredecessorPredecessorBlockPtr : PredecessorBlockPtr->Predecessors) {
+                        PredecessorPredecessorBlockPtr->Replace(PredecessorBlockPtr, BlockPtr);
+                        BlockPtr->Predecessors.insert(PredecessorPredecessorBlockPtr);
+                    }
+                    NextBlockPtr->Predecessors.erase(NextBlockPtr->Predecessors.find(PredecessorBlockPtr));
+                    Iter = BranchPredecessors.erase(Iter);
+                    Reduced = true;
+                }
+                else {
+                    ++Iter;
+                }
+            }
+        }
+
+        return Reduced;
     }
 
     xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr)
@@ -198,7 +256,7 @@ namespace jdc
             default:
                 break;
         }
-        Fatal("Unprocessed branch");
+        Fatal("Unprocessed BranchBlockPtr");
         return nullptr;
     }
 
@@ -422,12 +480,12 @@ namespace jdc
                 break;
         };
 
-        Fatal("Unprocessed branch");
+        Fatal("Unprocessed BranchBlockPtr");
         return true;
     }
 
     /**
-     * @brief Final reduce,
+     * @brief Final Reduce,
      *
      * @return true
      * @return false

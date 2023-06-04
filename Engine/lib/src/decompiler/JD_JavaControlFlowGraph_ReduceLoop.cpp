@@ -412,7 +412,7 @@ namespace jdc
                     auto Index = BlockPtr->BranchBlockPtr->Index;
                         // X_DEBUG_PRINTF("-->B %zi\n", Index);
                     if (!BlockPtr->BranchBlockPtr->IsTheEnd() && DominatorIndexes[Index]) {
-                        // 'branch' is a dominator -> Back edge found
+                        // 'BranchBlockPtr' is a dominator -> Back edge found
                         ArrayOfMemberIndexes[Index] = SearchLoopMemberIndexes(Length, ArrayOfMemberIndexes[Index], BlockPtr, BlockPtr->BranchBlockPtr);
                     }
                     // pass through

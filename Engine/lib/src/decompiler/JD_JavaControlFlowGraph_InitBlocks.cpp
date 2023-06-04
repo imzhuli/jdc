@@ -358,7 +358,7 @@ namespace jdc
                     LastStatementOffset = Offset;
                     break;
                 }
-            } // end of switch(opcode)
+            } // end of switch(OpCode)
         } // end of for
         NextOffsets[LastOffset] = CodeLength;
 
@@ -392,7 +392,7 @@ namespace jdc
         BlockMap[LastOffset] = NewBlock(xJavaBlock::TYPE_DELETED, LastOffset, CodeLength);
 
         /**
-         * @brief reduce to simple Blocks and set real types
+         * @brief Reduce to simple Blocks and set real types
          *
          */
 
