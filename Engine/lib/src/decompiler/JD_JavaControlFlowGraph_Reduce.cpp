@@ -284,26 +284,23 @@ namespace jdc
 
     bool CheckEclipseFinallyPattern(xJavaBlock * BlockPtr, xJavaBlock * FinallyBlockPtr, size_t MaxOffset)
     {
-        Todo();
-        // int nextOpcode = ByteCodeUtil.searchNextOpcode(BlockPtr, maxOffset);
+        auto NextOpcode = BlockPtr->GetNextOpCode(MaxOffset);
+        if ((NextOpcode == 0)   ||
+            (NextOpcode == 167) || // GOTO
+            (NextOpcode == 200)) { // GOTO_W
+            return true;
+        }
 
-        // if ((nextOpcode == 0)   ||
-        //     (nextOpcode == 167) || // GOTO
-        //     (nextOpcode == 200)) { // GOTO_W
-        //     return true;
-        // }
+        auto NextBlockPtr = BlockPtr->NextBlockPtr;
+        if (!(NextBlockPtr->Type & xJavaBlock::GROUP_END) && (FinallyBlockPtr->FromOffset < NextBlockPtr->FromOffset)) {
+            auto CFGPtr = FinallyBlockPtr->GetControlFlowGraph();
+            auto ToLineNumber   = CFGPtr->GetLineNumber(FinallyBlockPtr->ToOffset - 1);
+            auto FromLineNumber = CFGPtr->GetLineNumber(NextBlockPtr->FromOffset);
 
-        // BasicBlock next = BlockPtr->NextBlockPtr;
-
-        // if (!next.matchType(GROUP_END) && (FinallyBlockPtr->getFromOffset() < next.getFromOffset())) {
-        //     ControlFlowGraph cfg = FinallyBlockPtr->getControlFlowGraph();
-        //     int toLineNumber = cfg.getLineNumber(FinallyBlockPtr->getToOffset()-1);
-        //     int fromLineNumber = cfg.getLineNumber(next.getFromOffset());
-
-        //     if (fromLineNumber < toLineNumber) {
-        //         return true;
-        //     }
-        // }
+            if (FromLineNumber < ToLineNumber) {
+                return true;
+            }
+        }
 
         return false;
     }
