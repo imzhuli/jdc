@@ -525,7 +525,7 @@ namespace jdc
                     TryCatchFinalBlockPtr = BlockList.back().get();
                     TryCatchFinalBlockPtr->NextBlockPtr = StartBlockPtr;
 
-                    // Update predecessors
+                    // Update Predecessors
                     auto & StartBlockPredecessors = StartBlockPtr->Predecessors;
                     for (auto Iter = StartBlockPredecessors.begin(); Iter != StartBlockPredecessors.end();) {
                         auto & PredecessorPtr = *Iter;

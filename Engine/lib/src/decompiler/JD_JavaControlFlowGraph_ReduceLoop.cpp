@@ -641,7 +641,7 @@ namespace jdc
         // Build new basic block for Loop
         auto LoopBlockPtr = NewBlock(xJavaBlock::TYPE_LOOP, StartBlockPtr->FromOffset, StartBlockPtr->ToOffset);
 
-        // Update predecessors
+        // Update Predecessors
         do {
             auto & StartPredecessors = StartBlockPtr->Predecessors;
             for (auto Iter = StartPredecessors.begin(); Iter != StartPredecessors.end(); ) {

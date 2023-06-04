@@ -14,10 +14,15 @@ namespace jdc
 
     static bool ReduceConditionalBranch(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
     static bool ReduceSwitchDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
-    static bool ReduceTryDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
+    static bool ContainsFinally(xJavaBlock * BlockPtr);
+    static bool CheckEclipseFinallyPattern(xJavaBlock * BlockPtr, xJavaBlock * FinallyBlockPtr, size_t MaxOffset);
+    static xJavaBlock * UpdateBlock(xJavaBlock * BlockPtr, xJavaBlock * EndBlockPtr, size_t MaxOffset);
+    static xJavaBlock * SearchEndBlock(xJavaBlock * BlockPtr, size_t MaxOffset);
+    static xJavaBlock * SearchJsrTarget(xJavaBlock * BlockPtr, xBitSet & JsrTargets);
     static xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr);
     static xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr, xJavaBlock * SubBlockPtr);
     static xJavaBlock * GetLastConditionalBranch(xJavaBlock * BlockPtr, xBitSet & Visited);
+    static void RemoveJsrAndMergeSubTry(xJavaBlock * BlockPtr);
     static void RemoveLastContinueLoop(xJavaBlock * BlockPtr);
 
     bool ReduceConditionalBranch(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets)
@@ -34,11 +39,147 @@ namespace jdc
         return true;
     }
 
-    bool ReduceTryDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets)
+    bool xJavaControlFlowGraph::ReduceTryDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets)
     {
-        // TODO
-        Todo();
-        return true;
+        auto Reduced = true;
+        auto FinallyBlockPtr = xJavaBlockPtr();
+
+        for (auto & ExceptionHandler : BlockPtr->ExceptionHandlers) {
+            if (ExceptionHandler.FixedCatchTypeName.empty()) {
+                Reduced = Reduce(ExceptionHandler.BlockPtr, Visited, JstTargets);
+                FinallyBlockPtr = ExceptionHandler.BlockPtr;
+                break;
+            }
+        }
+
+        auto JsrTarget = SearchJsrTarget(BlockPtr, JstTargets);
+        Reduced &= Reduce(BlockPtr->NextBlockPtr, Visited, JstTargets);
+
+        auto TryBlockPtr = BlockPtr->NextBlockPtr;
+        if (TryBlockPtr->Type & xJavaBlock::GROUP_SYNTHETIC) {
+            return false;
+        }
+
+        auto MaxOffset = BlockPtr->FromOffset;
+        auto TryWithResourcesFlag = true;
+        auto TryWithResourcesBlockPtr = xJavaBlockPtr();
+
+        for (auto & ExceptionHandler : BlockPtr->ExceptionHandlers) {
+            if (ExceptionHandler.FixedCatchTypeName.size()) {
+                Reduced &= Reduce(ExceptionHandler.BlockPtr, Visited, JstTargets);
+            }
+
+            auto ExceptionBlockPtr = ExceptionHandler.BlockPtr;
+            if (ExceptionBlockPtr->Type & xJavaBlock::GROUP_SYNTHETIC) {
+                return false;
+            }
+
+            if (MaxOffset < ExceptionBlockPtr->FromOffset) {
+                MaxOffset = ExceptionBlockPtr->FromOffset;
+            }
+
+            if (TryWithResourcesFlag) {
+                auto & Predecessors = ExceptionBlockPtr->Predecessors;
+                if (Predecessors.size() == 1) {
+                    TryWithResourcesFlag = false;
+                } else {
+                    assert(Predecessors.size() == 2);
+                    if (!TryWithResourcesBlockPtr) {
+                        for (auto & PredecessorBlockPtr : Predecessors) {
+                            if (PredecessorBlockPtr != BlockPtr) {
+                                assert(PredecessorBlockPtr->Type == xJavaBlock::TYPE_TRY_DECLARATION);
+                                TryWithResourcesBlockPtr = PredecessorBlockPtr;
+                                break;
+                            }
+                        }
+                    } else if (Predecessors.find(TryWithResourcesBlockPtr) == Predecessors.end()) {
+                        TryWithResourcesFlag = false;
+                    }
+                }
+            }
+        }
+
+        if (TryWithResourcesFlag) {
+            // One of 'try-with-resources' patterns
+            for (auto & ExceptionHandler : BlockPtr->ExceptionHandlers) {
+                ExceptionHandler.BlockPtr->Predecessors.erase(ExceptionHandler.BlockPtr->Predecessors.find(BlockPtr));
+            }
+            for (auto & PredecessorBlockPtr : BlockPtr->Predecessors) {
+                PredecessorBlockPtr->Replace(BlockPtr, TryBlockPtr);
+                TryBlockPtr->Replace(BlockPtr, PredecessorBlockPtr);
+            }
+            BlockPtr->Type = xJavaBlock::TYPE_DELETED;
+        }
+        else if (Reduced) {
+            auto EndBlockPtr = SearchEndBlock(BlockPtr, MaxOffset);
+            UpdateBlock(TryBlockPtr, EndBlockPtr, MaxOffset);
+
+            if ((FinallyBlockPtr) &&
+                (BlockPtr->ExceptionHandlers.size() == 1) &&
+                (TryBlockPtr->Type == xJavaBlock::TYPE_TRY) &&
+                (TryBlockPtr->NextBlockPtr == &xJavaBlock::End) &&
+                (BlockPtr->FromOffset == TryBlockPtr->FromOffset) &&
+                !ContainsFinally(TryBlockPtr)) {
+                // Merge inner try
+                BlockPtr->ExceptionHandlers.insert(BlockPtr->ExceptionHandlers.begin(), TryBlockPtr->ExceptionHandlers.begin(), TryBlockPtr->ExceptionHandlers.end());
+
+                for (auto & ExceptionHandler : TryBlockPtr->ExceptionHandlers) {
+                    auto & ExceptionHandlerPredecessors = ExceptionHandler.BlockPtr->Predecessors;
+                    ExceptionHandlerPredecessors.clear();
+                    ExceptionHandlerPredecessors.insert(BlockPtr);
+                }
+
+                TryBlockPtr->Type = xJavaBlock::TYPE_DELETED;
+                TryBlockPtr = TryBlockPtr->FirstSubBlockPtr;
+                auto & TryBlockPredecessors = TryBlockPtr->Predecessors;
+                TryBlockPredecessors.clear();
+                TryBlockPredecessors.insert(BlockPtr);
+            }
+
+            // Update blocks
+            size_t ToOffset = MaxOffset;
+
+            for (auto & ExceptionHandler : BlockPtr->ExceptionHandlers) {
+                auto ExceptionHandlerBlockPtr = ExceptionHandler.BlockPtr;
+
+                if (ExceptionHandlerBlockPtr == EndBlockPtr) {
+                    ExceptionHandler.BlockPtr = &xJavaBlock::End;
+                } else {
+                    auto Offset = (ExceptionHandlerBlockPtr->FromOffset == MaxOffset) ? EndBlockPtr->FromOffset : MaxOffset;
+
+                    if (Offset == 0) {
+                        Offset = SIZE_MAX;
+                    }
+                    auto LastBlockPtr = UpdateBlock(ExceptionHandlerBlockPtr, EndBlockPtr, Offset);
+
+                    if (ToOffset < LastBlockPtr->ToOffset) {
+                        ToOffset = LastBlockPtr->ToOffset;
+                    }
+                }
+            }
+
+            BlockPtr->FirstSubBlockPtr = TryBlockPtr;
+            BlockPtr->NextBlockPtr = EndBlockPtr;
+            EndBlockPtr->Predecessors.insert(BlockPtr);
+
+            if (JsrTarget) {
+                // Change type
+                if ((FinallyBlockPtr) && CheckEclipseFinallyPattern(BlockPtr, FinallyBlockPtr, MaxOffset)) {
+                    BlockPtr->Type = xJavaBlock::TYPE_TRY_ECLIPSE;
+                } else {
+                    BlockPtr->Type = xJavaBlock::TYPE_TRY;
+                }
+            } else {
+                // Change type
+                BlockPtr->Type = xJavaBlock::TYPE_TRY_JSR;
+                // Merge 1.1 to 1.4 sub try block
+                RemoveJsrAndMergeSubTry(BlockPtr);
+            }
+
+            BlockPtr->ToOffset = ToOffset;
+        }
+
+        return Reduced;
     }
 
     bool xJavaControlFlowGraph::ReduceJsr(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets)
@@ -103,8 +244,118 @@ namespace jdc
                 }
             }
         }
-
         return Reduced;
+    }
+
+    void RemoveJsrAndMergeSubTry(xJavaBlock * BlockPtr)
+    {
+        // if (BlockPtr->getExceptionHandlers().size() == 1) {
+        //     BasicBlock subTry = BlockPtr->getSub1();
+
+        //     if (subTry.matchType(TYPE_TRY|TYPE_TRY_JSR|TYPE_TRY_ECLIPSE)) {
+        //         for (BasicBlock.ExceptionHandler exceptionHandler : subTry.getExceptionHandlers()) {
+        //             if (exceptionHandler.getInternalThrowableName() == null)
+        //                 return;
+        //         }
+
+        //         // Append 'catch' handlers
+        //         for (BasicBlock.ExceptionHandler exceptionHandler : subTry.getExceptionHandlers()) {
+        //             BasicBlock bb = exceptionHandler.getBasicBlock();
+        //             BlockPtr->addExceptionHandler(exceptionHandler.getInternalThrowableName(), bb);
+        //             bb.replace(subTry, BlockPtr->;
+        //         }
+
+        //         // Move 'try' clause to parent 'try' block
+        //         BlockPtr->setSub1(subTry.getSub1());
+        //         subTry.getSub1().replace(subTry, BlockPtr);
+        //     }
+        // }
+    }
+
+    bool ContainsFinally(xJavaBlock * BlockPtr)
+    {
+        for (auto & ExceptionHandler : BlockPtr->ExceptionHandlers) {
+            if (ExceptionHandler.FixedCatchTypeName.empty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool CheckEclipseFinallyPattern(xJavaBlock * BlockPtr, xJavaBlock * FinallyBlockPtr, size_t MaxOffset)
+    {
+        Todo();
+        // int nextOpcode = ByteCodeUtil.searchNextOpcode(BlockPtr, maxOffset);
+
+        // if ((nextOpcode == 0)   ||
+        //     (nextOpcode == 167) || // GOTO
+        //     (nextOpcode == 200)) { // GOTO_W
+        //     return true;
+        // }
+
+        // BasicBlock next = BlockPtr->NextBlockPtr;
+
+        // if (!next.matchType(GROUP_END) && (FinallyBlockPtr->getFromOffset() < next.getFromOffset())) {
+        //     ControlFlowGraph cfg = FinallyBlockPtr->getControlFlowGraph();
+        //     int toLineNumber = cfg.getLineNumber(FinallyBlockPtr->getToOffset()-1);
+        //     int fromLineNumber = cfg.getLineNumber(next.getFromOffset());
+
+        //     if (fromLineNumber < toLineNumber) {
+        //         return true;
+        //     }
+        // }
+
+        return false;
+    }
+
+    xJavaBlock * UpdateBlock(xJavaBlock * BlockPtr, xJavaBlock * EndBlockPtr, size_t MaxOffset)
+    {
+        Todo();
+        // WatchDog watchdog = new WatchDog();
+
+        // while (basicBlock.matchType(GROUP_SINGLE_SUCCESSOR)) {
+        //     watchdog.check(basicBlock, basicBlock.getNext());
+        //     BasicBlock next = basicBlock.getNext();
+
+        //     if ((next == EndBlockPtr) || (next.getFromOffset() > maxOffset)) {
+        //         next.getPredecessors().remove(basicBlock);
+        //         basicBlock.setNext(END);
+        //         break;
+        //     }
+
+        //     basicBlock = next;
+        // }
+
+        return BlockPtr;
+    }
+
+    xJavaBlock * SearchJsrTarget(xJavaBlock * BlockPtr, xBitSet & JsrTargets)
+    {
+        Todo();
+        // for (auto & exceptionHandler : BlockPtr.ExceptionHandlers) {
+        //     if (exceptionHandler.FixedCatchTypeName == null) {
+        //         BasicBlock ExceptionBlockPtr = exceptionHandler.getBasicBlock();
+
+        //         if (ExceptionBlockPtr->Type == TYPE_STATEMENTS) {
+        //             ExceptionBlockPtr = ExceptionBlockPtr->NextBlockPtr;
+
+        //             if ((ExceptionBlockPtr->Type == TYPE_JSR) && (ExceptionBlockPtr->NextBlockPtr.Type == TYPE_THROW)) {
+        //                 // Java 1.1 to 1.4 finally pattern found
+        //                 BasicBlock jsrTarget = ExceptionBlockPtr->getBranch();
+        //                 jsrTargets.set(jsrTarget.getIndex());
+        //                 return jsrTarget;
+        //             }
+        //         }
+        //     }
+        // }
+
+        return nullptr;
+    }
+
+    xJavaBlock * SearchEndBlock(xJavaBlock * BlockPtr, size_t MaxOffset)
+    {
+        Todo();
+        return nullptr;
     }
 
     xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr)
@@ -189,15 +440,15 @@ namespace jdc
             if (BlockPtr->FromOffset < SubBlockPtr->FromOffset) {
                 Todo();
         //         if (BlockPtr->getFirstLineNumber() == Expression.UNKNOWN_LINE_NUMBER) {
-        //             if (SubBlockPtr->matchType(GROUP_SINGLE_SUCCESSOR) && (SubBlockPtr->NextBlockPtr.getType() == TYPE_LOOP_START)) {
+        //             if (SubBlockPtr->matchType(GROUP_SINGLE_SUCCESSOR) && (SubBlockPtr->NextBlockPtr.Type == TYPE_LOOP_START)) {
         //                 int stackDepth = ByteCodeUtil.evalStackDepth(SubBlockPtr);
 
         //                 while (stackDepth != 0) {
-        //                     Set<BasicBlock> predecessors = SubBlockPtr->getPredecessors();
-        //                     if (predecessors.size() != 1) {
+        //                     Set<BasicBlock> Predecessors = SubBlockPtr->Predecessors;
+        //                     if (Predecessors.size() != 1) {
         //                         break;
         //                     }
-        //                     stackDepth += ByteCodeUtil.evalStackDepth(SubBlockPtr = predecessors.iterator().next());
+        //                     stackDepth += ByteCodeUtil.evalStackDepth(SubBlockPtr = Predecessors.iterator().next());
         //                 }
 
         //                 removePredecessors(SubBlockPtr);

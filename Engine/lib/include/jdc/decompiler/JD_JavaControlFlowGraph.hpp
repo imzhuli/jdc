@@ -121,6 +121,7 @@ namespace jdc
         X_PRIVATE_MEMBER xJavaBlock * ReduceLoop(xJavaLoop & Loop);
         X_PRIVATE_MEMBER bool ReduceLoop(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
         X_PRIVATE_MEMBER bool Reduce(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
+        X_PRIVATE_MEMBER bool ReduceTryDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
         X_PRIVATE_MEMBER bool ReduceJsr(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
         X_PRIVATE_MEMBER void ReduceGoto();
         X_PRIVATE_MEMBER void ReduceLoop();
