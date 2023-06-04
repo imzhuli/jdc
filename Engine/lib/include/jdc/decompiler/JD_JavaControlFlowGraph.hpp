@@ -28,7 +28,7 @@ namespace jdc
         std::vector<xJavaLocalVariable>            LocalVariableList;
         size_t                                     FirstVariableIndex;
         std::vector<std::unique_ptr<xJavaBlock>>   BlockList;
-        xJavaBlockPtrList                   BlockPtrList; // raw pointer version of block list
+        xJavaBlockPtrList                          BlockPtrList; // raw pointer version of block list
 
     protected:
         const xJavaMethod *                        _JavaMethodPtr;
@@ -53,15 +53,12 @@ namespace jdc
             auto BlockPtr = BlockUPtr.get();
             BlockPtr->Index = BlockList.size();
             BlockList.push_back(std::move(BlockUPtr));
+            BlockPtrList.push_back(BlockPtr);
             return BlockPtr;
         }
 
         X_INLINE xJavaBlock * CopyBlock(xJavaBlock * OriginalBlockPtr, xJavaBlockPtrSet && Predecessors = {}) {
-            auto BlockUPtr = std::make_unique<xJavaBlock>(this, OriginalBlockPtr->Type, OriginalBlockPtr->FromOffset, OriginalBlockPtr->ToOffset);
-            auto BlockPtr = BlockUPtr.get();
-            BlockPtr->Index = BlockList.size();
-            BlockList.push_back(std::move(BlockUPtr));
-
+            auto BlockPtr = NewBlock(OriginalBlockPtr->Type, OriginalBlockPtr->FromOffset, OriginalBlockPtr->ToOffset);
             BlockPtr->NextBlockPtr = OriginalBlockPtr->NextBlockPtr;
             BlockPtr->BranchBlockPtr = OriginalBlockPtr->BranchBlockPtr;
             BlockPtr->ConditionBlockPtr = OriginalBlockPtr->ConditionBlockPtr;
@@ -71,7 +68,6 @@ namespace jdc
             BlockPtr->ExceptionHandlers = OriginalBlockPtr->ExceptionHandlers;
             BlockPtr->SwitchCases = OriginalBlockPtr->SwitchCases;
             BlockPtr->Predecessors = std::move(Predecessors);
-
             return BlockPtr;
         }
 

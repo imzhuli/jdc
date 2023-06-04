@@ -744,7 +744,7 @@ namespace jdc
     bool xJavaControlFlowGraph::Reduce()
     {
         auto StartBlockPtr = BlockPtrList[0];
-        auto Visited = xBitSet();
+        auto Visited = xBitSet(BlockPtrList.size());
         auto JstTargets = xBitSet();
 
         return Reduce(StartBlockPtr, Visited, JstTargets);
