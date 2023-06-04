@@ -57,6 +57,35 @@ namespace jdc
             return BlockPtr;
         }
 
+        X_INLINE xJavaBlock * CopyBlock(xJavaBlock * OriginalBlockPtr, xJavaBlockPtrSet && Predecessors = {}) {
+            auto BlockUPtr = std::make_unique<xJavaBlock>(this, OriginalBlockPtr->Type, OriginalBlockPtr->FromOffset, OriginalBlockPtr->ToOffset);
+            auto BlockPtr = BlockUPtr.get();
+            BlockPtr->Index = BlockList.size();
+            BlockList.push_back(std::move(BlockUPtr));
+
+            BlockPtr->NextBlockPtr = OriginalBlockPtr->NextBlockPtr;
+            BlockPtr->BranchBlockPtr = OriginalBlockPtr->BranchBlockPtr;
+            BlockPtr->ConditionBlockPtr = OriginalBlockPtr->ConditionBlockPtr;
+            BlockPtr->MustInverseCondition = OriginalBlockPtr->MustInverseCondition;
+            BlockPtr->FirstSubBlockPtr = OriginalBlockPtr->FirstSubBlockPtr;
+            BlockPtr->SecondSubBlockPtr = OriginalBlockPtr->SecondSubBlockPtr;
+            BlockPtr->ExceptionHandlers = OriginalBlockPtr->ExceptionHandlers;
+            BlockPtr->SwitchCases = OriginalBlockPtr->SwitchCases;
+            BlockPtr->Predecessors = std::move(Predecessors);
+
+            return BlockPtr;
+        }
+
+        X_INLINE xJavaBlock * CloneNextBlock(xJavaBlock * BlockPtr, xJavaBlock * NextBlockPtr) {
+            assert(BlockPtr->NextBlockPtr == NextBlockPtr);
+            auto Clone = NewBlock(NextBlockPtr->Type, NextBlockPtr->FromOffset, NextBlockPtr->ToOffset);
+            Clone->NextBlockPtr = &xJavaBlock::End;
+            Clone->Predecessors.insert(BlockPtr);
+            NextBlockPtr->Predecessors.erase(NextBlockPtr->Predecessors.find(BlockPtr));
+            BlockPtr->NextBlockPtr = Clone;
+            return Clone;
+        }
+
         X_INLINE xJavaBlock * NewJumpBlock(xJavaBlock * SourceBlockPtr, xJavaBlock * TargetBlockPtr) {
             auto NewBlockPtr = NewBlock(xJavaBlock::TYPE_JUMP, SourceBlockPtr->FromOffset, TargetBlockPtr->FromOffset);
             NewBlockPtr->Predecessors.insert(SourceBlockPtr);
@@ -69,9 +98,13 @@ namespace jdc
         X_PRIVATE_MEMBER xJavaLoop MakeLoop(xJavaBlock * StartBlockPtr, xBitSet & SearchZoneIndexes, xBitSet & MemberIndexes);
         X_PRIVATE_MEMBER std::vector<xJavaLoop> IdentifyNaturalLoops(const std::vector<xBitSet> & ArrayOfDominatorIndexes);
         X_PRIVATE_MEMBER xJavaBlock * SearchEndBasicBlock(const xBitSet & MemberIndexes, size_t MaxOffset, const xJavaBlockPtrSet & Members);
+        X_PRIVATE_MEMBER void ChangeEndLoopToJump(xBitSet & Visited, xJavaBlock * TargetPtr, xJavaBlock * BlockPtr);
         X_PRIVATE_MEMBER xJavaBlock * ReduceLoop(xJavaLoop & Loop);
+        X_PRIVATE_MEMBER bool ReduceLoop(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
         X_PRIVATE_MEMBER void ReduceGoto();
         X_PRIVATE_MEMBER void ReduceLoop();
+        X_PRIVATE_MEMBER bool Reduce(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
+        X_PRIVATE_MEMBER bool Reduce();
 
     public:
         X_PRIVATE_STATIC_MEMBER std::unique_ptr<xJavaControlFlowGraph> ParseByteCode(const xJavaMethod * JavaMethodPtr);

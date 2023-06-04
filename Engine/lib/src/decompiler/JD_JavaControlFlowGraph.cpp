@@ -58,7 +58,9 @@ namespace jdc
         ReduceLoop();
         X_DEBUG_PRINTF("xJavaControlFlowGraph ReduceLoop done:\n%s\n", ToString(this).c_str());
 
-        // ReduceGraph();
+        Reduce();
+        X_DEBUG_PRINTF("xJavaControlFlowGraph ReduceLoop done:\n%s\n", ToString(this).c_str());
+
 
         return true;
     }
