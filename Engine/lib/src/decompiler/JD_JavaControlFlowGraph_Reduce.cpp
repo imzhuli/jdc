@@ -328,23 +328,22 @@ namespace jdc
 
     xJavaBlock * SearchJsrTarget(xJavaBlock * BlockPtr, xBitSet & JsrTargets)
     {
-        Todo();
-        // for (auto & exceptionHandler : BlockPtr.ExceptionHandlers) {
-        //     if (exceptionHandler.FixedCatchTypeName == null) {
-        //         BasicBlock ExceptionBlockPtr = exceptionHandler.getBasicBlock();
+        for (auto & ExceptionHandler : BlockPtr->ExceptionHandlers) {
+            if (ExceptionHandler.FixedCatchTypeName.empty()) {
+                auto ExceptionBlockPtr = ExceptionHandler.BlockPtr;
 
-        //         if (ExceptionBlockPtr->Type == TYPE_STATEMENTS) {
-        //             ExceptionBlockPtr = ExceptionBlockPtr->NextBlockPtr;
+                if (ExceptionBlockPtr->Type == xJavaBlock::TYPE_STATEMENTS) {
+                    ExceptionBlockPtr = ExceptionBlockPtr->NextBlockPtr;
 
-        //             if ((ExceptionBlockPtr->Type == TYPE_JSR) && (ExceptionBlockPtr->NextBlockPtr.Type == TYPE_THROW)) {
-        //                 // Java 1.1 to 1.4 finally pattern found
-        //                 BasicBlock jsrTarget = ExceptionBlockPtr->getBranch();
-        //                 jsrTargets.set(jsrTarget.getIndex());
-        //                 return jsrTarget;
-        //             }
-        //         }
-        //     }
-        // }
+                    if ((ExceptionBlockPtr->Type == xJavaBlock::TYPE_JSR) && (ExceptionBlockPtr->NextBlockPtr->Type == xJavaBlock::TYPE_THROW)) {
+                        // Java 1.1 to 1.4 finally pattern found
+                        auto JsrTargetBlockPtr = ExceptionBlockPtr->BranchBlockPtr;
+                        JsrTargets[JsrTargetBlockPtr->Index];
+                        return JsrTargetBlockPtr;
+                    }
+                }
+            }
+        }
 
         return nullptr;
     }
