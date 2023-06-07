@@ -16,7 +16,6 @@ namespace jdc
     static bool ContainsFinally(xJavaBlock * BlockPtr);
     static bool CheckEclipseFinallyPattern(xJavaBlock * BlockPtr, xJavaBlock * FinallyBlockPtr, size_t MaxOffset);
     static xJavaBlock * UpdateBlock(xJavaBlock * BlockPtr, xJavaBlock * EndBlockPtr, size_t MaxOffset);
-    static xJavaBlock * SearchEndBlock(xJavaBlock * BlockPtr, size_t MaxOffset);
     static xJavaBlock * SearchJsrTarget(xJavaBlock * BlockPtr, xBitSet & JsrTargets);
     static xJavaBlock * GetLastConditionalBranch(xJavaBlock * BlockPtr, xBitSet & Visited);
     static void RemoveJsrAndMergeSubTry(xJavaBlock * BlockPtr);
@@ -349,7 +348,7 @@ namespace jdc
         auto TryWithResourcesBlockPtr = xJavaBlockPtr();
 
         for (auto & ExceptionHandler : BlockPtr->ExceptionHandlers) {
-            if (ExceptionHandler.FixedCatchTypeName.size()) {
+            if (!ExceptionHandler.FixedCatchTypeName.empty()) {
                 Reduced &= Reduce(ExceptionHandler.BlockPtr, Visited, JsrTargets);
             }
 
@@ -627,11 +626,106 @@ namespace jdc
         return nullptr;
     }
 
-    xJavaBlock * SearchEndBlock(xJavaBlock * BlockPtr, size_t MaxOffset)
+    xJavaBlock * SplitSequence(xJavaBlock * BlockPtr, size_t MaxOffset)
     {
-        // TODO
-        Todo();
-        return nullptr;
+        auto NextBlockPtr = BlockPtr->NextBlockPtr;
+        auto WatchDog = xWatchDog();
+
+        while ((NextBlockPtr->FromOffset < MaxOffset) && (NextBlockPtr->Type & xJavaBlock::GROUP_SINGLE_SUCCESSOR)) {
+            WatchDog.Check(NextBlockPtr, NextBlockPtr->NextBlockPtr);
+            BlockPtr = NextBlockPtr;
+            NextBlockPtr = NextBlockPtr->NextBlockPtr;
+        }
+
+        if ((BlockPtr->ToOffset > MaxOffset) && (BlockPtr->Type == xJavaBlock::TYPE_TRY)) {
+            // Split last try block
+            auto & ExceptionHandlers = BlockPtr->ExceptionHandlers;
+            auto ExceptionHandlerBlockPtr = ExceptionHandlers.back().BlockPtr;
+            auto LastBlockPtr = SplitSequence(ExceptionHandlerBlockPtr, MaxOffset);
+
+            NextBlockPtr = LastBlockPtr->NextBlockPtr;
+            LastBlockPtr->NextBlockPtr = &xJavaBlock::End;
+
+            BlockPtr->ToOffset = LastBlockPtr->ToOffset;
+            BlockPtr->NextBlockPtr = NextBlockPtr;
+
+            NextBlockPtr->Predecessors.erase(NextBlockPtr->Predecessors.find(LastBlockPtr));
+            NextBlockPtr->Predecessors.insert(BlockPtr);
+        }
+
+        return BlockPtr;
+    }
+
+    xJavaBlock * xJavaControlFlowGraph::SearchEndBlock(xJavaBlock * BlockPtr, size_t MaxOffset)
+    {
+        auto EndBlockPtr  = xJavaBlockPtr(nullptr);
+        auto LastBlockPtr = SplitSequence(BlockPtr->NextBlockPtr, MaxOffset);
+
+        if (!(LastBlockPtr->Type & xJavaBlock::GROUP_END)) {
+            auto NextBlockPtr = LastBlockPtr->NextBlockPtr;
+            if ((NextBlockPtr->FromOffset >= MaxOffset) ||
+                (!(NextBlockPtr->Type & (xJavaBlock::TYPE_END | xJavaBlock::TYPE_RETURN | xJavaBlock::TYPE_SWITCH_BREAK | xJavaBlock::TYPE_LOOP_START | xJavaBlock::TYPE_LOOP_CONTINUE | xJavaBlock::TYPE_LOOP_END)) && (NextBlockPtr->ToOffset < BlockPtr->FromOffset))
+                ) {
+                return NextBlockPtr;
+            }
+
+            EndBlockPtr = NextBlockPtr;
+        }
+
+        for (auto & ExceptionHandler : BlockPtr->ExceptionHandlers) {
+            auto ExceptionHandlerBlockPtr = ExceptionHandler.BlockPtr;
+
+            if (ExceptionHandlerBlockPtr->FromOffset < MaxOffset) {
+                LastBlockPtr = SplitSequence(ExceptionHandlerBlockPtr, MaxOffset);
+
+                if (!(LastBlockPtr->Type & xJavaBlock::GROUP_END)) {
+                    auto NextBlockPtr = LastBlockPtr->NextBlockPtr;
+                    if ((NextBlockPtr->FromOffset >= MaxOffset)
+                        || (!(NextBlockPtr->Type & (xJavaBlock::TYPE_END | xJavaBlock::TYPE_RETURN | xJavaBlock::TYPE_SWITCH_BREAK | xJavaBlock::TYPE_LOOP_START | xJavaBlock::TYPE_LOOP_CONTINUE | xJavaBlock::TYPE_LOOP_END))
+                            && (NextBlockPtr->ToOffset < BlockPtr->FromOffset))
+                        ) {
+                        return NextBlockPtr;
+                    }
+
+                    if (!EndBlockPtr) {
+                        EndBlockPtr = NextBlockPtr;
+                    } else if (EndBlockPtr != NextBlockPtr) {
+                        EndBlockPtr = &xJavaBlock::End;
+                    }
+                }
+            }
+            else {
+                // Last handler block
+                auto LineNumber = GetLineNumber(ExceptionHandlerBlockPtr->FromOffset);
+                auto WatchDog = xWatchDog();
+                auto NextBlockPtr = ExceptionHandlerBlockPtr->NextBlockPtr;
+
+                LastBlockPtr = ExceptionHandlerBlockPtr;
+                while ((LastBlockPtr != NextBlockPtr) && (LastBlockPtr->Type & xJavaBlock::GROUP_SINGLE_SUCCESSOR) && (NextBlockPtr->Predecessors.size() == 1)
+                    && (LineNumber <= GetLineNumber(NextBlockPtr->FromOffset))
+                    ) {
+                    WatchDog.Check(NextBlockPtr, NextBlockPtr->NextBlockPtr);
+                    LastBlockPtr = NextBlockPtr;
+                    NextBlockPtr = NextBlockPtr->NextBlockPtr;
+                }
+
+                if (!(LastBlockPtr->Type & xJavaBlock::GROUP_END)) {
+                    if ((LastBlockPtr != NextBlockPtr) && ((NextBlockPtr->Predecessors.size() > 1) || !(NextBlockPtr->Type & xJavaBlock::GROUP_END))) {
+                        return NextBlockPtr;
+                    }
+
+                    if ((EndBlockPtr != NextBlockPtr) && (!ExceptionHandler.FixedCatchTypeName.empty())) {
+                        EndBlockPtr = &xJavaBlock::End;
+                    }
+                }
+            }
+        }
+
+        if (EndBlockPtr && (EndBlockPtr->Type & xJavaBlock::TYPE_SWITCH_BREAK | xJavaBlock::TYPE_LOOP_START | xJavaBlock::TYPE_LOOP_CONTINUE | xJavaBlock::TYPE_LOOP_END)) {
+            return EndBlockPtr;
+        }
+
+        return &xJavaBlock::End;
     }
 
     xJavaBlock * xJavaControlFlowGraph::SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr)

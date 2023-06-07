@@ -244,7 +244,7 @@ namespace jdc
         return MaxOffset;
     }
 
-    xJavaBlock * xJavaControlFlowGraph::SearchEndBasicBlock(const xBitSet & MemberIndexes, size_t MaxOffset, const xJavaBlockPtrSet & Members)
+    xJavaBlock * xJavaControlFlowGraph::SearchEndBlock(const xBitSet & MemberIndexes, size_t MaxOffset, const xJavaBlockPtrSet & Members)
     {
         xJavaBlock * EndBlockPtr = &xJavaBlock::End;
         for (auto & Member : Members) {
@@ -346,7 +346,7 @@ namespace jdc
 
         if (EndBlockPtr->IsTheEnd()) {
             // Not found, check all member blocks
-            EndBlockPtr = SearchEndBasicBlock(MemberIndexes, MaxOffset, Members);
+            EndBlockPtr = SearchEndBlock(MemberIndexes, MaxOffset, Members);
 
             if (!(EndBlockPtr->Type & (xJavaBlock::TYPE_END | xJavaBlock::TYPE_RETURN | xJavaBlock::TYPE_LOOP_START | xJavaBlock::TYPE_LOOP_CONTINUE | xJavaBlock::TYPE_LOOP_END)) &&
                 (EndBlockPtr->Predecessors.size() == 1)) {
@@ -365,7 +365,7 @@ namespace jdc
                         }
                     }
 
-                    EndBlockPtr = SearchEndBasicBlock(MemberIndexes, MaxOffset, Set);
+                    EndBlockPtr = SearchEndBlock(MemberIndexes, MaxOffset, Set);
                 }
             }
         }
