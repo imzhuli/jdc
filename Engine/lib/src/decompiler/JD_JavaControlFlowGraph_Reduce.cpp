@@ -395,9 +395,200 @@ namespace jdc
         return Change;
     }
 
+    void xJavaControlFlowGraph::CreateIf(xJavaBlock * BlockPtr, xJavaBlock * SubBlockPtr, xJavaBlock * LastBlockPtr, xJavaBlock * NextBlockPtr)
+    {
+        auto ConditionBlockPtr = CopyBlock(BlockPtr);
+        ConditionBlockPtr->NextBlockPtr = &xJavaBlock::End;
+        ConditionBlockPtr->BranchBlockPtr = &xJavaBlock::End;
+
+        auto ToOffset = LastBlockPtr->ToOffset;
+        if (ToOffset == 0) {
+            ToOffset = BlockPtr->ToOffset;
+        }
+
+        // Split sequence
+        LastBlockPtr->NextBlockPtr = &xJavaBlock::End;
+        NextBlockPtr->Predecessors.erase(NextBlockPtr->Predecessors.find(LastBlockPtr));
+
+        // Create 'if'
+        BlockPtr->Type = xJavaBlock::TYPE_IF;
+        BlockPtr->ToOffset = ToOffset;
+        BlockPtr->ConditionBlockPtr = ConditionBlockPtr;
+        BlockPtr->FirstSubBlockPtr = SubBlockPtr;
+        BlockPtr->SecondSubBlockPtr = nullptr;
+        BlockPtr->NextBlockPtr = NextBlockPtr;
+    }
+
+    void xJavaControlFlowGraph::CreateIfElse(xJavaBlock::eType OpType, xJavaBlock * BlockPtr, xJavaBlock * sub1, xJavaBlock * last1, xJavaBlock * sub2, xJavaBlock * last2, xJavaBlock * NextBlockPtr)
+    {
+        // BasicBlock condition = basicBlock.getControlFlowGraph().newBasicBlock(basicBlock);
+
+        // condition.setNext(&xJavaBlock::End);
+        // condition.setBranch(&xJavaBlock::End);
+
+        // int toOffset = last2.getToOffset();
+
+        // if (toOffset == 0) {
+        //     toOffset = last1.getToOffset();
+
+        //     if (toOffset == 0) {
+        //         toOffset = basicBlock.getToOffset();
+        //     }
+        // }
+
+        // // Split sequences
+        // last1.setNext(&xJavaBlock::End);
+        // next.getPredecessors().remove(last1);
+        // last2.setNext(&xJavaBlock::End);
+        // next.getPredecessors().remove(last2);
+        // next.getPredecessors().add(basicBlock);
+        // // Create 'if-else'
+        // basicBlock.setType(type);
+        // basicBlock.setToOffset(toOffset);
+        // basicBlock.setCondition(condition);
+        // basicBlock.setSub1(sub1);
+        // basicBlock.setSub2(sub2);
+        // basicBlock.setNext(next);
+    }
+
     bool xJavaControlFlowGraph::ReduceConditionalBranch(xJavaBlock * BlockPtr)
     {
-        // TODO
+        auto NextBlockPtr = BlockPtr->NextBlockPtr;
+        auto BranchBlockPtr = BlockPtr->BranchBlockPtr;
+        auto WatchDog = xWatchDog();
+
+        if (NextBlockPtr == BranchBlockPtr) {
+            // Empty 'if'
+            CreateIf(BlockPtr, &xJavaBlock::End, &xJavaBlock::End, BranchBlockPtr);
+            return true;
+        }
+
+        if ((NextBlockPtr->Type & xJavaBlock::GROUP_END) && (NextBlockPtr->Predecessors.size() <= 1)) {
+            // Create 'if'
+            CreateIf(BlockPtr, NextBlockPtr, NextBlockPtr, BranchBlockPtr);
+            return true;
+        }
+
+        // if (NextBlockPtr.matchType(GROUP_SINGLE_SUCCESSOR|TYPE_RETURN|TYPE_RETURN_VALUE|TYPE_THROW) && (NextBlockPtr.getPredecessors().size() == 1)) {
+        //     BasicBlock nextLast = NextBlockPtr;
+        //     BasicBlock nextNext = NextBlockPtr->NextBlockPtr;
+        //     ControlFlowGraph cfg = NextBlockPtr.getControlFlowGraph();
+        //     int lineNumber = cfg.getLineNumber(BlockPtr.getFromOffset());
+        //     int maxOffset = BranchBlockPtr.getFromOffset();
+
+        //     if ((maxOffset == 0) || (NextBlockPtr.getFromOffset() > BranchBlockPtr.getFromOffset())) {
+        //         maxOffset = Integer.MAX_VALUE;
+        //     }
+
+        //     while ((nextLast != nextNext) && nextNext.matchType(GROUP_SINGLE_SUCCESSOR) && (nextNext.getPredecessors().size() == 1) && (cfg.getLineNumber(nextNext.getFromOffset()) >= lineNumber) && (nextNext.getFromOffset() < maxOffset)) {
+        //         watchdog.check(nextNext, nextNext->NextBlockPtr);
+        //         nextLast = nextNext;
+        //         nextNext = nextNext->NextBlockPtr;
+        //     }
+
+        //     if (nextNext == BranchBlockPtr) {
+        //         createIf(BlockPtr, NextBlockPtr, nextLast, BranchBlockPtr);
+        //         return true;
+        //     }
+
+        //     if (nextNext.matchType(GROUP_END) && (nextNext.getFromOffset() < maxOffset)) {
+        //         createIf(BlockPtr, NextBlockPtr, nextNext, BranchBlockPtr);
+        //         return true;
+        //     }
+
+        //     if (BranchBlockPtr.matchType(GROUP_END)) {
+        //         if ((nextNext.getFromOffset() < maxOffset) && (nextNext.getPredecessors().size() == 1)) {
+        //             createIf(BlockPtr, NextBlockPtr, nextNext, BranchBlockPtr);
+        //         } else {
+        //             createIfElse(TYPE_IF_ELSE, BlockPtr, NextBlockPtr, nextLast, BranchBlockPtr, BranchBlockPtr, nextNext);
+        //         }
+        //         return true;
+        //     }
+
+        //     if (BranchBlockPtr.matchType(GROUP_SINGLE_SUCCESSOR) && (BranchBlockPtr.getPredecessors().size() == 1)) {
+        //         BasicBlock branchLast = BranchBlockPtr;
+        //         BasicBlock branchNext = BranchBlockPtr->NextBlockPtr;
+
+        //         watchdog.clear();
+
+        //         while ((branchLast != branchNext) && branchNext.matchType(GROUP_SINGLE_SUCCESSOR) && (branchNext.getPredecessors().size() == 1) && (cfg.getLineNumber(branchNext.getFromOffset()) >= lineNumber)) {
+        //             watchdog.check(branchNext, branchNext->NextBlockPtr);
+        //             branchLast = branchNext;
+        //             branchNext = branchNext->NextBlockPtr;
+        //         }
+
+        //         if (nextNext == branchNext) {
+        //             if (nextLast.matchType(TYPE_GOTO_IN_TERNARY_OPERATOR|TYPE_TERNARY_OPERATOR)) {
+        //                 createIfElse(TYPE_TERNARY_OPERATOR, BlockPtr, NextBlockPtr, nextLast, BranchBlockPtr, branchLast, nextNext);
+        //                 return true;
+        //             } else {
+        //                 createIfElse(TYPE_IF_ELSE, BlockPtr, NextBlockPtr, nextLast, BranchBlockPtr, branchLast, nextNext);
+        //                 return true;
+        //             }
+        //         } else {
+        //             if ((nextNext.getFromOffset() < BranchBlockPtr.getFromOffset()) && (nextNext.getPredecessors().size() == 1)) {
+        //                 createIf(BlockPtr, NextBlockPtr, nextNext, BranchBlockPtr);
+        //                 return true;
+        //             } else if (((nextNext.getFromOffset() > BranchBlockPtr.getFromOffset()) && branchNext.matchType(GROUP_END))) {
+        //                 createIfElse(TYPE_IF_ELSE, BlockPtr, NextBlockPtr, nextLast, BranchBlockPtr, branchNext, nextNext);
+        //                 return true;
+        //             }
+        //         }
+        //     }
+        // }
+
+        // if (BranchBlockPtr.matchType(GROUP_SINGLE_SUCCESSOR|TYPE_RETURN|TYPE_RETURN_VALUE|TYPE_THROW) && (BranchBlockPtr.getPredecessors().size() == 1)) {
+        //     BasicBlock branchLast = BranchBlockPtr;
+        //     BasicBlock branchNext = BranchBlockPtr->NextBlockPtr;
+
+        //     watchdog.clear();
+
+        //     while ((branchLast != branchNext) && branchNext.matchType(GROUP_SINGLE_SUCCESSOR) && (branchNext.getPredecessors().size() == 1)) {
+        //         watchdog.check(branchNext, branchNext->NextBlockPtr);
+        //         branchLast = branchNext;
+        //         branchNext = branchNext->NextBlockPtr;
+        //     }
+
+        //     if (branchNext == NextBlockPtr) {
+        //         BlockPtr.inverseCondition();
+        //         createIf(BlockPtr, BranchBlockPtr, branchLast, NextBlockPtr);
+        //         return true;
+        //     }
+
+        //     if (branchNext.matchType(GROUP_END) && (branchNext.getPredecessors().size() <= 1)) {
+        //         // Create 'if'
+        //         BlockPtr.inverseCondition();
+        //         createIf(BlockPtr, BranchBlockPtr, branchNext, NextBlockPtr);
+        //         return true;
+        //     }
+        // }
+
+        // if (NextBlockPtr.matchType(TYPE_RETURN|TYPE_RETURN_VALUE|TYPE_THROW)) {
+        //     // Un-optimize byte code
+        //     NextBlockPtr = clone(BlockPtr, NextBlockPtr);
+        //     // Create 'if'
+        //     createIf(BlockPtr, NextBlockPtr, NextBlockPtr, BranchBlockPtr);
+        //     return true;
+        // }
+
+        // if (NextBlockPtr.matchType(GROUP_SINGLE_SUCCESSOR)) {
+        //     BasicBlock nextLast = NextBlockPtr;
+        //     BasicBlock nextNext = NextBlockPtr->NextBlockPtr;
+
+        //     watchdog.clear();
+
+        //     while ((nextLast != nextNext) && nextNext.matchType(GROUP_SINGLE_SUCCESSOR) && (nextNext.getPredecessors().size() == 1)) {
+        //         watchdog.check(nextNext, nextNext->NextBlockPtr);
+        //         nextLast = nextNext;
+        //         nextNext = nextNext->NextBlockPtr;
+        //     }
+
+        //     if (nextNext.matchType(TYPE_RETURN|TYPE_RETURN_VALUE|TYPE_THROW)) {
+        //         createIf(BlockPtr, NextBlockPtr, nextNext, BranchBlockPtr);
+        //         return true;
+        //     }
+        // }
+
         return false;
     }
 

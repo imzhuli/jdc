@@ -117,6 +117,8 @@ namespace jdc
         X_PRIVATE_MEMBER xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr);
         X_PRIVATE_MEMBER xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr, xJavaBlock * SubBlockPtr);
         X_PRIVATE_MEMBER xJavaBlock * ReduceLoop(xJavaLoop & Loop);
+        X_PRIVATE_MEMBER void CreateIf(xJavaBlock * BlockPtr, xJavaBlock * SubBlockPtr, xJavaBlock * LastBlockPtr, xJavaBlock * NextBlockPtr);
+        X_PRIVATE_MEMBER void CreateIfElse(xJavaBlock::eType OpType, xJavaBlock * BlockPtr, xJavaBlock * sub1, xJavaBlock * last1, xJavaBlock * sub2, xJavaBlock * last2, xJavaBlock * NextBlockPtr);
         X_PRIVATE_MEMBER xJavaBlock * CreateLeftCondition(xJavaBlock * BlockPtr);
         X_PRIVATE_MEMBER xJavaBlock * CreateLeftInverseCondition(xJavaBlock * BlockPtr);
         X_PRIVATE_MEMBER void UpdateConditionTernaryOperator(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr);
