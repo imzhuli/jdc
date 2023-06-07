@@ -999,7 +999,7 @@ namespace jdc
             BlockPtr->NextBlockPtr = EndBlockPtr;
             EndBlockPtr->Predecessors.insert(BlockPtr);
 
-            if (JsrTarget) {
+            if (!JsrTarget) {
                 // Change type
                 if ((FinallyBlockPtr) && CheckEclipseFinallyPattern(BlockPtr, FinallyBlockPtr, MaxOffset)) {
                     BlockPtr->Type = xJavaBlock::TYPE_TRY_ECLIPSE;
@@ -1664,7 +1664,6 @@ namespace jdc
                 break;
         };
 
-        Fatal("Unprocessed BranchBlockPtr");
         return true;
     }
 

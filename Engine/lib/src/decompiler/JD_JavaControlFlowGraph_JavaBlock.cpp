@@ -109,7 +109,7 @@ namespace jdc
         OS << "BasicBlock{index=" << BlockPtr->Index
             << ", from=" << BlockPtr->FromOffset
             << ", to=" << BlockPtr->ToOffset
-            << ", type=" << (ToString(BlockPtr->Type).c_str() + 5)
+            << ", type=" << (ToString(BlockPtr->Type).c_str())
             << ", inverseCondition=" << TF(BlockPtr->MustInverseCondition);
 
         std::vector<size_t> IndexList;
@@ -1016,22 +1016,6 @@ namespace jdc
         }
         ExceptionHandlers.push_back(ExceptionHandler);
     }
-
-    /**************************************
-     *
-     *
-     *
-     *
-     * **********************************/
-
-    /**
-     * @brief not confirmed codes:
-     *
-     */
-
-
-
-
 
     void xJavaBlock::InverseCondition()
     {
