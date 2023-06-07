@@ -18,8 +18,6 @@ namespace jdc
     static xJavaBlock * UpdateBlock(xJavaBlock * BlockPtr, xJavaBlock * EndBlockPtr, size_t MaxOffset);
     static xJavaBlock * SearchEndBlock(xJavaBlock * BlockPtr, size_t MaxOffset);
     static xJavaBlock * SearchJsrTarget(xJavaBlock * BlockPtr, xBitSet & JsrTargets);
-    static xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr);
-    static xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr, xJavaBlock * SubBlockPtr);
     static xJavaBlock * GetLastConditionalBranch(xJavaBlock * BlockPtr, xBitSet & Visited);
     static void RemoveJsrAndMergeSubTry(xJavaBlock * BlockPtr);
     static void RemoveLastContinueLoop(xJavaBlock * BlockPtr);
@@ -636,7 +634,7 @@ namespace jdc
         return nullptr;
     }
 
-    xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr)
+    xJavaBlock * xJavaControlFlowGraph::SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr)
     {
         auto UpdateBasicBlock = xJavaBlockPtr();
 
@@ -710,32 +708,41 @@ namespace jdc
         return UpdateBasicBlock;
     }
 
-    xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr, xJavaBlock * SubBlockPtr) {
+    static void RemovePredecessors(xJavaBlock * BlockPtr) {
+        auto & Predecessors = BlockPtr->Predecessors;
+        for (auto & Predecessor : Predecessors) {
+            Predecessor->Replace(BlockPtr, &xJavaBlock::LoopContinue);
+        }
+        Predecessors.clear();
+    }
+
+    xJavaBlock * xJavaControlFlowGraph::SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr, xJavaBlock * SubBlockPtr)
+    {
         if (SubBlockPtr) {
             auto * CFGPtr = BlockPtr->GetControlFlowGraph();
             assert(CFGPtr && CFGPtr == SubBlockPtr->GetControlFlowGraph());
 
             if (BlockPtr->FromOffset < SubBlockPtr->FromOffset) {
-                Todo();
-        //         if (BlockPtr->getFirstLineNumber() == Expression.UNKNOWN_LINE_NUMBER) {
-        //             if (SubBlockPtr->matchType(GROUP_SINGLE_SUCCESSOR) && (SubBlockPtr->NextBlockPtr.Type == TYPE_LOOP_START)) {
-        //                 int stackDepth = ByteCodeUtil.evalStackDepth(SubBlockPtr);
+                if (GetFirstLineNumber(BlockPtr) == UNKNOWN_LINE_NUMBER) {
+                    if ((SubBlockPtr->Type & xJavaBlock::GROUP_SINGLE_SUCCESSOR) && (SubBlockPtr->NextBlockPtr->Type == xJavaBlock::TYPE_LOOP_START)) {
+                        auto StackDepth = SubBlockPtr->EvalStackDepth();
+                        while (StackDepth != 0) {
+                            auto & Predecessors = SubBlockPtr->Predecessors;
+                            if (Predecessors.size() != 1) {
+                                break;
+                            }
+                            auto Iter = Predecessors.begin();
+                            SubBlockPtr = *Iter;
+                            StackDepth += SubBlockPtr->EvalStackDepth();
+                        }
 
-        //                 while (stackDepth != 0) {
-        //                     Set<auto> Predecessors = SubBlockPtr->Predecessors;
-        //                     if (Predecessors.size() != 1) {
-        //                         break;
-        //                     }
-        //                     stackDepth += ByteCodeUtil.evalStackDepth(SubBlockPtr = Predecessors.iterator().NextBlockPtr());
-        //                 }
-
-        //                 removePredecessors(SubBlockPtr);
-        //                 return SubBlockPtr;
-        //             }
-        //         } else if (BlockPtr->getFirstLineNumber() > SubBlockPtr->getFirstLineNumber()) {
-        //             removePredecessors(SubBlockPtr);
-        //             return SubBlockPtr;
-        //         }
+                        RemovePredecessors(SubBlockPtr);
+                        return SubBlockPtr;
+                    }
+                } else if (GetFirstLineNumber(BlockPtr) > GetFirstLineNumber(SubBlockPtr)) {
+                    RemovePredecessors(SubBlockPtr);
+                    return SubBlockPtr;
+                }
             }
 
             return SearchUpdateBlockAndCreateContinueLoop(Visited, SubBlockPtr);

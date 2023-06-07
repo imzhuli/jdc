@@ -113,6 +113,8 @@ namespace jdc
         X_PRIVATE_MEMBER xJavaLoop MakeLoop(xJavaBlock * StartBlockPtr, xBitSet & SearchZoneIndexes, xBitSet & MemberIndexes);
         X_PRIVATE_MEMBER std::vector<xJavaLoop> IdentifyNaturalLoops(const std::vector<xBitSet> & ArrayOfDominatorIndexes);
         X_PRIVATE_MEMBER xJavaBlock * SearchEndBasicBlock(const xBitSet & MemberIndexes, size_t MaxOffset, const xJavaBlockPtrSet & Members);
+        X_PRIVATE_MEMBER xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr);
+        X_PRIVATE_MEMBER xJavaBlock * SearchUpdateBlockAndCreateContinueLoop(xBitSet & Visited, xJavaBlock * BlockPtr, xJavaBlock * SubBlockPtr);
         X_PRIVATE_MEMBER xJavaBlock * ReduceLoop(xJavaLoop & Loop);
         X_PRIVATE_MEMBER xJavaBlock * CreateLeftCondition(xJavaBlock * BlockPtr);
         X_PRIVATE_MEMBER xJavaBlock * CreateLeftInverseCondition(xJavaBlock * BlockPtr);
