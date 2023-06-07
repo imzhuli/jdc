@@ -110,7 +110,59 @@ namespace jdc
 
     void xJavaControlFlowGraph::UpdateCondition(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr, xJavaBlock * NextNextNextNextBlockPtr)
     {
-        // TODO
+        auto FromOffset =  NextNextNextNextBlockPtr->FromOffset;
+        auto ToOffset = NextNextNextNextBlockPtr->ToOffset;
+        auto NextBlockPtr = NextNextNextNextBlockPtr->NextBlockPtr;
+        auto BranchBlockPtr = NextNextNextNextBlockPtr->BranchBlockPtr;
+
+        auto ConditionBlockPtr = CopyBlock(BlockPtr);
+        ConditionBlockPtr->Type = xJavaBlock::TYPE_CONDITION;
+
+        BlockPtr->NextBlockPtr->NextBlockPtr = &xJavaBlock::End;
+        BlockPtr->NextBlockPtr->Predecessors.clear();
+        BlockPtr->BranchBlockPtr->NextBlockPtr = &xJavaBlock::End;
+        BlockPtr->BranchBlockPtr->Predecessors.clear();
+
+        NextNextNextNextBlockPtr->Type = xJavaBlock::TYPE_CONDITION_TERNARY_OPERATOR;
+        NextNextNextNextBlockPtr->FromOffset = ConditionBlockPtr->ToOffset; // same as to ?
+        NextNextNextNextBlockPtr->ToOffset = ConditionBlockPtr->ToOffset;
+        NextNextNextNextBlockPtr->ConditionBlockPtr = ConditionBlockPtr;
+        NextNextNextNextBlockPtr->FirstSubBlockPtr = BlockPtr->NextBlockPtr;
+        NextNextNextNextBlockPtr->SecondSubBlockPtr = BlockPtr->BranchBlockPtr;
+        NextNextNextNextBlockPtr->NextBlockPtr = &xJavaBlock::End;
+        NextNextNextNextBlockPtr->BranchBlockPtr = &xJavaBlock::End;
+        ConditionBlockPtr->NextBlockPtr = &xJavaBlock::End;
+        ConditionBlockPtr->BranchBlockPtr = &xJavaBlock::End;
+
+        ConditionBlockPtr = CopyBlock(NextNextBlockPtr);
+        ConditionBlockPtr->Type = xJavaBlock::TYPE_CONDITION;
+
+        NextNextBlockPtr->NextBlockPtr->NextBlockPtr = &xJavaBlock::End;
+        NextNextBlockPtr->NextBlockPtr->Predecessors.clear();
+        NextNextBlockPtr->BranchBlockPtr->NextBlockPtr = &xJavaBlock::End;
+        NextNextBlockPtr->BranchBlockPtr->Predecessors.clear();
+
+        NextNextBlockPtr->Type = xJavaBlock::TYPE_CONDITION_TERNARY_OPERATOR;
+        NextNextBlockPtr->FromOffset = ConditionBlockPtr->ToOffset;
+        NextNextBlockPtr->ToOffset = ConditionBlockPtr->ToOffset;
+        NextNextBlockPtr->ConditionBlockPtr = ConditionBlockPtr;
+        NextNextBlockPtr->FirstSubBlockPtr = NextNextBlockPtr->NextBlockPtr;
+        NextNextBlockPtr->SecondSubBlockPtr = NextNextBlockPtr->BranchBlockPtr;
+        NextNextBlockPtr->NextBlockPtr = &xJavaBlock::End;
+        NextNextBlockPtr->BranchBlockPtr = &xJavaBlock::End;
+        ConditionBlockPtr->NextBlockPtr = &xJavaBlock::End;
+        ConditionBlockPtr->BranchBlockPtr = &xJavaBlock::End;
+
+        BlockPtr->Type = xJavaBlock::TYPE_CONDITION;
+        BlockPtr->FromOffset = FromOffset;
+        BlockPtr->ToOffset = ToOffset;
+        BlockPtr->FirstSubBlockPtr = NextNextNextNextBlockPtr;
+        BlockPtr->SecondSubBlockPtr = NextNextBlockPtr;
+        BlockPtr->NextBlockPtr = NextBlockPtr;
+        BlockPtr->BranchBlockPtr = BranchBlockPtr;
+
+        NextBlockPtr->Replace(NextNextNextNextBlockPtr, BlockPtr);
+        BranchBlockPtr->Replace(NextNextNextNextBlockPtr, BlockPtr);
     }
 
     bool CheckJdk118TernaryOperatorPattern(xJavaBlock * NextBlockPtr, xJavaBlock * NextNextBlockPtr, xOpCode IfByteCode) {
