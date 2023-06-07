@@ -223,7 +223,7 @@ namespace jdc
         BlockPtr->NextBlockPtr = NextNextBlockPtr;
 
         auto & BranchPredecessors = BlockPtr->BranchBlockPtr->Predecessors;
-        BranchPredecessors.erase(BranchPredecessors.find(BlockPtr));
+        SafeRemove(BranchPredecessors, BlockPtr);
         BlockPtr->BranchBlockPtr = &xJavaBlock::End;
         BlockPtr->MustInverseCondition = false;
 
@@ -408,7 +408,7 @@ namespace jdc
 
         // Split sequence
         LastBlockPtr->NextBlockPtr = &xJavaBlock::End;
-        NextBlockPtr->Predecessors.erase(NextBlockPtr->Predecessors.find(LastBlockPtr));
+        SafeRemove(NextBlockPtr->Predecessors, LastBlockPtr);
 
         // Create 'if'
         BlockPtr->Type = xJavaBlock::TYPE_IF;
@@ -435,9 +435,9 @@ namespace jdc
 
         // Split sequences
         last1->NextBlockPtr = &xJavaBlock::End;
-        NextBlockPtr->Predecessors.erase(NextBlockPtr->Predecessors.find(last1));
+        SafeRemove(NextBlockPtr->Predecessors, last1);
         last2->NextBlockPtr = &xJavaBlock::End;
-        NextBlockPtr->Predecessors.erase(NextBlockPtr->Predecessors.find(last2));
+        SafeRemove(NextBlockPtr->Predecessors, last2);
         NextBlockPtr->Predecessors.insert(BlockPtr);
 
         // Create 'if-else'
@@ -789,7 +789,7 @@ namespace jdc
         }
 
         auto LastSwitchCaseBasicBlock = xJavaBlockPtr();
-        auto V = xBitSet();
+        auto V = xBitSet(BlockPtrList.size());
         auto Ends = xJavaBlockPtrSet();
 
         for (auto & SwitchCase : BlockPtr->SwitchCases) {
@@ -939,7 +939,7 @@ namespace jdc
         if (TryWithResourcesFlag) {
             // One of 'try-with-resources' patterns
             for (auto & ExceptionHandler : BlockPtr->ExceptionHandlers) {
-                ExceptionHandler.BlockPtr->Predecessors.erase(ExceptionHandler.BlockPtr->Predecessors.find(BlockPtr));
+                SafeRemove(ExceptionHandler.BlockPtr->Predecessors, BlockPtr);
             }
             for (auto & PredecessorBlockPtr : BlockPtr->Predecessors) {
                 PredecessorBlockPtr->Replace(BlockPtr, TryBlockPtr);
@@ -1033,21 +1033,21 @@ namespace jdc
                 if (OpCode == 168) { // JSR
                     BlockPtr->Type = xJavaBlock::TYPE_STATEMENTS;
                     BlockPtr->ToOffset = BlockPtr->ToOffset - 3;
-                    BranchBlockPtr->Predecessors.erase(BranchBlockPtr->Predecessors.find(BlockPtr));
+                    SafeRemove(BranchBlockPtr->Predecessors, BlockPtr);
                     return true;
                 } else if (Delta > 5) { // JSR_W
                     BlockPtr->Type = xJavaBlock::TYPE_STATEMENTS;
                     BlockPtr->ToOffset = BlockPtr->ToOffset - 5;
-                    BranchBlockPtr->Predecessors.erase(BranchBlockPtr->Predecessors.find(BlockPtr));
+                    SafeRemove(BranchBlockPtr->Predecessors, BlockPtr);
                     return true;
                 }
             }
 
             // Delete JSR
             BlockPtr->Type = xJavaBlock::TYPE_DELETED;
-            BranchBlockPtr->Predecessors.erase(BranchBlockPtr->Predecessors.find(BlockPtr));
+            SafeRemove(BranchBlockPtr->Predecessors, BlockPtr);
             auto & NextPredecessors = BlockPtr->NextBlockPtr->Predecessors;
-            NextPredecessors.erase(NextPredecessors.find(BlockPtr));
+            SafeRemove(NextPredecessors, BlockPtr);
 
             for (auto & PredecessorPtr : BlockPtr->Predecessors) {
                 PredecessorPtr->Replace(BlockPtr, BlockPtr->NextBlockPtr);
@@ -1072,7 +1072,7 @@ namespace jdc
                         PredecessorPredecessorBlockPtr->Replace(PredecessorBlockPtr, BlockPtr);
                         BlockPtr->Predecessors.insert(PredecessorPredecessorBlockPtr);
                     }
-                    NextBlockPtr->Predecessors.erase(NextBlockPtr->Predecessors.find(PredecessorBlockPtr));
+                    SafeRemove(NextBlockPtr->Predecessors, PredecessorBlockPtr);
                     Iter = BranchPredecessors.erase(Iter);
                     Reduced = true;
                 }
@@ -1149,7 +1149,7 @@ namespace jdc
             Watchdog.Check(BlockPtr, BlockPtr->NextBlockPtr);
             auto NextBlockPtr = BlockPtr->NextBlockPtr;
             if ((NextBlockPtr == EndBlockPtr) || (NextBlockPtr->FromOffset > MaxOffset)) {
-                NextBlockPtr->Predecessors.erase(NextBlockPtr->Predecessors.find(BlockPtr));
+                SafeRemove(NextBlockPtr->Predecessors, BlockPtr);
                 BlockPtr->NextBlockPtr = &xJavaBlock::End;
                 break;
             }
@@ -1203,7 +1203,7 @@ namespace jdc
             BlockPtr->ToOffset = LastBlockPtr->ToOffset;
             BlockPtr->NextBlockPtr = NextBlockPtr;
 
-            NextBlockPtr->Predecessors.erase(NextBlockPtr->Predecessors.find(LastBlockPtr));
+            SafeRemove(NextBlockPtr->Predecessors, LastBlockPtr);
             NextBlockPtr->Predecessors.insert(BlockPtr);
         }
 

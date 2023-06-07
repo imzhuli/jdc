@@ -154,6 +154,16 @@ namespace jdc
         return OS.str();
     }
 
+    bool SafeRemove(xJavaBlockPtrSet & BlockPtrSet, xJavaBlock * BlockPtr)
+    {
+        auto Iter = BlockPtrSet.find(BlockPtr);
+        if (Iter == BlockPtrSet.end()) {
+            return false;
+        }
+        BlockPtrSet.erase(Iter);
+        return true;
+    }
+
     xJavaBlock::xJavaBlock(xJavaControlFlowGraph * CFGPtr, eType Type, size_t FromOffset, size_t ToOffset, bool InverseCondition)
     : _JavaControlFlowGraphPtr(CFGPtr), Type(Type), FromOffset(FromOffset), ToOffset(ToOffset), MustInverseCondition(InverseCondition)
     {

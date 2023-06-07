@@ -96,7 +96,7 @@ namespace jdc
             auto Clone = NewBlock(NextBlockPtr->Type, NextBlockPtr->FromOffset, NextBlockPtr->ToOffset);
             Clone->NextBlockPtr = &xJavaBlock::End;
             Clone->Predecessors.insert(BlockPtr);
-            NextBlockPtr->Predecessors.erase(NextBlockPtr->Predecessors.find(BlockPtr));
+            SafeRemove(NextBlockPtr->Predecessors, BlockPtr);
             BlockPtr->NextBlockPtr = Clone;
             return Clone;
         }
@@ -106,7 +106,7 @@ namespace jdc
             NewBlockPtr->Predecessors.insert(SourceBlockPtr);
 
             auto & TargetBlockPredecessors = TargetBlockPtr->Predecessors;
-            TargetBlockPredecessors.erase(TargetBlockPredecessors.find(SourceBlockPtr));
+            SafeRemove(TargetBlockPredecessors, SourceBlockPtr);
             return NewBlockPtr;
         }
 

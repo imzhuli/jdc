@@ -190,4 +190,5 @@ namespace jdc
 
     X_PRIVATE std::string ToString(const xJavaBlock * BlockPtr);
     X_PRIVATE std::string ToString(const xJavaBlock::eType Type);
+    X_PRIVATE bool SafeRemove(xJavaBlockPtrSet & BlockPtrSet, xJavaBlock * BlockPtr);
 }

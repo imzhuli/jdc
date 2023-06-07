@@ -21,12 +21,12 @@ namespace jdc
 
             auto SuccessorPtr = BlockPtr->NextBlockPtr;
             if (BlockPtr == SuccessorPtr) { // infinite goto
-                BlockPtr->Predecessors.erase(BlockPtr->Predecessors.find(BlockPtr));
+                SafeRemove(BlockPtr->Predecessors, BlockPtr);
                 BlockPtr->Type = xJavaBlock::TYPE_INFINITE_GOTO;
             }
             else {
                 auto & SuccessorPredecessors = SuccessorPtr->Predecessors;
-                SuccessorPredecessors.erase(SuccessorPredecessors.find(BlockPtr));
+                SafeRemove(SuccessorPredecessors, BlockPtr);
                 for (auto & PredecessorPtr : BlockPtr->Predecessors) {
                     PredecessorPtr->Replace(BlockPtr, SuccessorPtr);
                     SuccessorPredecessors.insert(PredecessorPtr);
