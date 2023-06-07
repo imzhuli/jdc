@@ -53,8 +53,7 @@ namespace jdc
     }
 
     static void RecursiveForwardSearchLoopMemberIndexes(xBitSet & Visited, const xBitSet & SearchZoneIndexes, xJavaBlock * CurrentBlockPtr, size_t MaxOffset) {
-        if ((!CurrentBlockPtr->Type & (
-                xJavaBlock::TYPE_END | xJavaBlock::TYPE_LOOP_START | xJavaBlock::TYPE_LOOP_CONTINUE | xJavaBlock::TYPE_LOOP_END | xJavaBlock::TYPE_SWITCH_BREAK))
+        if (!(CurrentBlockPtr->Type & (xJavaBlock::TYPE_END | xJavaBlock::TYPE_LOOP_START | xJavaBlock::TYPE_LOOP_CONTINUE | xJavaBlock::TYPE_LOOP_END | xJavaBlock::TYPE_SWITCH_BREAK))
             && (!Visited[CurrentBlockPtr->Index])
             && (SearchZoneIndexes[CurrentBlockPtr->Index])
             && (CurrentBlockPtr->FromOffset <= MaxOffset)) {

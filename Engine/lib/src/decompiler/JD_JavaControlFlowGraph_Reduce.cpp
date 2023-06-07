@@ -24,6 +24,61 @@ namespace jdc
     static void RemoveJsrAndMergeSubTry(xJavaBlock * BlockPtr);
     static void RemoveLastContinueLoop(xJavaBlock * BlockPtr);
 
+    namespace {
+
+        class xWatchDogLink
+        {
+        protected:
+            size_t ParentIndex;
+            size_t ChildIndex;
+
+        public:
+            xWatchDogLink(xJavaBlock * ParentBlockPtr, xJavaBlock * ChildBlockPtr) {
+                ParentIndex = ParentBlockPtr->Index;
+                ChildIndex = ChildBlockPtr->Index;
+            }
+            bool operator < (const xWatchDogLink & Other) const {
+                if (ParentIndex < Other.ParentIndex) {
+                    return true;
+                }
+                if (ParentIndex == Other.ParentIndex) {
+                    return ChildIndex < Other.ChildIndex;
+                }
+                return false;
+            }
+        };
+
+        X_INLINE bool operator == (const xWatchDogLink & lhs, const xWatchDogLink & rhs) {
+            return !(lhs < rhs) && !(rhs < lhs);
+        }
+
+        X_INLINE bool operator != (const xWatchDogLink & lhs, const xWatchDogLink & rhs) {
+            return (lhs < rhs) || (rhs < lhs);
+        }
+
+        class xWatchDog {
+        protected:
+            std::set<xWatchDogLink> Links;
+
+        public:
+            void Clear() {
+                Links.clear();
+            }
+
+            void Check(xJavaBlock * ParentBlockPtr, xJavaBlock * ChildBlockPtr) { // check loop or multiple entry
+                if (!(ChildBlockPtr->Type & xJavaBlock::GROUP_END)) {
+                    auto Link = xWatchDogLink(ParentBlockPtr, ChildBlockPtr);
+                    if (Links.find(Link) != Links.end()) {
+                        X_DEBUG_PRINTF("CFG watchdog: parent=%zi, child=%zi\n" + ParentBlockPtr->Index, ChildBlockPtr->Index);
+                        Fatal();
+                    }
+                    Links.insert(Link);
+                }
+            }
+
+        };
+    }
+
     void xJavaControlFlowGraph::UpdateConditionTernaryOperator(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr)
     {
         // TODO
@@ -246,6 +301,7 @@ namespace jdc
 
     bool xJavaControlFlowGraph::ReduceConditionalBranch(xJavaBlock * BlockPtr)
     {
+        // TODO
         return false;
     }
 
@@ -537,22 +593,17 @@ namespace jdc
 
     xJavaBlock * UpdateBlock(xJavaBlock * BlockPtr, xJavaBlock * EndBlockPtr, size_t MaxOffset)
     {
-        Todo();
-        // WatchDog watchdog = new WatchDog();
-
-        // while (BlockPtr->Type & (GROUP_SINGLE_SUCCESSOR)) {
-        //     watchdog.check(BlockPtr, BlockPtr->NextBlockPtr);
-        //     auto NextBlockPtr = BlockPtr->NextBlockPtr;
-
-        //     if ((NextBlockPtr == EndBlockPtr) || (NextBlockPtr.getFromOffset() > maxOffset)) {
-        //         NextBlockPtr->Predecessors.remove(BlockPtr);
-        //         BlockPtr.setNext(END);
-        //         break;
-        //     }
-
-        //     BlockPtr = NextBlockPtr;
-        // }
-
+        auto Watchdog = xWatchDog();
+        while (BlockPtr->Type & xJavaBlock::GROUP_SINGLE_SUCCESSOR) {
+            Watchdog.Check(BlockPtr, BlockPtr->NextBlockPtr);
+            auto NextBlockPtr = BlockPtr->NextBlockPtr;
+            if ((NextBlockPtr == EndBlockPtr) || (NextBlockPtr->FromOffset > MaxOffset)) {
+                NextBlockPtr->Predecessors.erase(NextBlockPtr->Predecessors.find(BlockPtr));
+                BlockPtr->NextBlockPtr = &xJavaBlock::End;
+                break;
+            }
+            BlockPtr = NextBlockPtr;
+        }
         return BlockPtr;
     }
 
