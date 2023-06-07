@@ -146,7 +146,7 @@ namespace jdc
             ++NextTryFixInnerClassIndex;
         }
         size_t FixCounter = 0;
-        for (auto InnerClassPtr : TryFixInnerClassList) {
+        for (auto & InnerClassPtr : TryFixInnerClassList) {
             bool NeedCheck = false;
             std::string NewInnermostName = InnerClassPtr->_InnermostName;
             do {

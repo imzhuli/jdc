@@ -974,11 +974,11 @@ namespace jdc
         if (Olds.find(BranchBlockPtr) != Olds.end()) {
             BranchBlockPtr = NewBlockPtr;
         }
-        for (auto ExceptionHandlerPtr : ExceptionHandlers) {
-            ExceptionHandlerPtr.Replace(Olds, NewBlockPtr);
+        for (auto & ExceptionHandler : ExceptionHandlers) {
+            ExceptionHandler.Replace(Olds, NewBlockPtr);
         }
-        for (auto SwitchCasePtr : SwitchCases) {
-            SwitchCasePtr.Replace(Olds, NewBlockPtr);
+        for (auto & SwitchCase : SwitchCases) {
+            SwitchCase.Replace(Olds, NewBlockPtr);
         }
         if (Olds.find(FirstSubBlockPtr) != Olds.end()) {
             FirstSubBlockPtr = NewBlockPtr;
@@ -1048,11 +1048,11 @@ namespace jdc
     }
 
     xJavaSwitchCase::xJavaSwitchCase(xJavaBlock * BlockPtr)
-    : DefaultCase(true), Offset(BlockPtr->FromOffset), BlockPtr(BlockPtr)
+    : IsDefaultCase(true), Offset(BlockPtr->FromOffset), BlockPtr(BlockPtr)
     {}
 
     xJavaSwitchCase::xJavaSwitchCase(size_t Value, xJavaBlock * BlockPtr)
-    : DefaultCase(false), Value(Value), Offset(BlockPtr->FromOffset), BlockPtr(BlockPtr)
+    : IsDefaultCase(false), Value(Value), Offset(BlockPtr->FromOffset), BlockPtr(BlockPtr)
     {}
 
 }

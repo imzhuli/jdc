@@ -427,7 +427,7 @@ namespace jdc
                     break;
                 }
                 case xJavaBlock::TYPE_SWITCH_DECLARATION: {
-                    for (auto SwitchCase : BlockPtr->SwitchCases) {
+                    for (auto & SwitchCase : BlockPtr->SwitchCases) {
                         auto Index = SwitchCase.BlockPtr->Index;
                         // X_DEBUG_PRINTF("-->S %zi\n", Index);
                         if (!SwitchCase.BlockPtr->IsTheEnd() && DominatorIndexes[Index]) {
@@ -657,7 +657,7 @@ namespace jdc
         } while(false);
 
         // Set &xJavaBlock::LoopStart, &xJavaBlock::LoopEnd and TYPE_JUMP
-        for (auto MemberBlockPtr : Members) {
+        for (auto & MemberBlockPtr : Members) {
             if (MemberBlockPtr->Type & (xJavaBlock::GROUP_SINGLE_SUCCESSOR)) {
                 auto BlockPtr = MemberBlockPtr->NextBlockPtr;
 

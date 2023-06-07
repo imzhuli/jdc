@@ -12,7 +12,6 @@ using namespace xel;
 namespace jdc
 {
 
-    static bool ReduceSwitchDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JsrTargets);
     static bool ContainsFinally(xJavaBlock * BlockPtr);
     static bool CheckEclipseFinallyPattern(xJavaBlock * BlockPtr, xJavaBlock * FinallyBlockPtr, size_t MaxOffset);
     static xJavaBlock * UpdateBlock(xJavaBlock * BlockPtr, xJavaBlock * EndBlockPtr, size_t MaxOffset);
@@ -367,11 +366,270 @@ namespace jdc
         return false;
     }
 
-    bool ReduceSwitchDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JsrTargets)
+    void Visit(xJavaBlock * BlockPtr, xBitSet & Visited, size_t MaxOffset, xJavaBlockPtrSet & Ends) {
+        if (BlockPtr->FromOffset >= MaxOffset) {
+            Ends.insert(BlockPtr);
+        }
+        else if ((BlockPtr->Index >= 0) && (!Visited[BlockPtr->Index])) {
+            Visited[BlockPtr->Index] = true;
+        //     switch (BlockPtr.getType()) {
+        //         case TYPE_CONDITIONAL_BRANCH:
+        //         case TYPE_JSR:
+        //         case TYPE_CONDITION:
+        //             Visit(BlockPtr->BranchBlockPtr, Visited, MaxOffset, Ends);
+        //         case TYPE_START:
+        //         case TYPE_STATEMENTS:
+        //         case TYPE_GOTO:
+        //         case TYPE_GOTO_IN_TERNARY_OPERATOR:
+        //         case TYPE_LOOP:
+        //             Visit(Visited, BlockPtr.getNext(), MaxOffset, Ends);
+        //             break;
+        //         case TYPE_TRY:
+        //         case TYPE_TRY_JSR:
+        //         case TYPE_TRY_ECLIPSE:
+        //             Visit(Visited, BlockPtr.getSub1(), MaxOffset, Ends);
+        //         case TYPE_TRY_DECLARATION:
+        //             for (BasicBlock.ExceptionHandler exceptionHandler : BlockPtr.getExceptionHandlers()) {
+        //                 Visit(Visited, exceptionHandler.getBasicBlock(), MaxOffset, Ends);
+        //             }
+        //             Visit(Visited, BlockPtr.getNext(), MaxOffset, Ends);
+        //             break;
+        //         case TYPE_IF_ELSE:
+        //         case TYPE_TERNARY_OPERATOR:
+        //             Visit(Visited, BlockPtr.getSub2(), MaxOffset, Ends);
+        //         case TYPE_IF:
+        //             Visit(Visited, BlockPtr.getSub1(), MaxOffset, Ends);
+        //             Visit(Visited, BlockPtr.getNext(), MaxOffset, Ends);
+        //             break;
+        //         case TYPE_CONDITION_OR:
+        //         case TYPE_CONDITION_AND:
+        //             Visit(Visited, BlockPtr.getSub1(), MaxOffset, Ends);
+        //             Visit(Visited, BlockPtr.getSub2(), MaxOffset, Ends);
+        //             break;
+        //         case TYPE_SWITCH:
+        //             Visit(Visited, BlockPtr.getNext(), MaxOffset, Ends);
+        //         case TYPE_SWITCH_DECLARATION:
+        //             for (SwitchCase switchCase : BlockPtr.getSwitchCases()) {
+        //                 Visit(Visited, switchCase.getBasicBlock(), MaxOffset, Ends);
+        //             }
+        //             break;
+        //     }
+        }
+    }
+
+    bool SearchLoopStart(xJavaBlock * BlockPtr, size_t MaxOffset) {
+        // WatchDog watchdog = new WatchDog();
+
+        // for (SwitchCase switchCase : BlockPtr.getSwitchCases()) {
+        //     BasicBlock bb = switchCase.getBasicBlock();
+
+        //     watchdog.clear();
+
+        //     while (bb.getFromOffset() < MaxOffset) {
+        //         if (bb == LOOP_START) {
+        //             return true;
+        //         }
+
+        //         if (bb.matchType(GROUP_END|GROUP_CONDITION)) {
+        //             break;
+        //         }
+
+        //         BasicBlock next = null;
+
+        //         if (bb.matchType(GROUP_SINGLE_SUCCESSOR)) {
+        //             next = bb.getNext();
+        //         } else if (bb.getType() == TYPE_CONDITIONAL_BRANCH) {
+        //             next = bb.getBranch();
+        //         } else if (bb.getType() == TYPE_SWITCH_DECLARATION) {
+        //             int max = bb.getFromOffset();
+
+        //             for (SwitchCase sc : bb.getSwitchCases()) {
+        //                 if (max < sc.getBasicBlock().getFromOffset()) {
+        //                     next = sc.getBasicBlock();
+        //                     max = next.getFromOffset();
+        //                 }
+        //             }
+        //         }
+
+        //         if (bb == next) {
+        //             break;
+        //         }
+
+        //         watchdog.check(bb, next);
+        //         bb = next;
+        //     }
+        // }
+
+        return false;
+    }
+
+     void ReplaceLoopStartWithSwitchBreak(xJavaBlock * BlockPtr, xBitSet & Visited)
+     {
+        if (!(BlockPtr->Type & xJavaBlock::GROUP_END) && (!Visited[BlockPtr->Index])) {
+            Visited[BlockPtr->Index] = true;
+            BlockPtr->Replace(&xJavaBlock::LoopStart, &xJavaBlock::SwitchBreak);
+
+            switch (BlockPtr->Type) {
+                case xJavaBlock::TYPE_CONDITIONAL_BRANCH:
+                case xJavaBlock::TYPE_JSR:
+                case xJavaBlock::TYPE_CONDITION:
+                    ReplaceLoopStartWithSwitchBreak(BlockPtr->BranchBlockPtr, Visited);
+                case xJavaBlock::TYPE_START:
+                case xJavaBlock::TYPE_STATEMENTS:
+                case xJavaBlock::TYPE_GOTO:
+                case xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR:
+                case xJavaBlock::TYPE_LOOP:
+                    ReplaceLoopStartWithSwitchBreak(BlockPtr->NextBlockPtr, Visited);
+                    break;
+                case xJavaBlock::TYPE_TRY:
+                case xJavaBlock::TYPE_TRY_JSR:
+                case xJavaBlock::TYPE_TRY_ECLIPSE:
+                    ReplaceLoopStartWithSwitchBreak(BlockPtr->FirstSubBlockPtr, Visited);
+                case xJavaBlock::TYPE_TRY_DECLARATION:
+                    for (auto & ExceptionHandler : BlockPtr->ExceptionHandlers) {
+                        ReplaceLoopStartWithSwitchBreak(ExceptionHandler.BlockPtr, Visited);
+                    }
+                    break;
+                case xJavaBlock::TYPE_IF_ELSE:
+                case xJavaBlock::TYPE_TERNARY_OPERATOR:
+                    ReplaceLoopStartWithSwitchBreak(BlockPtr->SecondSubBlockPtr, Visited);
+                case xJavaBlock::TYPE_IF:
+                    ReplaceLoopStartWithSwitchBreak(BlockPtr->FirstSubBlockPtr, Visited);
+                    ReplaceLoopStartWithSwitchBreak(BlockPtr->NextBlockPtr, Visited);
+                    break;
+                case xJavaBlock::TYPE_CONDITION_OR:
+                case xJavaBlock::TYPE_CONDITION_AND:
+                    ReplaceLoopStartWithSwitchBreak(BlockPtr->FirstSubBlockPtr, Visited);
+                    ReplaceLoopStartWithSwitchBreak(BlockPtr->SecondSubBlockPtr, Visited);
+                    break;
+                case xJavaBlock::TYPE_SWITCH:
+                    ReplaceLoopStartWithSwitchBreak(BlockPtr->NextBlockPtr, Visited);
+                case xJavaBlock::TYPE_SWITCH_DECLARATION:
+                    for (auto & SwitchCase : BlockPtr->SwitchCases) {
+                        ReplaceLoopStartWithSwitchBreak(SwitchCase.BlockPtr, Visited);
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    bool xJavaControlFlowGraph::ReduceSwitchDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JsrTargets)
     {
-        // TODO
-        Todo();
-        return true;
+        xJavaSwitchCase * DefaultSCPtr = nullptr;
+        xJavaSwitchCase * LastSCPtr = nullptr;
+        size_t MaxOffset = 0;
+
+        for (auto & SwitchCase : BlockPtr->SwitchCases) {
+            if (MaxOffset < SwitchCase.Offset) {
+                MaxOffset = SwitchCase.Offset;
+            }
+
+            if (SwitchCase.IsDefaultCase) {
+                DefaultSCPtr = &SwitchCase;
+            } else {
+                LastSCPtr = &SwitchCase;
+            }
+        }
+
+        if (!LastSCPtr) {
+            LastSCPtr = DefaultSCPtr;
+        }
+
+        auto LastSwitchCaseBasicBlock = xJavaBlockPtr();
+        auto V = xBitSet();
+        auto Ends = xJavaBlockPtrSet();
+
+        for (auto & SwitchCase : BlockPtr->SwitchCases) {
+            auto SwitchCaseBlockPtr = SwitchCase.BlockPtr;
+
+            if (SwitchCase.Offset == MaxOffset) {
+                LastSwitchCaseBasicBlock = SwitchCaseBlockPtr;
+            } else {
+                Visit(SwitchCaseBlockPtr, V, MaxOffset, Ends);
+            }
+        }
+
+        auto EndBlockPtr = &xJavaBlock::End;
+
+        for (auto TempBlockPtr : Ends) {
+            if ((EndBlockPtr == &xJavaBlock::End) || (EndBlockPtr->FromOffset < TempBlockPtr->FromOffset)) {
+                EndBlockPtr = TempBlockPtr;
+            }
+        }
+
+        if (EndBlockPtr == &xJavaBlock::End) {
+            if ((LastSCPtr->BlockPtr == LastSwitchCaseBasicBlock) && SearchLoopStart(BlockPtr, MaxOffset)) {
+                ReplaceLoopStartWithSwitchBreak(BlockPtr, X2Ref(xBitSet()));
+                DefaultSCPtr->BlockPtr = (EndBlockPtr = &xJavaBlock::LoopStart);
+            } else {
+                EndBlockPtr = LastSwitchCaseBasicBlock;
+            }
+        } else {
+            Visit(LastSwitchCaseBasicBlock, V, EndBlockPtr->FromOffset, Ends);
+        }
+
+        // Set<BasicBlock> endPredecessors = EndBlockPtr.getPredecessors();
+        // Iterator<BasicBlock> endPredecessorIterator = endPredecessors.iterator();
+
+        // while (endPredecessorIterator.hasNext()) {
+        //     BasicBlock endPredecessor = endPredecessorIterator.next();
+
+        //     if (v.get(endPredecessor.getIndex())) {
+        //         endPredecessor.replace(EndBlockPtr, SWITCH_BREAK);
+        //         endPredecessorIterator.remove();
+        //     }
+        // }
+
+        // if (DefaultSCPtr.getBasicBlock() == EndBlockPtr) {
+        //     Iterator<SwitchCase> iterator = BlockPtr.getSwitchCases().iterator();
+        //     while (iterator.hasNext()) {
+        //         if (iterator.next().getBasicBlock() == EndBlockPtr) {
+        //             iterator.remove();
+        //         }
+        //     }
+        // } else {
+        //     for (SwitchCase switchCase : BlockPtr.getSwitchCases()) {
+        //         if (switchCase.getBasicBlock() == EndBlockPtr) {
+        //             switchCase.setBasicBlock(SWITCH_BREAK);
+        //         }
+        //     }
+        // }
+
+        auto Reduced = true;
+
+        // for (SwitchCase switchCase : BlockPtr.getSwitchCases()) {
+        //     reduced &= reduce(visited, switchCase.getBasicBlock(), jsrTargets);
+        // }
+
+        // for (SwitchCase switchCase : BlockPtr.getSwitchCases()) {
+        //     BasicBlock bb = switchCase.getBasicBlock();
+
+        //     assert bb != EndBlockPtr;
+
+        //     Set<BasicBlock> predecessors = bb.getPredecessors();
+
+        //     if (predecessors.size() > 1) {
+        //         Iterator<BasicBlock> predecessorIterator = predecessors.iterator();
+
+        //         while (predecessorIterator.hasNext()) {
+        //             BasicBlock predecessor = predecessorIterator.next();
+
+        //             if (predecessor != BlockPtr) {
+        //                 predecessor.replace(bb, END);
+        //                 predecessorIterator.remove();
+        //             }
+        //         }
+        //     }
+        // }
+
+        // // Change type
+        // BlockPtr.setType(TYPE_SWITCH);
+        // BlockPtr.setNext(EndBlockPtr);
+        // endPredecessors.add(BlockPtr);
+
+        return Reduced & Reduce(BlockPtr->NextBlockPtr, Visited, JsrTargets);
     }
 
     bool xJavaControlFlowGraph::ReduceTryDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JsrTargets)

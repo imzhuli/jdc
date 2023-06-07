@@ -125,6 +125,7 @@ namespace jdc
         X_PRIVATE_MEMBER void UpdateConditionalBranches(xJavaBlock * BlockPtr, xJavaBlock * LeftBlockPtr, xJavaBlock::eType OpType, xJavaBlock * SubBlockPtr);
         X_PRIVATE_MEMBER void ChangeEndLoopToJump(xBitSet & Visited, xJavaBlock * TargetPtr, xJavaBlock * BlockPtr);
         X_PRIVATE_MEMBER bool AggregateConditionalBranches(xJavaBlock * BlockPtr);
+        X_PRIVATE_MEMBER bool ReduceSwitchDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JsrTargets);
         X_PRIVATE_MEMBER bool ReduceConditionalBranch(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JsrTargets);
         X_PRIVATE_MEMBER bool ReduceConditionalBranch(xJavaBlock * BlockPtr);
         X_PRIVATE_MEMBER bool ReduceLoop(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JsrTargets);

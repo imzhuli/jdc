@@ -561,7 +561,7 @@ namespace jdc
         }
 
         /* --- Recheck TYPE_GOTO_IN_TERNARY_OPERATOR --- */
-        for (auto BlockPtr : Blocks) {
+        for (auto & BlockPtr : Blocks) {
             assert(BlockPtr);
             auto NextBlockPtr = BlockPtr->NextBlockPtr;
             auto PredecessorsPtr = static_cast<xJavaBlockPtrSet*>(nullptr);

@@ -18,10 +18,10 @@ namespace jdc
     class xJavaSwitchCase
     {
     public:
-        bool           DefaultCase  = {};
-        size_t         Value        = {};
-        size_t         Offset       = {};
-        xJavaBlock *   BlockPtr     = {};
+        bool           IsDefaultCase  = {};
+        size_t         Value          = {};
+        size_t         Offset         = {};
+        xJavaBlock *   BlockPtr       = {};
 
         X_PRIVATE_MEMBER xJavaSwitchCase() = default;
         X_PRIVATE_MEMBER xJavaSwitchCase(xJavaBlock * BlockPtr); // default case

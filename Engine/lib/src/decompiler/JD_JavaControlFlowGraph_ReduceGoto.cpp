@@ -14,7 +14,7 @@ namespace jdc
 
     void xJavaControlFlowGraph::ReduceGoto()
     {
-        for (auto BlockPtr : BlockPtrList) {
+        for (auto & BlockPtr : BlockPtrList) {
             if (BlockPtr->Type != xJavaBlock::TYPE_GOTO) {
                 continue;
             }
