@@ -421,34 +421,32 @@ namespace jdc
 
     void xJavaControlFlowGraph::CreateIfElse(xJavaBlock::eType OpType, xJavaBlock * BlockPtr, xJavaBlock * sub1, xJavaBlock * last1, xJavaBlock * sub2, xJavaBlock * last2, xJavaBlock * NextBlockPtr)
     {
-        // BasicBlock condition = basicBlock.getControlFlowGraph().newBasicBlock(basicBlock);
+        auto ConditionBlockPtr = CopyBlock(BlockPtr);
+        ConditionBlockPtr->NextBlockPtr = &xJavaBlock::End;
+        ConditionBlockPtr->BranchBlockPtr = &xJavaBlock::End;
 
-        // condition.setNext(&xJavaBlock::End);
-        // condition.setBranch(&xJavaBlock::End);
+        auto ToOffset = last2->ToOffset;
+        if (ToOffset == 0) {
+            ToOffset = last1->ToOffset;
+            if (ToOffset == 0) {
+                ToOffset = BlockPtr->ToOffset;
+            }
+        }
 
-        // int toOffset = last2.getToOffset();
+        // Split sequences
+        last1->NextBlockPtr = &xJavaBlock::End;
+        NextBlockPtr->Predecessors.erase(NextBlockPtr->Predecessors.find(last1));
+        last2->NextBlockPtr = &xJavaBlock::End;
+        NextBlockPtr->Predecessors.erase(NextBlockPtr->Predecessors.find(last2));
+        NextBlockPtr->Predecessors.insert(BlockPtr);
 
-        // if (toOffset == 0) {
-        //     toOffset = last1.getToOffset();
-
-        //     if (toOffset == 0) {
-        //         toOffset = basicBlock.getToOffset();
-        //     }
-        // }
-
-        // // Split sequences
-        // last1.setNext(&xJavaBlock::End);
-        // next.getPredecessors().remove(last1);
-        // last2.setNext(&xJavaBlock::End);
-        // next.getPredecessors().remove(last2);
-        // next.getPredecessors().add(basicBlock);
-        // // Create 'if-else'
-        // basicBlock.setType(type);
-        // basicBlock.setToOffset(toOffset);
-        // basicBlock.setCondition(condition);
-        // basicBlock.setSub1(sub1);
-        // basicBlock.setSub2(sub2);
-        // basicBlock.setNext(next);
+        // Create 'if-else'
+        BlockPtr->Type = OpType;
+        BlockPtr->ToOffset = ToOffset;
+        BlockPtr->ConditionBlockPtr = ConditionBlockPtr;
+        BlockPtr->FirstSubBlockPtr = sub1;
+        BlockPtr->SecondSubBlockPtr = sub2;
+        BlockPtr->NextBlockPtr = NextBlockPtr;
     }
 
     bool xJavaControlFlowGraph::ReduceConditionalBranch(xJavaBlock * BlockPtr)
