@@ -65,7 +65,7 @@ namespace jdc
                 if (!(ChildBlockPtr->Type & xJavaBlock::GROUP_END)) {
                     auto Link = xWatchDogLink(ParentBlockPtr, ChildBlockPtr);
                     if (Links.find(Link) != Links.end()) {
-                        X_DEBUG_PRINTF("CFG watchdog: parent=%zi, child=%zi\n" + ParentBlockPtr->Index, ChildBlockPtr->Index);
+                        X_DEBUG_PRINTF("CFG WatchDog: parent=%zi, child=%zi\n" + ParentBlockPtr->Index, ChildBlockPtr->Index);
                         Fatal();
                     }
                     Links.insert(Link);
@@ -467,125 +467,139 @@ namespace jdc
             return true;
         }
 
-        // if (NextBlockPtr.matchType(GROUP_SINGLE_SUCCESSOR|TYPE_RETURN|TYPE_RETURN_VALUE|TYPE_THROW) && (NextBlockPtr.getPredecessors().size() == 1)) {
-        //     BasicBlock nextLast = NextBlockPtr;
-        //     BasicBlock nextNext = NextBlockPtr->NextBlockPtr;
-        //     ControlFlowGraph cfg = NextBlockPtr.getControlFlowGraph();
-        //     int lineNumber = cfg.getLineNumber(BlockPtr.getFromOffset());
-        //     int maxOffset = BranchBlockPtr.getFromOffset();
+        if ((NextBlockPtr->Type & (xJavaBlock::GROUP_SINGLE_SUCCESSOR | xJavaBlock::TYPE_RETURN | xJavaBlock::TYPE_RETURN_VALUE | xJavaBlock::TYPE_THROW))
+            && (NextBlockPtr->Predecessors.size() == 1)) {
 
-        //     if ((maxOffset == 0) || (NextBlockPtr.getFromOffset() > BranchBlockPtr.getFromOffset())) {
-        //         maxOffset = Integer.MAX_VALUE;
-        //     }
+            auto NextLastBlockPtr = NextBlockPtr;
+            auto NextNextBlockPtr = NextBlockPtr->NextBlockPtr;
+            auto LineNumber = GetLineNumber(BlockPtr->FromOffset);
+            auto MaxOffset = BranchBlockPtr->FromOffset;
 
-        //     while ((nextLast != nextNext) && nextNext.matchType(GROUP_SINGLE_SUCCESSOR) && (nextNext.getPredecessors().size() == 1) && (cfg.getLineNumber(nextNext.getFromOffset()) >= lineNumber) && (nextNext.getFromOffset() < maxOffset)) {
-        //         watchdog.check(nextNext, nextNext->NextBlockPtr);
-        //         nextLast = nextNext;
-        //         nextNext = nextNext->NextBlockPtr;
-        //     }
+            if ((MaxOffset == 0) || (NextBlockPtr->FromOffset > BranchBlockPtr->FromOffset)) {
+                MaxOffset = SIZE_MAX;
+            }
 
-        //     if (nextNext == BranchBlockPtr) {
-        //         createIf(BlockPtr, NextBlockPtr, nextLast, BranchBlockPtr);
-        //         return true;
-        //     }
+            while ((NextLastBlockPtr != NextNextBlockPtr)
+                && (NextNextBlockPtr->Type & xJavaBlock::GROUP_SINGLE_SUCCESSOR)
+                && (NextNextBlockPtr->Predecessors.size() == 1)
+                && (GetLineNumber(NextNextBlockPtr->FromOffset) >= LineNumber) && (NextNextBlockPtr->FromOffset < MaxOffset)) {
 
-        //     if (nextNext.matchType(GROUP_END) && (nextNext.getFromOffset() < maxOffset)) {
-        //         createIf(BlockPtr, NextBlockPtr, nextNext, BranchBlockPtr);
-        //         return true;
-        //     }
+                WatchDog.Check(NextNextBlockPtr, NextNextBlockPtr->NextBlockPtr);
+                NextLastBlockPtr = NextNextBlockPtr;
+                NextNextBlockPtr = NextNextBlockPtr->NextBlockPtr;
+            }
 
-        //     if (BranchBlockPtr.matchType(GROUP_END)) {
-        //         if ((nextNext.getFromOffset() < maxOffset) && (nextNext.getPredecessors().size() == 1)) {
-        //             createIf(BlockPtr, NextBlockPtr, nextNext, BranchBlockPtr);
-        //         } else {
-        //             createIfElse(TYPE_IF_ELSE, BlockPtr, NextBlockPtr, nextLast, BranchBlockPtr, BranchBlockPtr, nextNext);
-        //         }
-        //         return true;
-        //     }
+            if (NextNextBlockPtr == BranchBlockPtr) {
+                CreateIf(BlockPtr, NextBlockPtr, NextLastBlockPtr, BranchBlockPtr);
+                return true;
+            }
 
-        //     if (BranchBlockPtr.matchType(GROUP_SINGLE_SUCCESSOR) && (BranchBlockPtr.getPredecessors().size() == 1)) {
-        //         BasicBlock branchLast = BranchBlockPtr;
-        //         BasicBlock branchNext = BranchBlockPtr->NextBlockPtr;
+            if ((NextNextBlockPtr->Type & xJavaBlock::GROUP_END) && (NextNextBlockPtr->FromOffset < MaxOffset)) {
+                CreateIf(BlockPtr, NextBlockPtr, NextNextBlockPtr, BranchBlockPtr);
+                return true;
+            }
 
-        //         watchdog.clear();
+            if (BranchBlockPtr->Type & xJavaBlock::GROUP_END) {
+                if ((NextNextBlockPtr->FromOffset < MaxOffset) && (NextNextBlockPtr->Predecessors.size() == 1)) {
+                    CreateIf(BlockPtr, NextBlockPtr, NextNextBlockPtr, BranchBlockPtr);
+                } else {
+                    CreateIfElse(xJavaBlock::TYPE_IF_ELSE, BlockPtr, NextBlockPtr, NextLastBlockPtr, BranchBlockPtr, BranchBlockPtr, NextNextBlockPtr);
+                }
+                return true;
+            }
 
-        //         while ((branchLast != branchNext) && branchNext.matchType(GROUP_SINGLE_SUCCESSOR) && (branchNext.getPredecessors().size() == 1) && (cfg.getLineNumber(branchNext.getFromOffset()) >= lineNumber)) {
-        //             watchdog.check(branchNext, branchNext->NextBlockPtr);
-        //             branchLast = branchNext;
-        //             branchNext = branchNext->NextBlockPtr;
-        //         }
+            if ((BranchBlockPtr->Type & xJavaBlock::GROUP_SINGLE_SUCCESSOR) && (BranchBlockPtr->Predecessors.size() == 1)) {
+                WatchDog.Clear();
+                auto BranchLastBlockPtr = BranchBlockPtr;
+                auto BranchNextBlockPtr = BranchBlockPtr->NextBlockPtr;
 
-        //         if (nextNext == branchNext) {
-        //             if (nextLast.matchType(TYPE_GOTO_IN_TERNARY_OPERATOR|TYPE_TERNARY_OPERATOR)) {
-        //                 createIfElse(TYPE_TERNARY_OPERATOR, BlockPtr, NextBlockPtr, nextLast, BranchBlockPtr, branchLast, nextNext);
-        //                 return true;
-        //             } else {
-        //                 createIfElse(TYPE_IF_ELSE, BlockPtr, NextBlockPtr, nextLast, BranchBlockPtr, branchLast, nextNext);
-        //                 return true;
-        //             }
-        //         } else {
-        //             if ((nextNext.getFromOffset() < BranchBlockPtr.getFromOffset()) && (nextNext.getPredecessors().size() == 1)) {
-        //                 createIf(BlockPtr, NextBlockPtr, nextNext, BranchBlockPtr);
-        //                 return true;
-        //             } else if (((nextNext.getFromOffset() > BranchBlockPtr.getFromOffset()) && branchNext.matchType(GROUP_END))) {
-        //                 createIfElse(TYPE_IF_ELSE, BlockPtr, NextBlockPtr, nextLast, BranchBlockPtr, branchNext, nextNext);
-        //                 return true;
-        //             }
-        //         }
-        //     }
-        // }
+                while ((BranchLastBlockPtr != BranchNextBlockPtr)
+                    && (BranchNextBlockPtr->Type & xJavaBlock::GROUP_SINGLE_SUCCESSOR) && (BranchNextBlockPtr->Predecessors.size() == 1)
+                    && (GetLineNumber(BranchNextBlockPtr->FromOffset) >= LineNumber)) {
 
-        // if (BranchBlockPtr.matchType(GROUP_SINGLE_SUCCESSOR|TYPE_RETURN|TYPE_RETURN_VALUE|TYPE_THROW) && (BranchBlockPtr.getPredecessors().size() == 1)) {
-        //     BasicBlock branchLast = BranchBlockPtr;
-        //     BasicBlock branchNext = BranchBlockPtr->NextBlockPtr;
+                    WatchDog.Check(BranchNextBlockPtr, BranchNextBlockPtr->NextBlockPtr);
+                    BranchLastBlockPtr = BranchNextBlockPtr;
+                    BranchNextBlockPtr = BranchNextBlockPtr->NextBlockPtr;
+                }
 
-        //     watchdog.clear();
+                if (NextNextBlockPtr == BranchNextBlockPtr) {
+                    if (NextLastBlockPtr->Type & (xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR | xJavaBlock::TYPE_TERNARY_OPERATOR)) {
+                        CreateIfElse(xJavaBlock::TYPE_TERNARY_OPERATOR, BlockPtr, NextBlockPtr, NextLastBlockPtr, BranchBlockPtr, BranchLastBlockPtr, NextNextBlockPtr);
+                        return true;
+                    } else {
+                        CreateIfElse(xJavaBlock::TYPE_IF_ELSE, BlockPtr, NextBlockPtr, NextLastBlockPtr, BranchBlockPtr, BranchLastBlockPtr, NextNextBlockPtr);
+                        return true;
+                    }
+                }
+                else {
+                    if ((NextNextBlockPtr->FromOffset < BranchBlockPtr->FromOffset) && (NextNextBlockPtr->Predecessors.size() == 1)) {
+                        CreateIf(BlockPtr, NextBlockPtr, NextNextBlockPtr, BranchBlockPtr);
+                        return true;
+                    } else if (((NextNextBlockPtr->FromOffset > BranchBlockPtr->FromOffset) && (BranchNextBlockPtr->Type & xJavaBlock::GROUP_END))) {
+                        CreateIfElse(xJavaBlock::TYPE_IF_ELSE, BlockPtr, NextBlockPtr, NextLastBlockPtr, BranchBlockPtr, BranchNextBlockPtr, NextNextBlockPtr);
+                        return true;
+                    }
+                }
+            }
+        }
 
-        //     while ((branchLast != branchNext) && branchNext.matchType(GROUP_SINGLE_SUCCESSOR) && (branchNext.getPredecessors().size() == 1)) {
-        //         watchdog.check(branchNext, branchNext->NextBlockPtr);
-        //         branchLast = branchNext;
-        //         branchNext = branchNext->NextBlockPtr;
-        //     }
+        if ((BranchBlockPtr->Type & (xJavaBlock::GROUP_SINGLE_SUCCESSOR | xJavaBlock::TYPE_RETURN | xJavaBlock::TYPE_RETURN_VALUE | xJavaBlock::TYPE_THROW))
+            && (BranchBlockPtr->Predecessors.size() == 1)) {
 
-        //     if (branchNext == NextBlockPtr) {
-        //         BlockPtr.inverseCondition();
-        //         createIf(BlockPtr, BranchBlockPtr, branchLast, NextBlockPtr);
-        //         return true;
-        //     }
+            WatchDog.Clear();
+            auto BranchLastBlockPtr = BranchBlockPtr;
+            auto BranchNextBlockPtr = BranchBlockPtr->NextBlockPtr;
 
-        //     if (branchNext.matchType(GROUP_END) && (branchNext.getPredecessors().size() <= 1)) {
-        //         // Create 'if'
-        //         BlockPtr.inverseCondition();
-        //         createIf(BlockPtr, BranchBlockPtr, branchNext, NextBlockPtr);
-        //         return true;
-        //     }
-        // }
+            while ((BranchLastBlockPtr != BranchNextBlockPtr)
+                && (BranchNextBlockPtr->Type & xJavaBlock::GROUP_SINGLE_SUCCESSOR)
+                && (BranchNextBlockPtr->Predecessors.size() == 1)) {
 
-        // if (NextBlockPtr.matchType(TYPE_RETURN|TYPE_RETURN_VALUE|TYPE_THROW)) {
-        //     // Un-optimize byte code
-        //     NextBlockPtr = clone(BlockPtr, NextBlockPtr);
-        //     // Create 'if'
-        //     createIf(BlockPtr, NextBlockPtr, NextBlockPtr, BranchBlockPtr);
-        //     return true;
-        // }
+                WatchDog.Check(BranchNextBlockPtr, BranchNextBlockPtr->NextBlockPtr);
+                BranchLastBlockPtr = BranchNextBlockPtr;
+                BranchNextBlockPtr = BranchNextBlockPtr->NextBlockPtr;
+            }
 
-        // if (NextBlockPtr.matchType(GROUP_SINGLE_SUCCESSOR)) {
-        //     BasicBlock nextLast = NextBlockPtr;
-        //     BasicBlock nextNext = NextBlockPtr->NextBlockPtr;
+            if (BranchNextBlockPtr == NextBlockPtr) {
+                BlockPtr->InverseCondition();
+                CreateIf(BlockPtr, BranchBlockPtr, BranchLastBlockPtr, NextBlockPtr);
+                return true;
+            }
 
-        //     watchdog.clear();
+            if ((BranchNextBlockPtr->Type & xJavaBlock::GROUP_END) && (BranchNextBlockPtr->Predecessors.size() <= 1)) {
+                // Create 'if'
+                BlockPtr->InverseCondition();
+                CreateIf(BlockPtr, BranchBlockPtr, BranchNextBlockPtr, NextBlockPtr);
+                return true;
+            }
+        }
 
-        //     while ((nextLast != nextNext) && nextNext.matchType(GROUP_SINGLE_SUCCESSOR) && (nextNext.getPredecessors().size() == 1)) {
-        //         watchdog.check(nextNext, nextNext->NextBlockPtr);
-        //         nextLast = nextNext;
-        //         nextNext = nextNext->NextBlockPtr;
-        //     }
+        if (NextBlockPtr->Type & (xJavaBlock::TYPE_RETURN | xJavaBlock::TYPE_RETURN_VALUE | xJavaBlock::TYPE_THROW)) {
+            // Un-optimize byte code
+            NextBlockPtr = CloneNextBlock(BlockPtr, NextBlockPtr);
+            // Create 'if'
+            CreateIf(BlockPtr, NextBlockPtr, NextBlockPtr, BranchBlockPtr);
+            return true;
+        }
 
-        //     if (nextNext.matchType(TYPE_RETURN|TYPE_RETURN_VALUE|TYPE_THROW)) {
-        //         createIf(BlockPtr, NextBlockPtr, nextNext, BranchBlockPtr);
-        //         return true;
-        //     }
-        // }
+        if (NextBlockPtr->Type & xJavaBlock::GROUP_SINGLE_SUCCESSOR) {
+            WatchDog.Clear();
+            auto NextLastBlockPtr = NextBlockPtr;
+            auto NextNextBlockPtr = NextBlockPtr->NextBlockPtr;
+
+            while ((NextLastBlockPtr != NextNextBlockPtr)
+                && (NextNextBlockPtr->Type & xJavaBlock::GROUP_SINGLE_SUCCESSOR)
+                && (NextNextBlockPtr->Predecessors.size() == 1)) {
+
+                WatchDog.Check(NextNextBlockPtr, NextNextBlockPtr->NextBlockPtr);
+                NextLastBlockPtr = NextNextBlockPtr;
+                NextNextBlockPtr = NextNextBlockPtr->NextBlockPtr;
+            }
+
+            if (NextNextBlockPtr->Type & (xJavaBlock::TYPE_RETURN | xJavaBlock::TYPE_RETURN_VALUE | xJavaBlock::TYPE_THROW)) {
+                CreateIf(BlockPtr, NextBlockPtr, NextNextBlockPtr, BranchBlockPtr);
+                return true;
+            }
+        }
 
         return false;
     }
