@@ -77,7 +77,46 @@ namespace jdc
 
     void xJavaControlFlowGraph::UpdateConditionTernaryOperator(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr)
     {
-        // TODO
+        auto FromOffset =  NextNextBlockPtr->FromOffset;
+        auto ToOffset = NextNextBlockPtr->ToOffset;
+        auto NextNextNextBlockPtr = NextNextBlockPtr->NextBlockPtr;
+        auto NextNextBranchBlockPtr = NextNextBlockPtr->BranchBlockPtr;
+
+        if (BlockPtr->Type == xJavaBlock::TYPE_CONDITIONAL_BRANCH) {
+            BlockPtr->Type = xJavaBlock::TYPE_CONDITION;
+        }
+        if ((NextNextBlockPtr->Type == xJavaBlock::TYPE_CONDITION) && !NextNextBlockPtr->MustInverseCondition) {
+            BlockPtr->InverseCondition();
+        }
+
+        auto ConditionBlockPtr = NextNextBlockPtr;
+
+        ConditionBlockPtr->Type = BlockPtr->Type;
+        ConditionBlockPtr->FromOffset = BlockPtr->FromOffset;
+        ConditionBlockPtr->ToOffset = BlockPtr->ToOffset;
+        ConditionBlockPtr->NextBlockPtr = &xJavaBlock::End;
+        ConditionBlockPtr->BranchBlockPtr = &xJavaBlock::End;
+        ConditionBlockPtr->ConditionBlockPtr = BlockPtr->ConditionBlockPtr;
+        ConditionBlockPtr->FirstSubBlockPtr = BlockPtr->FirstSubBlockPtr;
+        ConditionBlockPtr->SecondSubBlockPtr = BlockPtr->SecondSubBlockPtr;
+        ConditionBlockPtr->Predecessors.clear();
+
+        BlockPtr->Type = xJavaBlock::TYPE_CONDITION_TERNARY_OPERATOR;
+        BlockPtr->FromOffset = FromOffset;
+        BlockPtr->ToOffset = ToOffset;
+        BlockPtr->ConditionBlockPtr = ConditionBlockPtr;
+        BlockPtr->FirstSubBlockPtr = BlockPtr->NextBlockPtr;
+        BlockPtr->SecondSubBlockPtr = BlockPtr->BranchBlockPtr;
+        BlockPtr->NextBlockPtr = NextNextNextBlockPtr;
+        BlockPtr->BranchBlockPtr = NextNextBranchBlockPtr;
+        BlockPtr->FirstSubBlockPtr->NextBlockPtr = &xJavaBlock::End;
+        BlockPtr->SecondSubBlockPtr->NextBlockPtr = &xJavaBlock::End;
+
+        NextNextNextBlockPtr->Replace(NextNextBlockPtr, BlockPtr);
+        NextNextBranchBlockPtr->Replace(NextNextBlockPtr, BlockPtr);
+
+        BlockPtr->FirstSubBlockPtr->Predecessors.clear();
+        BlockPtr->SecondSubBlockPtr->Predecessors.clear();
     }
 
     void xJavaControlFlowGraph::UpdateConditionTernaryOperator(xJavaBlock * BlockPtr) {
