@@ -570,64 +570,57 @@ namespace jdc
             Visit(LastSwitchCaseBasicBlock, V, EndBlockPtr->FromOffset, Ends);
         }
 
-        // Set<BasicBlock> endPredecessors = EndBlockPtr.getPredecessors();
-        // Iterator<BasicBlock> endPredecessorIterator = endPredecessors.iterator();
+        auto & EndPredecessors = EndBlockPtr->Predecessors;
+        for (auto Iter = EndPredecessors.begin() ; Iter != EndPredecessors.end();) {
+            auto & EndPrecedessor = *Iter;
+            if (V[EndPrecedessor->Index]) {
+                EndPrecedessor->Replace(EndBlockPtr, &xJavaBlock::SwitchBreak);
+                Iter = EndPredecessors.erase(Iter);
+            } else {
+                ++Iter;
+            }
+        }
 
-        // while (endPredecessorIterator.hasNext()) {
-        //     BasicBlock endPredecessor = endPredecessorIterator.next();
-
-        //     if (v.get(endPredecessor.getIndex())) {
-        //         endPredecessor.replace(EndBlockPtr, SWITCH_BREAK);
-        //         endPredecessorIterator.remove();
-        //     }
-        // }
-
-        // if (DefaultSCPtr.getBasicBlock() == EndBlockPtr) {
-        //     Iterator<SwitchCase> iterator = BlockPtr.getSwitchCases().iterator();
-        //     while (iterator.hasNext()) {
-        //         if (iterator.next().getBasicBlock() == EndBlockPtr) {
-        //             iterator.remove();
-        //         }
-        //     }
-        // } else {
-        //     for (SwitchCase switchCase : BlockPtr.getSwitchCases()) {
-        //         if (switchCase.getBasicBlock() == EndBlockPtr) {
-        //             switchCase.setBasicBlock(SWITCH_BREAK);
-        //         }
-        //     }
-        // }
+        if (DefaultSCPtr->BlockPtr == EndBlockPtr) {
+            auto & SwitchCases = BlockPtr->SwitchCases;
+            for (auto Iter = SwitchCases.begin(); Iter != SwitchCases.end();) {
+                if (Iter->BlockPtr == EndBlockPtr) {
+                    Iter = SwitchCases.erase(Iter);
+                }
+            }
+        } else {
+            for (auto & SwitchCase : BlockPtr->SwitchCases) {
+                if (SwitchCase.BlockPtr == EndBlockPtr) {
+                    SwitchCase.BlockPtr = &xJavaBlock::SwitchBreak;
+                }
+            }
+        }
 
         auto Reduced = true;
+        for (auto & SwitchCase : BlockPtr->SwitchCases) {
+            Reduced &= Reduce(SwitchCase.BlockPtr, Visited, JsrTargets);
+        }
 
-        // for (SwitchCase switchCase : BlockPtr.getSwitchCases()) {
-        //     reduced &= reduce(visited, switchCase.getBasicBlock(), jsrTargets);
-        // }
+        for (auto & SwitchCase : BlockPtr->SwitchCases) {
+            auto SwitchBlockPtr = SwitchCase.BlockPtr;
+            assert(SwitchBlockPtr != EndBlockPtr);
 
-        // for (SwitchCase switchCase : BlockPtr.getSwitchCases()) {
-        //     BasicBlock bb = switchCase.getBasicBlock();
-
-        //     assert bb != EndBlockPtr;
-
-        //     Set<BasicBlock> predecessors = bb.getPredecessors();
-
-        //     if (predecessors.size() > 1) {
-        //         Iterator<BasicBlock> predecessorIterator = predecessors.iterator();
-
-        //         while (predecessorIterator.hasNext()) {
-        //             BasicBlock predecessor = predecessorIterator.next();
-
-        //             if (predecessor != BlockPtr) {
-        //                 predecessor.replace(bb, END);
-        //                 predecessorIterator.remove();
-        //             }
-        //         }
-        //     }
-        // }
+            auto & Predecessors = SwitchBlockPtr->Predecessors;
+            if (Predecessors.size() > 1) {
+                for (auto Iter = Predecessors.begin(); Iter != Predecessors.end();) {
+                    auto & Predecessor = *Iter;
+                    if (Predecessor != BlockPtr) {
+                        Predecessor->Replace(SwitchBlockPtr, &xJavaBlock::End);
+                        Predecessors.erase(Iter);
+                    }
+                }
+            }
+        }
 
         // // Change type
-        // BlockPtr.setType(TYPE_SWITCH);
-        // BlockPtr.setNext(EndBlockPtr);
-        // endPredecessors.add(BlockPtr);
+        BlockPtr->Type = xJavaBlock::TYPE_SWITCH;
+        BlockPtr->NextBlockPtr = EndBlockPtr;
+        EndPredecessors.insert(BlockPtr);
 
         return Reduced & Reduce(BlockPtr->NextBlockPtr, Visited, JsrTargets);
     }
