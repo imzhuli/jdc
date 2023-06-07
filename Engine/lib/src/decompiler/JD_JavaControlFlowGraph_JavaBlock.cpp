@@ -109,7 +109,7 @@ namespace jdc
         OS << "BasicBlock{index=" << BlockPtr->Index
             << ", from=" << BlockPtr->FromOffset
             << ", to=" << BlockPtr->ToOffset
-            << ", type=" << (ToString(BlockPtr->Type).c_str())
+            << ", type=" << (ToString(BlockPtr->Type).c_str() + 5 /* skip prefix TYPE_ */)
             << ", inverseCondition=" << TF(BlockPtr->MustInverseCondition);
 
         std::vector<size_t> IndexList;
