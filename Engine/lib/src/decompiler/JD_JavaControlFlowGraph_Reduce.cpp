@@ -219,7 +219,16 @@ namespace jdc
 
     void ConvertConditionalBranchToGotoInTernaryOperator(xJavaBlock * BlockPtr, xJavaBlock * NextBlockPtr, xJavaBlock * NextNextBlockPtr)
     {
-        // TODO
+        BlockPtr->Type = xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR;
+        BlockPtr->NextBlockPtr = NextNextBlockPtr;
+
+        auto & BranchPredecessors = BlockPtr->BranchBlockPtr->Predecessors;
+        BranchPredecessors.erase(BranchPredecessors.find(BlockPtr));
+        BlockPtr->BranchBlockPtr = &xJavaBlock::End;
+        BlockPtr->MustInverseCondition = false;
+
+        NextNextBlockPtr->Replace(NextBlockPtr, BlockPtr);
+        NextBlockPtr->Type = xJavaBlock::TYPE_DELETED;
     }
 
     void ConvertGotoInTernaryOperatorToCondition(xJavaBlock * BlockPtr, xJavaBlock * NextBlockPtr)
