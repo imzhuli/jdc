@@ -420,47 +420,45 @@ namespace jdc
     }
 
     bool SearchLoopStart(xJavaBlock * BlockPtr, size_t MaxOffset) {
-        // WatchDog watchdog = new WatchDog();
+        auto WatchDog = xWatchDog();
 
-        // for (SwitchCase switchCase : BlockPtr.getSwitchCases()) {
-        //     BasicBlock bb = switchCase.getBasicBlock();
+        for (auto & SwitchCase : BlockPtr->SwitchCases) {
+            WatchDog.Clear();
+            auto SwitchCaseBlockPtr = SwitchCase.BlockPtr;
 
-        //     watchdog.clear();
+            while (SwitchCaseBlockPtr->FromOffset < MaxOffset) {
+                if (SwitchCaseBlockPtr == &xJavaBlock::LoopStart) {
+                    return true;
+                }
 
-        //     while (bb.getFromOffset() < MaxOffset) {
-        //         if (bb == LOOP_START) {
-        //             return true;
-        //         }
+                if (SwitchCaseBlockPtr->Type & (xJavaBlock::GROUP_END | xJavaBlock::GROUP_CONDITION)) {
+                    break;
+                }
 
-        //         if (bb.matchType(GROUP_END|GROUP_CONDITION)) {
-        //             break;
-        //         }
+                auto NextBlockPtr = xJavaBlockPtr(nullptr);
 
-        //         BasicBlock next = null;
+                if (SwitchCaseBlockPtr->Type & xJavaBlock::GROUP_SINGLE_SUCCESSOR) {
+                    NextBlockPtr = SwitchCaseBlockPtr->NextBlockPtr;
+                } else if (SwitchCaseBlockPtr->Type == xJavaBlock::TYPE_CONDITIONAL_BRANCH) {
+                    NextBlockPtr = SwitchCaseBlockPtr->BranchBlockPtr;
+                } else if (SwitchCaseBlockPtr->Type == xJavaBlock::TYPE_SWITCH_DECLARATION) {
+                    auto Max = SwitchCaseBlockPtr->FromOffset;
+                    for (auto & SubSC : SwitchCaseBlockPtr->SwitchCases) {
+                        if (Max < SubSC.BlockPtr->FromOffset) {
+                            NextBlockPtr = SubSC.BlockPtr;
+                            Max = NextBlockPtr->FromOffset;
+                        }
+                    }
+                }
 
-        //         if (bb.matchType(GROUP_SINGLE_SUCCESSOR)) {
-        //             next = bb->NextBlockPtr;
-        //         } else if (bb.getType() == TYPE_CONDITIONAL_BRANCH) {
-        //             next = bb.getBranch();
-        //         } else if (bb.getType() == TYPE_SWITCH_DECLARATION) {
-        //             int max = bb.getFromOffset();
+                if (SwitchCaseBlockPtr == NextBlockPtr) {
+                    break;
+                }
 
-        //             for (SwitchCase sc : bb.getSwitchCases()) {
-        //                 if (max < sc.getBasicBlock().getFromOffset()) {
-        //                     next = sc.getBasicBlock();
-        //                     max = next.getFromOffset();
-        //                 }
-        //             }
-        //         }
-
-        //         if (bb == next) {
-        //             break;
-        //         }
-
-        //         watchdog.check(bb, next);
-        //         bb = next;
-        //     }
-        // }
+                WatchDog.Check(SwitchCaseBlockPtr, NextBlockPtr);
+                SwitchCaseBlockPtr = NextBlockPtr;
+            }
+        }
 
         return false;
     }
