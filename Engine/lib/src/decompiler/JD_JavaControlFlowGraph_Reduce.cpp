@@ -372,48 +372,50 @@ namespace jdc
         }
         else if ((BlockPtr->Index >= 0) && (!Visited[BlockPtr->Index])) {
             Visited[BlockPtr->Index] = true;
-        //     switch (BlockPtr.getType()) {
-        //         case TYPE_CONDITIONAL_BRANCH:
-        //         case TYPE_JSR:
-        //         case TYPE_CONDITION:
-        //             Visit(BlockPtr->BranchBlockPtr, Visited, MaxOffset, Ends);
-        //         case TYPE_START:
-        //         case TYPE_STATEMENTS:
-        //         case TYPE_GOTO:
-        //         case TYPE_GOTO_IN_TERNARY_OPERATOR:
-        //         case TYPE_LOOP:
-        //             Visit(Visited, BlockPtr.getNext(), MaxOffset, Ends);
-        //             break;
-        //         case TYPE_TRY:
-        //         case TYPE_TRY_JSR:
-        //         case TYPE_TRY_ECLIPSE:
-        //             Visit(Visited, BlockPtr.getSub1(), MaxOffset, Ends);
-        //         case TYPE_TRY_DECLARATION:
-        //             for (BasicBlock.ExceptionHandler exceptionHandler : BlockPtr.getExceptionHandlers()) {
-        //                 Visit(Visited, exceptionHandler.getBasicBlock(), MaxOffset, Ends);
-        //             }
-        //             Visit(Visited, BlockPtr.getNext(), MaxOffset, Ends);
-        //             break;
-        //         case TYPE_IF_ELSE:
-        //         case TYPE_TERNARY_OPERATOR:
-        //             Visit(Visited, BlockPtr.getSub2(), MaxOffset, Ends);
-        //         case TYPE_IF:
-        //             Visit(Visited, BlockPtr.getSub1(), MaxOffset, Ends);
-        //             Visit(Visited, BlockPtr.getNext(), MaxOffset, Ends);
-        //             break;
-        //         case TYPE_CONDITION_OR:
-        //         case TYPE_CONDITION_AND:
-        //             Visit(Visited, BlockPtr.getSub1(), MaxOffset, Ends);
-        //             Visit(Visited, BlockPtr.getSub2(), MaxOffset, Ends);
-        //             break;
-        //         case TYPE_SWITCH:
-        //             Visit(Visited, BlockPtr.getNext(), MaxOffset, Ends);
-        //         case TYPE_SWITCH_DECLARATION:
-        //             for (SwitchCase switchCase : BlockPtr.getSwitchCases()) {
-        //                 Visit(Visited, switchCase.getBasicBlock(), MaxOffset, Ends);
-        //             }
-        //             break;
-        //     }
+            switch (BlockPtr->Type) {
+                case xJavaBlock::TYPE_CONDITIONAL_BRANCH:
+                case xJavaBlock::TYPE_JSR:
+                case xJavaBlock::TYPE_CONDITION:
+                    Visit(BlockPtr->BranchBlockPtr, Visited, MaxOffset, Ends);
+                case xJavaBlock::TYPE_START:
+                case xJavaBlock::TYPE_STATEMENTS:
+                case xJavaBlock::TYPE_GOTO:
+                case xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR:
+                case xJavaBlock::TYPE_LOOP:
+                    Visit(BlockPtr->NextBlockPtr, Visited, MaxOffset, Ends);
+                    break;
+                case xJavaBlock::TYPE_TRY:
+                case xJavaBlock::TYPE_TRY_JSR:
+                case xJavaBlock::TYPE_TRY_ECLIPSE:
+                    Visit(BlockPtr->FirstSubBlockPtr, Visited, MaxOffset, Ends);
+                case xJavaBlock::TYPE_TRY_DECLARATION:
+                    for (auto & ExceptionHandler : BlockPtr->ExceptionHandlers) {
+                        Visit(ExceptionHandler.BlockPtr, Visited, MaxOffset, Ends);
+                    }
+                    Visit(BlockPtr->NextBlockPtr, Visited, MaxOffset, Ends);
+                    break;
+                case xJavaBlock::TYPE_IF_ELSE:
+                case xJavaBlock::TYPE_TERNARY_OPERATOR:
+                    Visit(BlockPtr->SecondSubBlockPtr, Visited, MaxOffset, Ends);
+                case xJavaBlock::TYPE_IF:
+                    Visit(BlockPtr->FirstSubBlockPtr, Visited, MaxOffset, Ends);
+                    Visit(BlockPtr->NextBlockPtr, Visited, MaxOffset, Ends);
+                    break;
+                case xJavaBlock::TYPE_CONDITION_OR:
+                case xJavaBlock::TYPE_CONDITION_AND:
+                    Visit(BlockPtr->FirstSubBlockPtr, Visited, MaxOffset, Ends);
+                    Visit(BlockPtr->SecondSubBlockPtr, Visited, MaxOffset, Ends);
+                    break;
+                case xJavaBlock::TYPE_SWITCH:
+                    Visit(BlockPtr->NextBlockPtr, Visited, MaxOffset, Ends);
+                case xJavaBlock::TYPE_SWITCH_DECLARATION:
+                    for (auto & SwitchCase : BlockPtr->SwitchCases) {
+                        Visit(SwitchCase.BlockPtr, Visited, MaxOffset, Ends);
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
     }
 
@@ -437,7 +439,7 @@ namespace jdc
         //         BasicBlock next = null;
 
         //         if (bb.matchType(GROUP_SINGLE_SUCCESSOR)) {
-        //             next = bb.getNext();
+        //             next = bb->NextBlockPtr;
         //         } else if (bb.getType() == TYPE_CONDITIONAL_BRANCH) {
         //             next = bb.getBranch();
         //         } else if (bb.getType() == TYPE_SWITCH_DECLARATION) {
