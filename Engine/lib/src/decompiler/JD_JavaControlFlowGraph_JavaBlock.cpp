@@ -154,8 +154,8 @@ namespace jdc
         return OS.str();
     }
 
-    xJavaBlock::xJavaBlock(xJavaControlFlowGraph * CFGPtr, eType Type, size_t FromOffset, size_t ToOffset)
-    : _JavaControlFlowGraphPtr(CFGPtr), Type(Type), FromOffset(FromOffset), ToOffset(ToOffset)
+    xJavaBlock::xJavaBlock(xJavaControlFlowGraph * CFGPtr, eType Type, size_t FromOffset, size_t ToOffset, bool InverseCondition)
+    : _JavaControlFlowGraphPtr(CFGPtr), Type(Type), FromOffset(FromOffset), ToOffset(ToOffset), MustInverseCondition(InverseCondition)
     {
         if (CFGPtr) {
             assert(!(Type & (TYPE_SWITCH_BREAK | TYPE_LOOP_START | TYPE_LOOP_CONTINUE | TYPE_LOOP_END | TYPE_END | TYPE_RETURN)));

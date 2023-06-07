@@ -129,7 +129,7 @@ namespace jdc
         };
 
     public:
-        X_PRIVATE_MEMBER xJavaBlock(xJavaControlFlowGraph * CFGPtr, eType Type, size_t FromOffset = 0, size_t ToOffet = 0);
+        X_PRIVATE_MEMBER xJavaBlock(xJavaControlFlowGraph * CFGPtr, eType Type, size_t FromOffset = 0, size_t ToOffet = 0, bool InverseCondition = true);
 
         X_INLINE class xJavaControlFlowGraph * GetControlFlowGraph() const {
             assert(_JavaControlFlowGraphPtr || Type & (TYPE_SWITCH_BREAK | TYPE_LOOP_START | TYPE_LOOP_CONTINUE | TYPE_LOOP_END | TYPE_END | TYPE_RETURN));

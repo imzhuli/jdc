@@ -12,8 +12,7 @@ using namespace xel;
 namespace jdc
 {
 
-    static bool ReduceConditionalBranch(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
-    static bool ReduceSwitchDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets);
+    static bool ReduceSwitchDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JsrTargets);
     static bool ContainsFinally(xJavaBlock * BlockPtr);
     static bool CheckEclipseFinallyPattern(xJavaBlock * BlockPtr, xJavaBlock * FinallyBlockPtr, size_t MaxOffset);
     static xJavaBlock * UpdateBlock(xJavaBlock * BlockPtr, xJavaBlock * EndBlockPtr, size_t MaxOffset);
@@ -25,35 +24,266 @@ namespace jdc
     static void RemoveJsrAndMergeSubTry(xJavaBlock * BlockPtr);
     static void RemoveLastContinueLoop(xJavaBlock * BlockPtr);
 
-    bool ReduceConditionalBranch(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets)
+    void xJavaControlFlowGraph::UpdateConditionTernaryOperator(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr)
+    {
+        // TODO
+    }
+
+    void xJavaControlFlowGraph::UpdateConditionTernaryOperator(xJavaBlock * BlockPtr) {
+        auto NextBlockPtr = BlockPtr->NextBlockPtr;
+        auto BranchBlockPtr = BlockPtr->BranchBlockPtr;
+
+        auto cfg = BlockPtr->GetControlFlowGraph();
+        auto ConditionBlockPtr = cfg->NewBlock(xJavaBlock::TYPE_CONDITION, BlockPtr->FromOffset, BlockPtr->ToOffset);
+
+        ConditionBlockPtr->NextBlockPtr = &xJavaBlock::End;
+        ConditionBlockPtr->BranchBlockPtr = &xJavaBlock::End;
+
+        BlockPtr->Type = xJavaBlock::TYPE_CONDITION_TERNARY_OPERATOR;
+        BlockPtr->ToOffset = BlockPtr->FromOffset;
+        BlockPtr->ConditionBlockPtr = ConditionBlockPtr;
+        BlockPtr->FirstSubBlockPtr = NextBlockPtr;
+        BlockPtr->SecondSubBlockPtr = BranchBlockPtr;
+        BlockPtr->NextBlockPtr = NextBlockPtr->NextBlockPtr;
+        BlockPtr->BranchBlockPtr = NextBlockPtr->BranchBlockPtr;
+
+        NextBlockPtr->NextBlockPtr->Replace(NextBlockPtr, BlockPtr);
+        NextBlockPtr->BranchBlockPtr->Replace(NextBlockPtr, BlockPtr);
+        BranchBlockPtr->NextBlockPtr->Replace(BranchBlockPtr, BlockPtr);
+        BranchBlockPtr->BranchBlockPtr->Replace(BranchBlockPtr, BlockPtr);
+
+        NextBlockPtr->Predecessors.clear();
+        BranchBlockPtr->Predecessors.clear();
+    }
+
+    void xJavaControlFlowGraph::UpdateCondition(xJavaBlock * BlockPtr, xJavaBlock * NextNextBlockPtr, xJavaBlock * NextNextNextNextBlockPtr)
+    {
+        // TODO
+    }
+
+    bool CheckJdk118TernaryOperatorPattern(xJavaBlock * NextBlockPtr, xJavaBlock * NextNextBlockPtr, xOpCode IfByteCode) {
+        if ((NextNextBlockPtr->ToOffset - NextNextBlockPtr->FromOffset) == 3) {
+            assert(NextBlockPtr->GetCode() == NextNextBlockPtr->GetCode());
+            auto & Code = * NextBlockPtr->GetCode();
+            auto NextFromOffset = NextBlockPtr->FromOffset;
+            auto NextNextFromOffset = NextNextBlockPtr->FromOffset;
+            return (Code[NextFromOffset] == 3) &&                                                               // ICONST_0
+                    (((Code[NextFromOffset + 1] & 255) == 167) || ((Code[NextFromOffset + 1] & 255) == 200)) && // GOTO or GOTO_W
+                    ((Code[NextNextFromOffset] & 255) == IfByteCode) &&                                         // IFEQ or IFNE
+                    (NextNextFromOffset + 3 == NextNextBlockPtr->ToOffset);
+        }
+        return false;
+    }
+
+    void ConvertConditionalBranchToGotoInTernaryOperator(xJavaBlock * BlockPtr, xJavaBlock * NextBlockPtr, xJavaBlock * NextNextBlockPtr)
+    {
+        // TODO
+    }
+
+    void ConvertGotoInTernaryOperatorToCondition(xJavaBlock * BlockPtr, xJavaBlock * NextBlockPtr)
+    {
+        BlockPtr->Type = xJavaBlock::TYPE_CONDITION;
+        BlockPtr->NextBlockPtr = NextBlockPtr->NextBlockPtr;
+        BlockPtr->BranchBlockPtr = NextBlockPtr->BranchBlockPtr;
+
+        NextBlockPtr->NextBlockPtr->Replace(NextBlockPtr, BlockPtr);
+        NextBlockPtr->BranchBlockPtr->Replace(NextBlockPtr, BlockPtr);
+
+        NextBlockPtr->Type = xJavaBlock::TYPE_DELETED;
+    }
+
+    void xJavaControlFlowGraph::UpdateConditionalBranches(xJavaBlock * BlockPtr, xJavaBlock * LeftBlockPtr, xJavaBlock::eType OpType, xJavaBlock * SubBlockPtr)
+    {
+        BlockPtr->Type = OpType;
+        BlockPtr->ToOffset = SubBlockPtr->ToOffset;
+        BlockPtr->NextBlockPtr = SubBlockPtr->NextBlockPtr;
+        BlockPtr->BranchBlockPtr = SubBlockPtr->BranchBlockPtr;
+        BlockPtr->ConditionBlockPtr = &xJavaBlock::End;
+        BlockPtr->FirstSubBlockPtr = LeftBlockPtr;
+        BlockPtr->SecondSubBlockPtr = SubBlockPtr;
+
+        SubBlockPtr->NextBlockPtr->Replace(SubBlockPtr, BlockPtr);
+        SubBlockPtr->BranchBlockPtr->Replace(SubBlockPtr, BlockPtr);
+    }
+
+    xJavaBlock * xJavaControlFlowGraph::CreateLeftCondition(xJavaBlock * BlockPtr) {
+        if (BlockPtr->Type == xJavaBlock::TYPE_CONDITIONAL_BRANCH) {
+            return NewBlock(xJavaBlock::TYPE_CONDITION, BlockPtr->FromOffset, BlockPtr->ToOffset, false);
+        }
+        auto LeftBlockPtr = CopyBlock(BlockPtr);
+        LeftBlockPtr->InverseCondition();
+        return LeftBlockPtr;
+    }
+
+    xJavaBlock * xJavaControlFlowGraph::CreateLeftInverseCondition(xJavaBlock * BlockPtr) {
+        if (BlockPtr->Type == xJavaBlock::TYPE_CONDITIONAL_BRANCH) {
+            return NewBlock(xJavaBlock::TYPE_CONDITION, BlockPtr->FromOffset, BlockPtr->ToOffset);
+        }
+        return CopyBlock(BlockPtr);
+    }
+
+    bool xJavaControlFlowGraph::AggregateConditionalBranches(xJavaBlock * BlockPtr)
+    {
+        auto Change = false;
+
+        auto NextBlockPtr = BlockPtr->NextBlockPtr;
+        auto BranchBlockPtr = BlockPtr->BranchBlockPtr;
+
+        if ((NextBlockPtr->Type == xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR) && (NextBlockPtr->Predecessors.size() == 1)) {
+            auto NextNextBlockPtr = NextBlockPtr->NextBlockPtr;
+
+            if (NextNextBlockPtr->Type & (xJavaBlock::TYPE_CONDITIONAL_BRANCH | xJavaBlock::TYPE_CONDITION)) {
+                if ((BranchBlockPtr->Type & (xJavaBlock::TYPE_STATEMENTS | xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR)) &&
+                    (NextNextBlockPtr == BranchBlockPtr->NextBlockPtr) &&
+                    (BranchBlockPtr->Predecessors.size() == 1) &&
+                    (NextNextBlockPtr->Predecessors.size() == 2)) {
+
+                    if (NextNextBlockPtr->GetMinDepth() == -1) {
+                        UpdateConditionTernaryOperator(BlockPtr, NextNextBlockPtr);
+                        return true;
+                    }
+
+                    auto NextNextNextBlockPtr = NextNextBlockPtr->NextBlockPtr;
+                    auto NextNextBranchBlockPtr = NextNextBlockPtr->BranchBlockPtr;
+
+                    if ((NextNextNextBlockPtr->Type == xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR) && (NextNextNextBlockPtr->Predecessors.size() == 1)) {
+                        auto NextNextNextNextBlockPtr = NextNextNextBlockPtr->NextBlockPtr;
+
+                        if (NextNextNextNextBlockPtr->Type & (xJavaBlock::TYPE_CONDITIONAL_BRANCH | xJavaBlock::TYPE_CONDITION)) {
+                            if ((NextNextBranchBlockPtr->Type & (xJavaBlock::TYPE_STATEMENTS | xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR)) &&
+                                (NextNextNextNextBlockPtr == NextNextBranchBlockPtr->NextBlockPtr) &&
+                                (NextNextBranchBlockPtr->Predecessors.size() == 1) &&
+                                (NextNextNextNextBlockPtr->Predecessors.size() == 2)) {
+
+                                if (NextNextNextNextBlockPtr->GetMinDepth() == -2) {
+                                    UpdateCondition(BlockPtr, NextNextBlockPtr, NextNextNextNextBlockPtr);
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+                if ((NextNextBlockPtr->NextBlockPtr == BranchBlockPtr) && CheckJdk118TernaryOperatorPattern(NextBlockPtr, NextNextBlockPtr, xOpCode(153))) { // IFEQ
+                    ConvertConditionalBranchToGotoInTernaryOperator(BlockPtr, NextBlockPtr, NextNextBlockPtr);
+                    return true;
+                }
+                if ((NextNextBlockPtr->BranchBlockPtr == BranchBlockPtr) && CheckJdk118TernaryOperatorPattern(NextBlockPtr, NextNextBlockPtr, 154)) { // IFNE
+                    ConvertConditionalBranchToGotoInTernaryOperator(BlockPtr, NextBlockPtr, NextNextBlockPtr);
+                    return true;
+                }
+                if (NextNextBlockPtr->Predecessors.size() == 1) {
+                    ConvertGotoInTernaryOperatorToCondition(NextBlockPtr, NextNextBlockPtr);
+                    return true;
+                }
+            }
+        }
+
+        if (NextBlockPtr->Type & (xJavaBlock::TYPE_CONDITIONAL_BRANCH | xJavaBlock::GROUP_CONDITION)) {
+            // Test line numbers
+            auto LineNumber1 = GetLastLineNumber(BlockPtr);
+            auto LineNumber2 = GetFirstLineNumber(NextBlockPtr);
+            assert(LineNumber1 <= LineNumber2);
+
+            if ((LineNumber2-LineNumber1) <= 1) {
+                Change = AggregateConditionalBranches(NextBlockPtr);
+                if ((NextBlockPtr->Type & (xJavaBlock::TYPE_CONDITIONAL_BRANCH | xJavaBlock::GROUP_CONDITION)) &&
+                    (NextBlockPtr->Predecessors.size() == 1)) {
+                    // Aggregate conditional branches
+                    if (NextBlockPtr->NextBlockPtr == BranchBlockPtr) {
+                        UpdateConditionalBranches(BlockPtr, CreateLeftCondition(BlockPtr), xJavaBlock::TYPE_CONDITION_OR, NextBlockPtr);
+                        return true;
+                    }
+                    else if (NextBlockPtr->BranchBlockPtr == BranchBlockPtr) {
+                        UpdateConditionalBranches(BlockPtr, CreateLeftInverseCondition(BlockPtr), xJavaBlock::TYPE_CONDITION_AND, NextBlockPtr);
+                        return true;
+                    }
+                    else if (BranchBlockPtr->Type & (xJavaBlock::TYPE_CONDITIONAL_BRANCH | xJavaBlock::GROUP_CONDITION)) {
+                        Change = AggregateConditionalBranches(BranchBlockPtr);
+                        if (BranchBlockPtr->Type & (xJavaBlock::TYPE_CONDITIONAL_BRANCH | xJavaBlock::GROUP_CONDITION)) {
+                            if ((NextBlockPtr->NextBlockPtr == BranchBlockPtr->NextBlockPtr) && (NextBlockPtr->BranchBlockPtr == BranchBlockPtr->BranchBlockPtr)) {
+                                UpdateConditionTernaryOperator(BlockPtr);
+                                return true;
+                            } else if ((NextBlockPtr->BranchBlockPtr == BranchBlockPtr->NextBlockPtr) && (NextBlockPtr->NextBlockPtr == BranchBlockPtr->BranchBlockPtr)) {
+                                UpdateConditionTernaryOperator(BlockPtr);
+                                BranchBlockPtr->InverseCondition();
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (BranchBlockPtr->Type & (xJavaBlock::TYPE_CONDITIONAL_BRANCH | xJavaBlock::GROUP_CONDITION)) {
+            // Test line numbers
+            auto LineNumber1 = GetLastLineNumber(BlockPtr);
+            auto LineNumber2 = GetFirstLineNumber(BranchBlockPtr);
+            assert(LineNumber1 <= LineNumber2);
+
+            if ((LineNumber2-LineNumber1) <= 1) {
+                Change = AggregateConditionalBranches(BranchBlockPtr);
+
+                if (BranchBlockPtr->Type & (xJavaBlock::TYPE_CONDITIONAL_BRANCH | xJavaBlock::GROUP_CONDITION) && (BranchBlockPtr->Predecessors.size() == 1)) {
+                    // Aggregate conditional branches
+                    if (BranchBlockPtr->BranchBlockPtr == NextBlockPtr) {
+                        UpdateConditionalBranches(BlockPtr, CreateLeftCondition(BlockPtr), xJavaBlock::TYPE_CONDITION_AND, BranchBlockPtr);
+                        return true;
+                    } else if (BranchBlockPtr->NextBlockPtr == NextBlockPtr) {
+                        UpdateConditionalBranches(BlockPtr, CreateLeftInverseCondition(BlockPtr), xJavaBlock::TYPE_CONDITION_OR, BranchBlockPtr);
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (BlockPtr->Type == xJavaBlock::TYPE_CONDITIONAL_BRANCH) {
+            BlockPtr->Type = xJavaBlock::TYPE_CONDITION;
+            return true;
+        }
+
+        return Change;
+    }
+
+    bool xJavaControlFlowGraph::ReduceConditionalBranch(xJavaBlock * BlockPtr)
+    {
+        return false;
+    }
+
+    bool xJavaControlFlowGraph::ReduceConditionalBranch(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JsrTargets)
+    {
+        while (AggregateConditionalBranches(BlockPtr))
+        {}
+
+        assert(BlockPtr->Type & xJavaBlock::GROUP_CONDITION);
+        if (Reduce(BlockPtr->NextBlockPtr, Visited, JsrTargets) & Reduce(BlockPtr->BranchBlockPtr, Visited, JsrTargets)) {
+            return ReduceConditionalBranch(BlockPtr);
+        }
+
+        return false;
+    }
+
+    bool ReduceSwitchDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JsrTargets)
     {
         // TODO
         Todo();
         return true;
     }
 
-    bool ReduceSwitchDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets)
-    {
-        // TODO
-        Todo();
-        return true;
-    }
-
-    bool xJavaControlFlowGraph::ReduceTryDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets)
+    bool xJavaControlFlowGraph::ReduceTryDeclaration(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JsrTargets)
     {
         auto Reduced = true;
         auto FinallyBlockPtr = xJavaBlockPtr();
 
         for (auto & ExceptionHandler : BlockPtr->ExceptionHandlers) {
             if (ExceptionHandler.FixedCatchTypeName.empty()) {
-                Reduced = Reduce(ExceptionHandler.BlockPtr, Visited, JstTargets);
+                Reduced = Reduce(ExceptionHandler.BlockPtr, Visited, JsrTargets);
                 FinallyBlockPtr = ExceptionHandler.BlockPtr;
                 break;
             }
         }
 
-        auto JsrTarget = SearchJsrTarget(BlockPtr, JstTargets);
-        Reduced &= Reduce(BlockPtr->NextBlockPtr, Visited, JstTargets);
+        auto JsrTarget = SearchJsrTarget(BlockPtr, JsrTargets);
+        Reduced &= Reduce(BlockPtr->NextBlockPtr, Visited, JsrTargets);
 
         auto TryBlockPtr = BlockPtr->NextBlockPtr;
         if (TryBlockPtr->Type & xJavaBlock::GROUP_SYNTHETIC) {
@@ -66,7 +296,7 @@ namespace jdc
 
         for (auto & ExceptionHandler : BlockPtr->ExceptionHandlers) {
             if (ExceptionHandler.FixedCatchTypeName.size()) {
-                Reduced &= Reduce(ExceptionHandler.BlockPtr, Visited, JstTargets);
+                Reduced &= Reduce(ExceptionHandler.BlockPtr, Visited, JsrTargets);
             }
 
             auto ExceptionBlockPtr = ExceptionHandler.BlockPtr;
@@ -182,12 +412,12 @@ namespace jdc
         return Reduced;
     }
 
-    bool xJavaControlFlowGraph::ReduceJsr(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets)
+    bool xJavaControlFlowGraph::ReduceJsr(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JsrTargets)
     {
         auto BranchBlockPtr = BlockPtr->BranchBlockPtr;
-        auto Reduced = Reduce(BlockPtr->NextBlockPtr, Visited, JstTargets) & Reduce(BranchBlockPtr, Visited, JstTargets);
+        auto Reduced = Reduce(BlockPtr->NextBlockPtr, Visited, JsrTargets) & Reduce(BranchBlockPtr, Visited, JsrTargets);
 
-        if ((BranchBlockPtr->Index >= 0) && JstTargets[BranchBlockPtr->Index]) {
+        if ((BranchBlockPtr->Index >= 0) && JsrTargets[BranchBlockPtr->Index]) {
             // Reduce JSR
             auto Delta = BlockPtr->ToOffset - BlockPtr->FromOffset;
             if (Delta > 3) {
@@ -224,7 +454,7 @@ namespace jdc
             // Aggregate JSR
             auto NextBlockPtr = BlockPtr->NextBlockPtr;
             auto & BranchPredecessors = BlockPtr->BranchBlockPtr->Predecessors;
-            // Iterator<BasicBlock> iterator = BlockPtr->BranchBlockPtr->Predecessors.iterator();
+            // Iterator<auto> iterator = BlockPtr->BranchBlockPtr->Predecessors.iterator();
             for (auto Iter = BranchPredecessors.begin(); Iter != BranchPredecessors.end();) {
                 auto PredecessorBlockPtr = *Iter;
                 if ((PredecessorBlockPtr != BlockPtr) &&
@@ -310,17 +540,17 @@ namespace jdc
         Todo();
         // WatchDog watchdog = new WatchDog();
 
-        // while (basicBlock.matchType(GROUP_SINGLE_SUCCESSOR)) {
-        //     watchdog.check(basicBlock, basicBlock.getNext());
-        //     BasicBlock next = basicBlock.getNext();
+        // while (BlockPtr->Type & (GROUP_SINGLE_SUCCESSOR)) {
+        //     watchdog.check(BlockPtr, BlockPtr->NextBlockPtr);
+        //     auto NextBlockPtr = BlockPtr->NextBlockPtr;
 
-        //     if ((next == EndBlockPtr) || (next.getFromOffset() > maxOffset)) {
-        //         next.getPredecessors().remove(basicBlock);
-        //         basicBlock.setNext(END);
+        //     if ((NextBlockPtr == EndBlockPtr) || (NextBlockPtr.getFromOffset() > maxOffset)) {
+        //         NextBlockPtr->Predecessors.remove(BlockPtr);
+        //         BlockPtr.setNext(END);
         //         break;
         //     }
 
-        //     basicBlock = next;
+        //     BlockPtr = NextBlockPtr;
         // }
 
         return BlockPtr;
@@ -350,6 +580,7 @@ namespace jdc
 
     xJavaBlock * SearchEndBlock(xJavaBlock * BlockPtr, size_t MaxOffset)
     {
+        // TODO
         Todo();
         return nullptr;
     }
@@ -440,11 +671,11 @@ namespace jdc
         //                 int stackDepth = ByteCodeUtil.evalStackDepth(SubBlockPtr);
 
         //                 while (stackDepth != 0) {
-        //                     Set<BasicBlock> Predecessors = SubBlockPtr->Predecessors;
+        //                     Set<auto> Predecessors = SubBlockPtr->Predecessors;
         //                     if (Predecessors.size() != 1) {
         //                         break;
         //                     }
-        //                     stackDepth += ByteCodeUtil.evalStackDepth(SubBlockPtr = Predecessors.iterator().next());
+        //                     stackDepth += ByteCodeUtil.evalStackDepth(SubBlockPtr = Predecessors.iterator().NextBlockPtr());
         //                 }
 
         //                 removePredecessors(SubBlockPtr);
@@ -640,16 +871,16 @@ namespace jdc
         }
     }
 
-    bool xJavaControlFlowGraph::ReduceLoop(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets)
+    bool xJavaControlFlowGraph::ReduceLoop(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JsrTargets)
     {
         auto VisitedBackup = Visited;
-        auto Reduced = Reduce(BlockPtr->FirstSubBlockPtr, Visited, JstTargets);
+        auto Reduced = Reduce(BlockPtr->FirstSubBlockPtr, Visited, JsrTargets);
 
         if (!Reduced) {
             Visited = VisitedBackup; // restore
             auto VisitedMembers = xBitSet();
             auto UpdateBlockPtr = SearchUpdateBlockAndCreateContinueLoop(VisitedMembers, BlockPtr->FirstSubBlockPtr);
-            Reduced = Reduce(BlockPtr->FirstSubBlockPtr, Visited, JstTargets);
+            Reduced = Reduce(BlockPtr->FirstSubBlockPtr, Visited, JsrTargets);
 
             if (UpdateBlockPtr) {
                 RemoveLastContinueLoop(BlockPtr->FirstSubBlockPtr->FirstSubBlockPtr);
@@ -682,15 +913,15 @@ namespace jdc
                     BlockPtr->FirstSubBlockPtr = NewLoopBlockPtr;
 
                     VisitedMembers.clear();
-                    Reduced = Reduce(NewLoopBlockPtr, VisitedMembers, JstTargets);
+                    Reduced = Reduce(NewLoopBlockPtr, VisitedMembers, JsrTargets);
                 }
             }
         }
 
-        return Reduced & Reduce(BlockPtr->NextBlockPtr, Visited, JstTargets);
+        return Reduced & Reduce(BlockPtr->NextBlockPtr, Visited, JsrTargets);
     }
 
-    bool xJavaControlFlowGraph::Reduce(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JstTargets)
+    bool xJavaControlFlowGraph::Reduce(xJavaBlock * BlockPtr, xBitSet & Visited, xBitSet & JsrTargets)
     {
         if (Visited[BlockPtr->Index]) {
             return true;
@@ -708,21 +939,21 @@ namespace jdc
             case xJavaBlock::TYPE_TRY_JSR:
             case xJavaBlock::TYPE_TRY_ECLIPSE:
             case xJavaBlock::TYPE_GOTO_IN_TERNARY_OPERATOR:
-                return Reduce(BlockPtr->NextBlockPtr, Visited, JstTargets);
+                return Reduce(BlockPtr->NextBlockPtr, Visited, JsrTargets);
             case xJavaBlock::TYPE_CONDITIONAL_BRANCH:
             case xJavaBlock::TYPE_CONDITION:
             case xJavaBlock::TYPE_CONDITION_OR:
             case xJavaBlock::TYPE_CONDITION_AND:
             case xJavaBlock::TYPE_CONDITION_TERNARY_OPERATOR:
-                return ReduceConditionalBranch(BlockPtr, Visited, JstTargets);
+                return ReduceConditionalBranch(BlockPtr, Visited, JsrTargets);
             case xJavaBlock::TYPE_SWITCH_DECLARATION:
-                return ReduceSwitchDeclaration(BlockPtr, Visited, JstTargets);
+                return ReduceSwitchDeclaration(BlockPtr, Visited, JsrTargets);
             case xJavaBlock::TYPE_TRY_DECLARATION:
-                return ReduceTryDeclaration(BlockPtr, Visited, JstTargets);
+                return ReduceTryDeclaration(BlockPtr, Visited, JsrTargets);
             case xJavaBlock::TYPE_JSR:
-                return ReduceJsr(BlockPtr, Visited, JstTargets);
+                return ReduceJsr(BlockPtr, Visited, JsrTargets);
             case xJavaBlock::TYPE_LOOP:
-                return ReduceLoop(BlockPtr, Visited, JstTargets);
+                return ReduceLoop(BlockPtr, Visited, JsrTargets);
             default:
                 break;
         };
@@ -741,9 +972,9 @@ namespace jdc
     {
         auto StartBlockPtr = BlockPtrList[0];
         auto Visited = xBitSet(BlockPtrList.size());
-        auto JstTargets = xBitSet();
+        auto JsrTargets = xBitSet();
 
-        return Reduce(StartBlockPtr, Visited, JstTargets);
+        return Reduce(StartBlockPtr, Visited, JsrTargets);
     }
 
 
