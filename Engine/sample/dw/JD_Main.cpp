@@ -23,11 +23,11 @@ int main(int argc, char *argv[])
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
-    xCommandLine Cmd { argc, argv, {
+    auto Cmd = xCommandLine(argc, argv, {
         { 'd', nullptr, "decompile", false },
         { 'i', nullptr, "input_dir", true },
         { 'o', nullptr, "output_dir", true },
-    }};
+    });
 
     auto OptInputDir = Cmd["input_dir"];
     auto OptOutputDir = Cmd["output_dir"];
