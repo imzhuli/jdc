@@ -67,7 +67,6 @@ namespace jdc
     void xJavaControlFlowGraph::InitBlocks()
     {
         xel::Renew(BlockList);
-        FirstVariableIndex = 0;
 
         auto CodeAttributePtr = GetCodeAttribute();
         auto & CodeBinary = CodeAttributePtr->CodeBinary;

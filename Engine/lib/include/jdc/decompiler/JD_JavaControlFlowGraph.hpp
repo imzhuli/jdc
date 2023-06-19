@@ -25,8 +25,9 @@ namespace jdc
     : xel::xNonCopyable
     {
     public:
+        std::vector<std::string>                   ClassNameBlackList;
         std::vector<xJavaLocalVariable>            LocalVariableList;
-        size_t                                     FirstVariableIndex;
+
         std::vector<std::unique_ptr<xJavaBlock>>   BlockList;
         xJavaBlockPtrList                          BlockPtrList; // raw pointer version of block list
 

@@ -45,10 +45,8 @@ namespace jdc
     bool xJavaControlFlowGraph::Init()
     {
         assert(LocalVariableList.empty());
-        xel::Renew(FirstVariableIndex);
         assert(BlockList.empty());
 
-        InitLocalVariables();
         InitBlocks();
         X_DEBUG_PRINTF("xJavaControlFlowGraph InitBlocks done:\n%s\n", ToString(this).c_str());
 
@@ -61,14 +59,15 @@ namespace jdc
         Reduce();
         X_DEBUG_PRINTF("xJavaControlFlowGraph ReduceLoop done:\n%s\n", ToString(this).c_str());
 
+        InitLocalVariables();
 
         return true;
     }
 
     void xJavaControlFlowGraph::Clean()
     {
-        xel::Renew(FirstVariableIndex);
         xel::Renew(LocalVariableList);
+        xel::Renew(ClassNameBlackList);
         xel::Renew(BlockList);
 
         _JavaClassPtr = nullptr;

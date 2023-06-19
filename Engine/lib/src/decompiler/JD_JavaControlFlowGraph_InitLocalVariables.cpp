@@ -15,7 +15,9 @@ namespace jdc
 
     void xJavaControlFlowGraph::InitLocalVariables()
     {
+        xel::Renew(ClassNameBlackList);
         xel::Renew(LocalVariableList);
+        size_t FirstVariableIndex = 0;
 
         if (_JavaMethodPtr->MethodInfoPtr->AccessFlags & ACC_STATIC) { // no "this" parameter
         }
