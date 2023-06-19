@@ -50,7 +50,9 @@ namespace jdc
         }
         X_INLINE std::string GetShortClassCodeName(const std::string & UnfixedClassBinaryName) const {
             auto JavaTypePtr = GetJavaTypeByUnfixedBinaryName(UnfixedClassBinaryName);
-            assert(JavaTypePtr);
+            if(!JavaTypePtr) { // maybe from 3rd package
+                return UnfixedClassBinaryName;
+            }
             if (!JavaTypePtr->IsLangType()) {
                 return JavaTypePtr->GetFixedCodeName();
             }
