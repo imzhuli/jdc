@@ -97,7 +97,7 @@ namespace jdc
 
     void CleanJavaPrimitiveTypes()
     {
-        xel::Renew(PrimativeJavaTypeMap);
+        // xel::Renew(PrimativeJavaTypeMap);
     }
 
     const std::map<std::string, xJavaPrimitiveType> & GetJavaPrimitiveTypeMap()

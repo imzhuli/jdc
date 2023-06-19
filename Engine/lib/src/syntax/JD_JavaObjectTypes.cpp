@@ -6,43 +6,66 @@ namespace jdc
     static std::map<std::string, const xJavaObjectType *>          JavaObjectTypeCodeNameMap;
     static std::string DefaultBaseClassBinaryName = "java/lang/Object";
 
-    void AddJavaObjectType(const char * BinaryName)
+    xJavaType * TYPE_BOOLEAN             = nullptr;
+    xJavaType * TYPE_BYTE                = nullptr;
+    xJavaType * TYPE_CHARACTER           = nullptr;
+    xJavaType * TYPE_CLASS               = nullptr;
+    xJavaType * TYPE_CLASS_WILDCARD      = nullptr;
+    xJavaType * TYPE_DOUBLE              = nullptr;
+    xJavaType * TYPE_EXCEPTION           = nullptr;
+    xJavaType * TYPE_FLOAT               = nullptr;
+    xJavaType * TYPE_INTEGER             = nullptr;
+    xJavaType * TYPE_ITERABLE            = nullptr;
+    xJavaType * TYPE_LONG                = nullptr;
+    xJavaType * TYPE_MATH                = nullptr;
+    xJavaType * TYPE_OBJECT              = nullptr;
+    xJavaType * TYPE_RUNTIME_EXCEPTION   = nullptr;
+    xJavaType * TYPE_SHORT               = nullptr;
+    xJavaType * TYPE_STRING              = nullptr;
+    xJavaType * TYPE_STRING_BUFFER       = nullptr;
+    xJavaType * TYPE_STRING_BUILDER      = nullptr;
+    xJavaType * TYPE_SYSTEM              = nullptr;
+    xJavaType * TYPE_THREAD              = nullptr;
+    xJavaType * TYPE_THROWABLE           = nullptr;
+
+    xJavaObjectType * AddJavaObjectType(const char * BinaryName)
     {
         auto TypeUPtr = std::make_unique<xJavaObjectType>();
-        auto & Type = *TypeUPtr;
-        Type._UnfixedBinaryName        = BinaryName;
-        Type._FixedBinaryName          = Type._UnfixedBinaryName;
-        Type._FixedCodeName            = ConvertBinaryNameToCodeName(BinaryName);
-        Type._SimpleBinaryName         = GetInnermostClassName(BinaryName);
-        Type._SimpleCodeName           = Type._SimpleBinaryName;
-        Type._InnermostName            = Type._SimpleBinaryName;
+        auto TypePtr = TypeUPtr.get();
+        TypePtr->_UnfixedBinaryName        = BinaryName;
+        TypePtr->_FixedBinaryName          = TypePtr->_UnfixedBinaryName;
+        TypePtr->_FixedCodeName            = ConvertBinaryNameToCodeName(BinaryName);
+        TypePtr->_SimpleBinaryName         = GetInnermostClassName(BinaryName);
+        TypePtr->_SimpleCodeName           = TypePtr->_SimpleBinaryName;
+        TypePtr->_InnermostName            = TypePtr->_SimpleBinaryName;
 
         JavaObjectTypeMap.insert(std::make_pair(BinaryName, std::move(TypeUPtr)));
-        JavaObjectTypeCodeNameMap.insert(std::make_pair(Type._FixedCodeName, &Type));
+        JavaObjectTypeCodeNameMap.insert(std::make_pair(BinaryName, TypePtr));
+        return TypePtr;
     }
 
     bool InitJavaObjectTypes()
     {
-        AddJavaObjectType("java/lang/Boolean");
-        AddJavaObjectType("java/lang/Byte");
-        AddJavaObjectType("java/lang/Character");
-        AddJavaObjectType("java/lang/Class");
-        AddJavaObjectType("java/lang/Double");
-        AddJavaObjectType("java/lang/Exception");
-        AddJavaObjectType("java/lang/Float");
-        AddJavaObjectType("java/lang/Integer");
-        AddJavaObjectType("java/lang/Iterable");
-        AddJavaObjectType("java/lang/Long");
-        AddJavaObjectType("java/lang/Math");
-        AddJavaObjectType("java/lang/Object");
-        AddJavaObjectType("java/lang/RuntimeException");
-        AddJavaObjectType("java/lang/Short");
-        AddJavaObjectType("java/lang/String");
-        AddJavaObjectType("java/lang/StringBuffer");
-        AddJavaObjectType("java/lang/StringBuilder");
-        AddJavaObjectType("java/lang/System");
-        AddJavaObjectType("java/lang/Thread");
-        AddJavaObjectType("java/lang/Throwable");
+        TYPE_BOOLEAN              = AddJavaObjectType("java/lang/Boolean");
+        TYPE_BYTE                 = AddJavaObjectType("java/lang/Byte");
+        TYPE_CHARACTER            = AddJavaObjectType("java/lang/Character");
+        TYPE_CLASS                = AddJavaObjectType("java/lang/Class");
+        TYPE_DOUBLE               = AddJavaObjectType("java/lang/Double");
+        TYPE_EXCEPTION            = AddJavaObjectType("java/lang/Exception");
+        TYPE_FLOAT                = AddJavaObjectType("java/lang/Float");
+        TYPE_INTEGER              = AddJavaObjectType("java/lang/Integer");
+        TYPE_ITERABLE             = AddJavaObjectType("java/lang/Iterable");
+        TYPE_LONG                 = AddJavaObjectType("java/lang/Long");
+        TYPE_MATH                 = AddJavaObjectType("java/lang/Math");
+        TYPE_OBJECT               = AddJavaObjectType("java/lang/Object");
+        TYPE_RUNTIME_EXCEPTION    = AddJavaObjectType("java/lang/RuntimeException");
+        TYPE_SHORT                = AddJavaObjectType("java/lang/Short");
+        TYPE_STRING               = AddJavaObjectType("java/lang/String");
+        TYPE_STRING_BUFFER        = AddJavaObjectType("java/lang/StringBuffer");
+        TYPE_STRING_BUILDER       = AddJavaObjectType("java/lang/StringBuilder");
+        TYPE_SYSTEM               = AddJavaObjectType("java/lang/System");
+        TYPE_THREAD               = AddJavaObjectType("java/lang/Thread");
+        TYPE_THROWABLE            = AddJavaObjectType("java/lang/Throwable");
 
         // for (auto & Entry : JavaObjectTypeMap) {
         //     X_DEBUG_PRINTF("Init object type: %s --> %s\n", Entry.second->GetInnermostName().c_str(), Entry.first.c_str());

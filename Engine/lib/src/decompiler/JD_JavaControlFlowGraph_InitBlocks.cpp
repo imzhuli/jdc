@@ -67,6 +67,7 @@ namespace jdc
     void xJavaControlFlowGraph::InitBlocks()
     {
         xel::Renew(BlockList);
+        xel::Renew(BlockPtrList);
 
         auto CodeAttributePtr = GetCodeAttribute();
         auto & CodeBinary = CodeAttributePtr->CodeBinary;
@@ -602,6 +603,12 @@ namespace jdc
                 NextBlockPtr->Type = xJavaBlock::TYPE_DELETED;
             }
         }
+    }
+
+    void xJavaControlFlowGraph::CleanBlocks()
+    {
+        xel::Renew(BlockPtrList);
+        xel::Renew(BlockList);
     }
 
 }

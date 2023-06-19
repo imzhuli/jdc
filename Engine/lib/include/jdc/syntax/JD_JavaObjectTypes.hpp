@@ -15,13 +15,13 @@ namespace jdc
         X_INLINE bool IsDirectType()     const override { return true; }
         X_INLINE bool IsObjectType()     const override { return true; }
 
-        X_PRIVATE_MEMBER static bool IsDefaultAnnotationBase(xJavaType * JavaTypePtr);
-        X_PRIVATE_MEMBER static bool IsDefaultAnnotationBase(const std::string & BinaryName);
-        X_PRIVATE_MEMBER static bool IsDefaultClassBase(xJavaType * JavaTypePtr);
-        X_PRIVATE_MEMBER static bool IsDefaultClassBase(const std::string & BinaryName);
+        X_PRIVATE_STATIC_MEMBER bool IsDefaultAnnotationBase(xJavaType * JavaTypePtr);
+        X_PRIVATE_STATIC_MEMBER bool IsDefaultAnnotationBase(const std::string & BinaryName);
+        X_PRIVATE_STATIC_MEMBER bool IsDefaultClassBase(xJavaType * JavaTypePtr);
+        X_PRIVATE_STATIC_MEMBER bool IsDefaultClassBase(const std::string & BinaryName);
 
     private:
-        friend void AddJavaObjectType(const char * BinaryName);
+        friend xJavaObjectType * AddJavaObjectType(const char * BinaryName);
     };
 
     X_PRIVATE bool InitJavaObjectTypes();

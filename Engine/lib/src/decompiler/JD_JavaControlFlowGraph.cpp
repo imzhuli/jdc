@@ -66,9 +66,8 @@ namespace jdc
 
     void xJavaControlFlowGraph::Clean()
     {
-        xel::Renew(LocalVariableList);
-        xel::Renew(ClassNameBlackList);
-        xel::Renew(BlockList);
+        CleanLocalVariables();
+        CleanBlocks();
 
         _JavaClassPtr = nullptr;
         _JavaMethodPtr = nullptr;

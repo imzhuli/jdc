@@ -25,15 +25,18 @@ namespace jdc
     : xel::xNonCopyable
     {
     public:
-        std::vector<std::string>                   ClassNameBlackList;
-        std::vector<xJavaLocalVariable>            LocalVariableList;
+        // blocks
+        std::vector<std::unique_ptr<xJavaBlock>>           BlockList;
+        xJavaBlockPtrList                                  BlockPtrList; // raw pointer version of block list
 
-        std::vector<std::unique_ptr<xJavaBlock>>   BlockList;
-        xJavaBlockPtrList                          BlockPtrList; // raw pointer version of block list
+        // local variables
+        std::vector<std::string>                           ClassNameBlackList;
+        std::vector<std::unique_ptr<xJavaLocalVariable>>   LocalVariableList;
+        std::vector<xJavaLocalVariable*>                   LocalVariablePtrList;
 
     protected:
-        const xJavaMethod *                        _JavaMethodPtr;
-        const xJavaClass *                         _JavaClassPtr;
+        const xJavaMethod *                               _JavaMethodPtr;
+        const xJavaClass *                                _JavaClassPtr;
 
     public:
         X_PRIVATE_MEMBER xJavaControlFlowGraph(const xJavaMethod * JavaMethodPtr);
@@ -65,8 +68,9 @@ namespace jdc
         X_PRIVATE_MEMBER bool Init();
         X_PRIVATE_MEMBER void Clean();
 
-        X_PRIVATE_MEMBER void InitLocalVariables();
+    protected: // blocks and graph
         X_PRIVATE_MEMBER void InitBlocks();
+        X_PRIVATE_MEMBER void CleanBlocks();
 
         template<typename ... tArgs>
         X_INLINE xJavaBlock * NewBlock(tArgs&& ... Args) {
@@ -138,6 +142,22 @@ namespace jdc
         X_PRIVATE_MEMBER void ReduceGoto();
         X_PRIVATE_MEMBER void ReduceLoop();
         X_PRIVATE_MEMBER bool Reduce();
+
+    public: // Local variables
+
+        X_PRIVATE_MEMBER void InitLocalVariables();
+        X_PRIVATE_MEMBER void CleanLocalVariables();
+
+        xJavaLocalVariable * GetRootVariable(size_t Index) {
+            if (Index >= LocalVariablePtrList.size()) {
+                return nullptr;
+            }
+            auto VariablePtr = LocalVariablePtrList[Index];
+            for(; VariablePtr; VariablePtr = VariablePtr->GetNext())
+            {}
+            return VariablePtr;
+        }
+
 
     public:
         X_PRIVATE_STATIC_MEMBER std::unique_ptr<xJavaControlFlowGraph> ParseByteCode(const xJavaMethod * JavaMethodPtr);
