@@ -25,6 +25,7 @@ namespace jdc
     {
         friend class xJavaSpace;
         bool IsLangType() const override { return false; }
+        const xJavaType * GetOutterType() const override { return Extend.OuterClassPtr; }
 
     public:
         const xJavaSpace *                    JavaSpacePtr = nullptr;

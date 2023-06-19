@@ -23,9 +23,9 @@ namespace jdc
         virtual bool               IsLangType()            const { return false; }
         virtual bool               IsPrimitiveType()       const { return false; }
         virtual bool               IsObjectType()          const { return false; }
-        virtual bool               IsInnerObjectType()     const { return _OuterTypePtr; }
+        virtual bool               IsInnerObjectType()     const { return GetOutterType(); }
         virtual size_t             GetDimension()          const { return 0; } // non-array type returns 0;
-        virtual const xJavaType *  GetOutterType()         const { return _OuterTypePtr; }
+        virtual const xJavaType *  GetOutterType()         const { return nullptr; }
 
         virtual std::string TypeNameString() const { return {}; }
 
