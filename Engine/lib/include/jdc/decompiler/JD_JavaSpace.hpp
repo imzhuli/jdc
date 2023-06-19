@@ -48,12 +48,22 @@ namespace jdc
             }
             return ConvertBinaryNameToCodeName(UnfixedClassBinaryName);
         }
+        X_INLINE std::string GetShortClassCodeName(const std::string & UnfixedClassBinaryName) const {
+            auto JavaTypePtr = GetJavaTypeByUnfixedBinaryName(UnfixedClassBinaryName);
+            assert(JavaTypePtr);
+            if (!JavaTypePtr->IsLangType()) {
+                return JavaTypePtr->GetFixedCodeName();
+            }
+            return JavaTypePtr->GetSimpleCodeName();
+        }
 
     public:
         X_GAME_API_STATIC_MEMBER std::unique_ptr<xJavaSpace> LoadJavaSpace(const std::string & RootDirectory);
 
         X_PRIVATE_MEMBER bool BuildClassFiles();
         X_PRIVATE_MEMBER bool DumpClassFiles(const std::string & OutputDirectory);
+
+        X_PRIVATE_MEMBER xJavaType * GetJavaTypeByUnfixedBinaryName(const std::string & UnfixedBinaryName) const;
     };
 
 

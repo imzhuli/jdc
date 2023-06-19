@@ -204,25 +204,5 @@ namespace jdc
         return Names.ParameterTypeBinaryNames.size();
     }
 
-    const std::string & GetShorterBinaryName(const std::string & FullBinaryName)
-    {
-        auto & Map = GetJavaObjectTypeMap();
-        auto Iter = Map.find(FullBinaryName);
-        if (Iter == Map.end()) {
-            return FullBinaryName;
-        }
-        return Iter->second->GetSimpleBinaryName();
-    }
-
-    const std::string & GetShorterCodeName(const std::string & FullCodeName)
-    {
-        auto & Map = GetJavaObjectTypeCodeNameMap();
-        auto Iter = Map.find(FullCodeName);
-        if (Iter == Map.end()) {
-            return FullCodeName;
-        }
-        return Iter->second->GetSimpleCodeName();
-    }
-
 }
 

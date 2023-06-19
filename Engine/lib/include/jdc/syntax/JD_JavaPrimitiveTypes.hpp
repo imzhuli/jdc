@@ -23,8 +23,8 @@ namespace jdc
         static constexpr const xFlag FLAG_VOID    = 1 << 8;
 
     public:
+        X_INLINE bool IsLangType()       const override { return true;  }
         X_INLINE bool IsPrimitiveType()  const override { return true;  }
-        X_INLINE bool IsDirectType()     const override { return true;  }
         X_INLINE bool IsObjectType()     const override { return false; }
 
         X_INLINE xFlag GetTypeFlag() const { return _TypeFlag; }
@@ -41,6 +41,6 @@ namespace jdc
 
     X_PRIVATE bool  InitJavaPrimitiveTypes();
     X_PRIVATE void  CleanJavaPrimitiveTypes();
-    X_PRIVATE const std::map<std::string, xJavaPrimitiveType> & GetJavaPrimitiveTypeMap();
+    X_PRIVATE std::map<std::string, xJavaPrimitiveType> & GetJavaPrimitiveTypeMap();
 
 }

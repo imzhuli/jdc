@@ -3,6 +3,7 @@
 #include "../base/JD_Instructions.hpp"
 #include "../class_file/JD_ClassInfo.hpp"
 #include "../syntax/JD_JavaType.hpp"
+#include "../syntax/JD_JavaObjectTypes.hpp"
 #include "./JD_JavaPackage.hpp"
 #include "./JD_JavaField.hpp"
 #include "./JD_JavaMethod.hpp"
@@ -20,9 +21,10 @@ namespace jdc
     class xJavaSpace;
 
     class xJavaClass final
-    : public xJavaType
+    : public xJavaObjectType
     {
         friend class xJavaSpace;
+        bool IsLangType() const override { return false; }
 
     public:
         const xJavaSpace *                    JavaSpacePtr = nullptr;

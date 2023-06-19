@@ -23,6 +23,7 @@ namespace jdc
 
     protected:
         std::string                               Name;
+        xJavaType *                               TypePtr          = nullptr;
 
         xJavaFrame *                              FramePtr         = nullptr;
         size_t                                    Index            = 0;
@@ -47,6 +48,9 @@ namespace jdc
 
         auto & GetName() const { return Name; }
         void SetName(const std::string & New) { Name = New; }
+
+        auto GetType() const { return TypePtr; }
+        void SetType(xJavaType * New) { TypePtr = New; }
 
         auto GetFrame() const { return FramePtr; }
         void SetFrame(xJavaFrame * New) { FramePtr = New; }
@@ -88,7 +92,6 @@ namespace jdc
         // virtual void    VariableOnLeft   (std::map<std::string, xJavaType*> TypeBounds, xJavaLocalVariable * VariablePtr);
 
     public:
-        virtual xJavaType * GetType() const       { return nullptr; }
         virtual size_t GetDemension() const       { return 0; }
         virtual bool IsPrimitiveLocalVariable()   { return false; }
     };
@@ -106,12 +109,15 @@ namespace jdc
         size_t                                           Size = 0;
 
     public:
-        auto & GetList() const { return Array; }
-        auto GetSize() const { return Size; }
+        auto& GetList() const { return Array; }
+        auto  GetSize() const   { return Size; }
+        bool  IsEmpty() const   { return Size == 0; }
 
-        xJavaLocalVariable * GetRootVariable(size_t Index);
-        void Add(size_t Index, xJavaLocalVariable * NewVariablePtr);
-        xJavaLocalVariable * RemoveVariable(size_t Index, size_t Offset);
+        xJavaLocalVariable *    GetRoot(size_t Index);
+        void                    Add(size_t Index, xJavaLocalVariable * NewVariablePtr);
+        xJavaLocalVariable *    Remove(size_t Index, size_t Offset);
+        xJavaLocalVariable *    Get(size_t Index, size_t Offset);
+        void                    Update(size_t Index, size_t Offset, xJavaType * TypePtr);
 
     };
 

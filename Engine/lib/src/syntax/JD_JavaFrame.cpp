@@ -3,7 +3,7 @@
 namespace jdc
 {
 
-    xJavaLocalVariable * xJavaLocalVariableSet::GetRootVariable(size_t Index)
+    xJavaLocalVariable * xJavaLocalVariableSet::GetRoot(size_t Index)
     {
         if (Index >= Array.size()) {
             return nullptr;
@@ -50,7 +50,7 @@ namespace jdc
     }
 
 
-    xJavaLocalVariable * xJavaLocalVariableSet::RemoveVariable(size_t Index, size_t Offset)
+    xJavaLocalVariable * xJavaLocalVariableSet::Remove(size_t Index, size_t Offset)
     {
         if (Index >= Array.size()) {
             return nullptr;
@@ -79,6 +79,40 @@ namespace jdc
         return nullptr;
     }
 
+    xJavaLocalVariable * xJavaLocalVariableSet::Get(size_t Index, size_t Offset)
+    {
+        if (Index >= Array.size()) {
+            return nullptr;
+        }
 
+        auto VariablePtr = Array[Index];
+        while (VariablePtr) {
+            if (VariablePtr->GetFromOffset() <= Offset) {
+                return VariablePtr;
+            }
+
+            assert(VariablePtr != VariablePtr->GetNext());
+            VariablePtr = VariablePtr->GetNext();
+        }
+
+        return nullptr;
+    }
+
+    void xJavaLocalVariableSet::Update(size_t Index, size_t Offset, xJavaType * TypePtr)
+    {
+        if (Index >= Array.size()) {
+            return;
+        }
+
+        auto VariablePtr = Array[Index];
+        while (VariablePtr) {
+            if (VariablePtr->GetFromOffset() == Offset) {
+                VariablePtr->SetType(TypePtr);
+                break;
+            }
+            assert(VariablePtr != VariablePtr->GetNext());
+            VariablePtr = VariablePtr->GetNext();
+        }
+    }
 
 }

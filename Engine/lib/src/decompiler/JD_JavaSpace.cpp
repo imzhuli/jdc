@@ -2,6 +2,9 @@
 #include <jdc/decompiler/JD_JavaPackage.hpp>
 #include <jdc/decompiler/JD_JavaClass.hpp>
 #include <jdc/syntax/_.hpp>
+#include <jdc/syntax/JD_JavaType.hpp>
+#include <jdc/syntax/JD_JavaPrimitiveTypes.hpp>
+#include <jdc/syntax/JD_JavaObjectTypes.hpp>
 #include <filesystem>
 
 namespace jdc
@@ -202,6 +205,29 @@ namespace jdc
         }
 
         return true;
+    }
+
+    xJavaType * xJavaSpace::GetJavaTypeByUnfixedBinaryName(const std::string & UnfixedBinaryName) const
+    {
+        auto & PrimaryTypeMap = GetJavaPrimitiveTypeMap();
+        auto PrimaryIter = PrimaryTypeMap.find(UnfixedBinaryName);
+        if (PrimaryIter != PrimaryTypeMap.end()) {
+            return &PrimaryIter->second;
+        }
+
+        auto & DefaultObjectMap = GetJavaObjectTypeMap();
+        auto ObjectIter = DefaultObjectMap.find(UnfixedBinaryName);
+        if (ObjectIter != DefaultObjectMap.end()) {
+            return ObjectIter->second.get();
+        }
+
+        auto & UserClassObjectMap = _ClassMap;
+        auto UserClassIter = UserClassObjectMap.find(UnfixedBinaryName);
+        if (UserClassIter != UserClassObjectMap.end()) {
+            return UserClassIter->second.get();
+        }
+
+        return nullptr;
     }
 
 }

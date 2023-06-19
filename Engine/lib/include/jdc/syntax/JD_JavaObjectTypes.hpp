@@ -11,8 +11,8 @@ namespace jdc
     : public xJavaType
     {
     public:
+        X_INLINE bool IsLangType()       const override { return true; }
         X_INLINE bool IsPrimitiveType()  const override { return false; }
-        X_INLINE bool IsDirectType()     const override { return true; }
         X_INLINE bool IsObjectType()     const override { return true; }
 
         X_PRIVATE_STATIC_MEMBER bool IsDefaultAnnotationBase(xJavaType * JavaTypePtr);
@@ -26,7 +26,7 @@ namespace jdc
 
     X_PRIVATE bool InitJavaObjectTypes();
     X_PRIVATE void CleanJavaObjectTypes();
-    X_PRIVATE const std::map<std::string, std::unique_ptr<xJavaObjectType>> & GetJavaObjectTypeMap();
-    X_PRIVATE const std::map<std::string, const xJavaObjectType *> & GetJavaObjectTypeCodeNameMap();
+    X_PRIVATE const std::string & GetShorterBinaryName(const std::string & FullBinaryName);
+    X_PRIVATE std::map<std::string, std::unique_ptr<xJavaObjectType>> & GetJavaObjectTypeMap();
 
 }
