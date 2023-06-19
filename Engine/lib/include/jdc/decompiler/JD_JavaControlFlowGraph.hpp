@@ -32,7 +32,7 @@ namespace jdc
         // local variables
         std::vector<std::string>                           ClassNameBlackList;
         std::vector<std::unique_ptr<xJavaLocalVariable>>   LocalVariableList;
-        std::vector<xJavaLocalVariable*>                   LocalVariablePtrList;
+        xJavaLocalVariableSet                              LocalVariablePtrSet;
 
     protected:
         const xJavaMethod *                               _JavaMethodPtr;
@@ -147,17 +147,6 @@ namespace jdc
 
         X_PRIVATE_MEMBER void InitLocalVariables();
         X_PRIVATE_MEMBER void CleanLocalVariables();
-
-        xJavaLocalVariable * GetRootVariable(size_t Index) {
-            if (Index >= LocalVariablePtrList.size()) {
-                return nullptr;
-            }
-            auto VariablePtr = LocalVariablePtrList[Index];
-            for(; VariablePtr; VariablePtr = VariablePtr->GetNext())
-            {}
-            return VariablePtr;
-        }
-
 
     public:
         X_PRIVATE_STATIC_MEMBER std::unique_ptr<xJavaControlFlowGraph> ParseByteCode(const xJavaMethod * JavaMethodPtr);

@@ -16,7 +16,7 @@ namespace jdc
     {
         xel::Renew(ClassNameBlackList);
         xel::Renew(LocalVariableList);
-        xel::Renew(LocalVariablePtrList);
+        xel::Renew(LocalVariablePtrSet);
         size_t FirstVariableIndex = 0;
 
         if (_JavaMethodPtr->MethodInfoPtr->AccessFlags & ACC_STATIC) { // no "this" parameter
@@ -38,14 +38,16 @@ namespace jdc
         }
 
         X_DEBUG_PRINTF("JavaMethod: %s.%s local variables:\n", _JavaClassPtr->GetFixedCodeName().c_str(), _JavaMethodPtr->OriginalName.c_str());
-        for (auto & VariablePtr : LocalVariablePtrList) {
-            X_DEBUG_PRINTF("VariableName:%s\n", VariablePtr->GetName().c_str());
+        for (auto & VariablePtr : LocalVariablePtrSet.GetList()) {
+            if (VariablePtr) {
+                X_DEBUG_PRINTF("VariableName:%s\n", VariablePtr->GetName().c_str());
+            }
         }
     }
 
     void xJavaControlFlowGraph::CleanLocalVariables()
     {
-        xel::Renew(LocalVariablePtrList);
+        xel::Renew(LocalVariablePtrSet);
         xel::Renew(LocalVariableList);
         xel::Renew(ClassNameBlackList);
     }

@@ -56,6 +56,7 @@ namespace jdc
 
         auto GetIndex() const { return Index; }
 
+        auto GetFromOffset() const { return FromOffset; }
         void SetFromOffset(size_t NewFromOffset) {
             assert(NewFromOffset <= ToOffset);
             FromOffset = NewFromOffset;
@@ -90,6 +91,28 @@ namespace jdc
         virtual xJavaType * GetType() const       { return nullptr; }
         virtual size_t GetDemension() const       { return 0; }
         virtual bool IsPrimitiveLocalVariable()   { return false; }
+    };
+
+    /**
+     * @brief Set of local variables     *
+     * @note Array allows null slots
+     *
+     */
+    class xJavaLocalVariableSet
+    : xel::xNonCopyable
+    {
+    private:
+        std::vector<xJavaLocalVariable*>                 Array;
+        size_t                                           Size = 0;
+
+    public:
+        auto & GetList() const { return Array; }
+        auto GetSize() const { return Size; }
+
+        xJavaLocalVariable * GetRootVariable(size_t Index);
+        void Add(size_t Index, xJavaLocalVariable * NewVariablePtr);
+        xJavaLocalVariable * RemoveVariable(size_t Index, size_t Offset);
+
     };
 
     class xJavaFrame
