@@ -7,7 +7,7 @@ namespace jdc
 
     void xJavaField::DoConvert()
     {
-        Converted.FixedTypeCodeName = JavaClassPtr->JavaSpacePtr->GetShortClassCodeName(UnfixedTypeBinaryName);
+        Converted.FixedTypeCodeName = JavaClassPtr->JavaSpacePtr->GetFixedClassCodeName(UnfixedTypeBinaryName);
         Converted.AttributeMap = LoadAttributeInfo(FieldInfoPtr->Attributes,  &JavaClassPtr->ClassInfo);
         Converted.AnnotationDeclarations = JavaClassPtr->ExtractAnnotations(Converted.AttributeMap);
     }

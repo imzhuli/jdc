@@ -42,16 +42,9 @@ namespace jdc
             return UnfixedClassBinaryName;
         }
         X_INLINE std::string GetFixedClassCodeName(const std::string & UnfixedClassBinaryName) const {
-            auto JavaClassPtr = GetClass(UnfixedClassBinaryName);
-            if (JavaClassPtr) {
-                return JavaClassPtr->GetFixedCodeName();
-            }
-            return ConvertBinaryNameToCodeName(UnfixedClassBinaryName);
-        }
-        X_INLINE std::string GetShortClassCodeName(const std::string & UnfixedClassBinaryName) const {
             auto JavaTypePtr = GetJavaTypeByUnfixedBinaryName(UnfixedClassBinaryName);
             if(!JavaTypePtr) { // maybe from 3rd package
-                return UnfixedClassBinaryName;
+                return ConvertBinaryNameToCodeName(UnfixedClassBinaryName);
             }
             if (!JavaTypePtr->IsLangType()) {
                 return JavaTypePtr->GetFixedCodeName();
